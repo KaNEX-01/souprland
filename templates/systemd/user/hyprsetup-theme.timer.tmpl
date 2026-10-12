@@ -1,0 +1,14 @@
+{{! require: MANAGE_HYPR_CONFIGS && THEME_SCHEDULE }}
+[Unit]
+Description=hyprsetup — day ({{THEME_DAY_START}}) / night ({{THEME_NIGHT_START}}) theme
+
+[Timer]
+# On login, the theme for the current time; then at both switch times.
+OnActiveSec=20s
+OnCalendar=*-*-* {{THEME_DAY_START}}:00
+OnCalendar=*-*-* {{THEME_NIGHT_START}}:00
+# If the machine was off/asleep at a switch time, run right after it wakes.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

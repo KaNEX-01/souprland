@@ -1,0 +1,20 @@
+{{! require: MANAGE_HYPR_CONFIGS && MANAGE_MONITORS && HYPR_LANG==lua }}
+{{! target: hypr/hyprland/monitors.lua }}
+----------------------------------------------------------------------
+-- hyprland/monitors.lua — display configuration
+--
+-- If a tool such as nwg-displays writes this file itself, set
+-- MANAGE_MONITORS=0 in settings.conf; the script never touches the file and
+-- hyprland.lua does not require it.
+--
+-- hyprsetup:managed — this line marks who owns the file.
+-- If another tool rewrites the file the line disappears and the script
+-- leaves the file alone from then on (see lib/core.sh:foreign_config_owner).
+--
+-- To list your current displays:  hyprctl monitors all
+----------------------------------------------------------------------
+
+{{MONITOR_LINES}}
+
+-- Safe default for unknown displays
+hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })

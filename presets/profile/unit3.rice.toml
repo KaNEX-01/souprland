@@ -1,0 +1,132 @@
+# samyns/Unit-3 — r/hyprland "[Hyprland +Quickshell] Unit-3 Nier Automata inspired"
+# https://www.reddit.com/r/hyprland/comments/1sw71vc/
+# Posted 2026-04-26 (u/Icy-Dark5530); the installed commit is that day's last
+# (bb38216, "Update image in README.md"). MIT. Hyprland conf config +
+# Quickshell (NieR:Automata interface: menu, notifications, music, wallpaper
+# picker, lock screen, pixel-wave transitions) + waybar.
+#
+# The user-level jobs of the author's install.sh, as is: config/hypr,
+# kitty, quickshell, waybar into ~/.config; wallpapers into ~/Pictures/wallpapers
+# (looks); execute permission for the scripts; an empty hypr/user.conf. Optional:
+# config/bash/.bashrc (welcome banner, NieR prompt). NOT TAKEN (sudo):
+# /etc/pam.d/qs-lock (password check for the lock screen), enabling NetworkManager and
+# pipewire services, installing yay. Without the PAM file the lock screen would
+# reject every password; the check is switched to system-auth (see [[fix]]).
+default_variant = "orman"
+provides = ["bar", "widget", "launcher", "notify", "wallpaper"]
+
+post_install = [
+  "find ~/.config/hypr ~/.config/quickshell ~/.config/waybar -type f \\( -name '*.sh' -o -name '*.py' \\) -exec chmod +x {} + 2>/dev/null || true",
+  "mkdir -p ~/Pictures/wallpapers ~/Screenshots",
+  # The pixel-wave videos are generated on first start (wave-check.sh, ~10 s);
+  # generating them during install spares the first login the wait.
+  "~/.config/quickshell/wave-check.sh >/dev/null 2>&1 || true",
+  "hyprctl reload >/dev/null 2>&1 || true",
+]
+
+notes = [
+  "The lock screen (Quickshell) checks the password with pamtester: install pamtester from the AUR. The author installs an /etc/pam.d/qs-lock file (sudo); here the check is switched to system-auth, which has the same content, so no sudo is needed. Without pamtester the lock screen isn't started at login.",
+  "The author says 'don't look at the wallpapers' in the post; the looks are the author's four wallpapers from the repo, with the forest scene from the video as the default.",
+  "Keybindings: pressing SUPER twice opens the menu, SUPER+P the wallpaper picker (the author's). Your own keybindings take precedence over these.",
+  "dunst/mako/swaync are stopped at startup: the Quickshell shell shows the notifications.",
+]
+
+[source]
+repo = "https://github.com/samyns/Unit-3"
+commit = "bb38216c98340c9767912351b373c91128ced707"
+post = "https://www.reddit.com/r/hyprland/comments/1sw71vc/hyprland_quickshell_unit3_nier_automata_inspired/"
+license = "MIT"
+
+[[install]]
+from = "config/hypr"
+to = "~/.config/hypr"
+[[install]]
+from = "config/kitty"
+to = "~/.config/kitty"
+[[install]]
+from = "config/quickshell"
+to = "~/.config/quickshell"
+[[install]]
+from = "config/waybar"
+to = "~/.config/waybar"
+[[install]]
+from = "config/bash/.bashrc"
+to = "~/.bashrc"
+group = "shell"
+
+# A personal file created by the author's installer and never overwritten by updates;
+# hyprland.conf sources it.
+[[fix]]
+file = "~/.config/hypr/user.conf"
+create = "# Personal Hyprland additions (the Unit-3 installer leaves this empty)\n"
+why = "hyprland.conf sources this file; the author's installer creates it"
+
+[[fix]]
+file = "~/.config/quickshell/widgets/lockscreen.qml"
+replace = ["pamtester qs-lock ", "pamtester system-auth "]
+why = "the author's install.sh puts the qs-lock PAM service into /etc/pam.d with sudo; without it PAM falls back to 'other' (pam_deny) and the lock screen rejects EVERY password. qs-lock only includes system-auth, so that is used directly."
+[[fix]]
+file = "~/.config/hypr/hyprland.conf"
+replace = ["exec-once = ~/.config/quickshell/lock.sh", "exec-once = command -v pamtester >/dev/null && ~/.config/quickshell/lock.sh"]
+why = "the startup lock can't be unlocked without pamtester (the password is always rejected); if pamtester isn't installed, it doesn't lock at startup"
+
+[packages]
+repo = ["hyprland", "hyprlock", "hypridle", "xdg-desktop-portal-hyprland", "waybar",
+        "quickshell", "qt5-wayland", "qt6-wayland", "qt6-multimedia-ffmpeg", "gtk4-layer-shell",
+        "awww", "figlet", "kitty", "pipewire", "pipewire-alsa", "pipewire-pulse", "wireplumber",
+        "pavucontrol", "playerctl", "polkit-kde-agent", "brightnessctl", "grim", "slurp", "satty",
+        "hyprshot", "wl-clipboard", "udiskie", "udisks2", "networkmanager", "ttf-jetbrains-mono",
+        "noto-fonts", "noto-fonts-cjk", "noto-fonts-emoji", "fish", "starship", "python-cairo",
+        "python-numpy", "python-pillow", "ffmpeg", "xdg-user-dirs", "xdg-utils"]
+aur = ["pamtester"]
+
+[variants.orman]
+title = "Forest — 2B and a mossy machine (as posted)"
+wallpaper = "https://raw.githubusercontent.com/samyns/Unit-3/bb38216c98340c9767912351b373c91128ced707/assets/wallpapers/video-games-nier-automata-2b-nier-automata-wallpaper-3816fda860c05c98705c019e3812740a.jpg"
+wallpaper_dest = "~/Pictures/wallpapers/unit3-orman.jpg"
+apply = ["awww img {wallpaper}"]
+credit = "assets/wallpapers from the author's repo (NieR:Automata art); the one in the post's preview"
+
+[variants.yorha]
+title = "YoRHa — dark emblem"
+wallpaper = "https://raw.githubusercontent.com/samyns/Unit-3/bb38216c98340c9767912351b373c91128ced707/assets/wallpapers/UDqXyQq.jpeg"
+wallpaper_dest = "~/Pictures/wallpapers/unit3-yorha.jpeg"
+apply = ["awww img {wallpaper}"]
+credit = "assets/wallpapers/UDqXyQq.jpeg from the author's repo"
+
+[variants.hollow-knight]
+title = "Hollow Knight — Vincent Bisschop"
+wallpaper = "https://raw.githubusercontent.com/samyns/Unit-3/bb38216c98340c9767912351b373c91128ced707/assets/wallpapers/vincent-bisschop-hollow-knight-fantasy-art-video-games-wallpaper-dc425103943cadc74f86ffc53d8f7622.jpg"
+wallpaper_dest = "~/Pictures/wallpapers/unit3-hollow-knight.jpg"
+apply = ["awww img {wallpaper}"]
+credit = "assets/wallpapers from the author's repo (Vincent Bisschop, Hollow Knight fan art)"
+
+[variants.savas]
+title = "2B — red battle scene"
+wallpaper = "https://raw.githubusercontent.com/samyns/Unit-3/bb38216c98340c9767912351b373c91128ced707/assets/wallpapers/wallpaperflare.com_wallpaper.jpg"
+wallpaper_dest = "~/Pictures/wallpapers/unit3-savas.jpg"
+apply = ["awww img {wallpaper}"]
+credit = "assets/wallpapers/wallpaperflare.com_wallpaper.jpg from the author's repo"
+
+# The settings app's Bar page recognizes this bar (ricebar.py): waybar.
+[bar]
+kind = "waybar"
+label = "Unit-3 waybar"
+config = "~/.config/waybar/config.jsonc"
+style = "~/.config/waybar/style.css"
+
+# --- Mix parts (python -m hyprsetup mix; see python/hyprsetup/mix.py) ---
+[[part]]
+slot = "bar"
+title = "Unit-3 waybar (NieR)"
+paths = ["~/.config/waybar"]
+start = "waybar"
+provides = ["bar"]
+packages = ["waybar"]
+
+[[part]]
+slot = "terminal"
+title = "Kitty (Unit-3)"
+paths = ["~/.config/kitty"]
+commands = { CMD_TERMINAL = "kitty" }
+packages = ["kitty"]

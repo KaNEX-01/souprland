@@ -1,0 +1,863 @@
+{
+  "version": 1,
+  "_comment": "Keybindings. Every entry here feeds ~/.config/hypr/keybinds.conf (or hyprland/keybinds.lua in Lua mode), the Keybindings page in the GUI, and the SUPER+F1 help screen. The user can override a keybinding with KEYBINDS in settings.conf: KEYBINDS=\"terminal=MOD+T;;lock=MOD+CTRL+L\" — an empty value removes that keybinding entirely.",
+  "_note_end4": "Key combos are aligned with the end-4/dots-hyprland defaults (illogical-impulse, commit 2f0c8bf). end-4's quickshell-specific keybindings (OSK, Google Lens, OCR, translation, media panel, wallpaper picker, VM submap) were not taken over because this project has no equivalent; those with a close equivalent were mapped: SUPER tap = launcher, SUPER+A = Actions (instead of the left sidebar), SUPER+N = notification center, SUPER+G = widgets, SUPER+J = bar, SUPER+CTRL+R = reload Hyprland (restarts the shell there). Deliberate deviations: SUPER+Tab (overview there) is next workspace here since there is no overview; SUPER+C (code editor there) centers the window here; SUPER+ALT+R/G stay with Instant Replay; ALT+Tab is this project's window switcher. Project-specific additions use keys unused in end-4: SUPER+ALT+T split direction, SUPER+ALT+arrows resize, SUPER+ALT+N night light, SUPER+F1 help.",
+  "_schema": {
+    "id": "stable id (used in KEYBINDS overrides)",
+    "title": "name shown in the UI and on the help screen",
+    "keys": "MOD+SHIFT+L format; the MOD, SHIFT, CTRL, ALT tokens are joined with '+'",
+    "dispatcher": "Hyprland dispatcher (exec, killactive, movefocus…) — translated to an hl.dsp.* call automatically in Lua mode",
+    "args": "dispatcher argument; {{VARIABLE}} placeholders are filled in at render time",
+    "flags": "'' | e (repeat) | l (also when locked) | el | m (mouse)",
+    "require": "the require syntax from the templates; if the condition is not met, no line is generated",
+    "editable": "if false, it cannot be reassigned in the UI (mouse/wheel bindings)"
+  },
+  "_note_dispatchers": "Dispatcher names can change between Hyprland versions. In 0.54 'togglesplit' and 'swapsplit' were removed; they are now called via 'layoutmsg' (see https://hypr.land/news/update54/). When adding a keybinding, verify the name against https://wiki.hypr.land/Configuring/Dispatchers/; a wrong name gives an 'Invalid dispatcher' error when Hyprland starts. './install.sh --doctor' catches these errors via 'hyprctl configerrors'. In Lua mode (HYPR_LANG=lua) every dispatcher is turned into an hl.dsp.* call from the translation table in python/hyprsetup/keybinds.py; those without an entry run as-is via 'hyprctl dispatch'.",
+  "categories": [
+    {
+      "id": "apps",
+      "title": "Applications",
+      "binds": [
+        {
+          "id": "terminal",
+          "title": "Terminal",
+          "keys": "MOD+Return",
+          "dispatcher": "exec",
+          "args": "{{CMD_TERMINAL}}"
+        },
+        {
+          "id": "terminal-t",
+          "title": "Terminal (second key)",
+          "keys": "MOD+T",
+          "dispatcher": "exec",
+          "args": "{{CMD_TERMINAL}}"
+        },
+        {
+          "id": "terminal-ctrl-alt",
+          "title": "Terminal (Ctrl+Alt+T)",
+          "keys": "CTRL+ALT+T",
+          "dispatcher": "exec",
+          "args": "{{CMD_TERMINAL}}"
+        },
+        {
+          "id": "launcher",
+          "title": "App launcher (tap SUPER)",
+          "keys": "MOD+Super_L",
+          "dispatcher": "exec",
+          "args": "{{CMD_LAUNCHER}}",
+          "flags": "r"
+        },
+        {
+          "id": "actions",
+          "title": "Actions (identify song, color, emoji…)",
+          "keys": "MOD+A",
+          "dispatcher": "exec",
+          "args": "~/.config/hypr/scripts/actions.py"
+        },
+        {
+          "id": "emoji",
+          "title": "Emoji picker",
+          "keys": "MOD+period",
+          "dispatcher": "exec",
+          "args": "~/.config/hypr/scripts/actions.py emoji"
+        },
+        {
+          "id": "filemanager",
+          "title": "File manager",
+          "keys": "MOD+E",
+          "dispatcher": "exec",
+          "args": "{{CMD_FILEMANAGER}}",
+          "require": "CMD_FILEMANAGER"
+        },
+        {
+          "id": "browser",
+          "title": "Web browser",
+          "keys": "MOD+W",
+          "dispatcher": "exec",
+          "args": "{{BROWSER}}",
+          "require": "BROWSER"
+        },
+        {
+          "id": "text-editor",
+          "title": "Text editor",
+          "keys": "MOD+X",
+          "dispatcher": "exec",
+          "args": "kate || kwrite || gnome-text-editor"
+        },
+        {
+          "id": "task-manager",
+          "title": "Task manager",
+          "keys": "CTRL+SHIFT+Escape",
+          "dispatcher": "exec",
+          "args": "plasma-systemmonitor || gnome-system-monitor || {{CMD_TERMINAL}} {{TERMINAL_EXEC_FLAG}} btop"
+        },
+        {
+          "id": "settings",
+          "title": "Settings",
+          "keys": "MOD+I",
+          "dispatcher": "exec",
+          "args": "~/.config/hypr/scripts/settings.sh"
+        },
+        {
+          "id": "keybind-help",
+          "title": "Keybinding cheatsheet",
+          "keys": "MOD+slash",
+          "dispatcher": "exec",
+          "args": "~/.config/hypr/scripts/keybind-help.sh"
+        },
+        {
+          "id": "keybind-help-f1",
+          "title": "Keybinding cheatsheet (F1)",
+          "keys": "MOD+F1",
+          "dispatcher": "exec",
+          "args": "~/.config/hypr/scripts/keybind-help.sh"
+        },
+        {
+          "id": "bar-toggle",
+          "title": "Show/hide the bar",
+          "keys": "MOD+J",
+          "dispatcher": "exec",
+          "args": "~/.config/hypr/scripts/bar-toggle.sh",
+          "require": "BAR==waybar"
+        },
+        {
+          "id": "audio-mixer",
+          "title": "Volume mixer",
+          "keys": "MOD+CTRL+V",
+          "dispatcher": "exec",
+          "args": "pavucontrol",
+          "require": "HAS_AUDIO_TOOLS"
+        },
+        {
+          "id": "widgets-toggle",
+          "title": "Show/hide desktop widgets",
+          "keys": "MOD+G",
+          "dispatcher": "exec",
+          "args": "~/.config/hypr/scripts/widgets.sh toggle",
+          "require": "HAS_EWW"
+        },
+        {
+          "id": "notifications",
+          "title": "Notification center",
+          "keys": "MOD+N",
+          "dispatcher": "exec",
+          "args": "swaync-client -t -sw",
+          "require": "NOTIFIER==swaync"
+        },
+        {
+          "id": "gamemode",
+          "title": "Toggle game mode",
+          "keys": "MOD+F12",
+          "dispatcher": "exec",
+          "args": "~/.config/hypr/scripts/gamemode.py toggle",
+          "require": "MANAGE_HYPR_CONFIGS"
+        }
+      ]
+    },
+    {
+      "id": "session",
+      "title": "Session",
+      "binds": [
+        {
+          "id": "lock",
+          "title": "Lock screen",
+          "keys": "MOD+L",
+          "dispatcher": "exec",
+          "args": "{{LOCK_CMD}}"
+        },
+        {
+          "id": "sleep",
+          "title": "Suspend",
+          "keys": "MOD+SHIFT+L",
+          "dispatcher": "exec",
+          "args": "systemctl suspend || loginctl suspend",
+          "flags": "l"
+        },
+        {
+          "id": "powermenu",
+          "title": "Power menu (lock/suspend/shut down)",
+          "keys": "CTRL+ALT+Delete",
+          "dispatcher": "exec",
+          "args": "{{POWERMENU_CMD}}"
+        },
+        {
+          "id": "logout",
+          "title": "Log out immediately",
+          "keys": "MOD+CTRL+SHIFT+E",
+          "dispatcher": "exec",
+          "args": "{{LOGOUT_CMD}}"
+        },
+        {
+          "id": "reload",
+          "title": "Reload config",
+          "keys": "MOD+CTRL+R",
+          "dispatcher": "exec",
+          "args": "hyprctl reload"
+        },
+        {
+          "id": "exit",
+          "title": "Exit Hyprland",
+          "keys": "MOD+CTRL+SHIFT+Q",
+          "dispatcher": "exit",
+          "args": ""
+        },
+        {
+          "id": "poweroff",
+          "title": "Shut down the computer",
+          "keys": "MOD+CTRL+ALT+SHIFT+Delete",
+          "dispatcher": "exec",
+          "args": "systemctl poweroff || loginctl poweroff"
+        }
+      ]
+    },
+    {
+      "id": "window",
+      "title": "Windows",
+      "binds": [
+        {
+          "id": "close",
+          "title": "Close window",
+          "keys": "MOD+Q",
+          "dispatcher": "killactive",
+          "args": ""
+        },
+        {
+          "id": "force-kill",
+          "title": "Force kill window",
+          "keys": "MOD+ALT+SHIFT+Q",
+          "dispatcher": "exec",
+          "args": "hyprctl kill"
+        },
+        {
+          "id": "float",
+          "title": "Floating window",
+          "keys": "MOD+ALT+Space",
+          "dispatcher": "togglefloating",
+          "args": ""
+        },
+        {
+          "id": "pin",
+          "title": "Pin window",
+          "keys": "MOD+P",
+          "dispatcher": "pin",
+          "args": ""
+        },
+        {
+          "id": "pseudo",
+          "title": "Pseudotile",
+          "keys": "MOD+ALT+P",
+          "dispatcher": "pseudo",
+          "args": ""
+        },
+        {
+          "id": "togglesplit",
+          "title": "Toggle split direction (dwindle)",
+          "keys": "MOD+ALT+T",
+          "dispatcher": "layoutmsg",
+          "args": "togglesplit"
+        },
+        {
+          "id": "fullscreen",
+          "title": "Fullscreen",
+          "keys": "MOD+F",
+          "dispatcher": "fullscreen",
+          "args": "0"
+        },
+        {
+          "id": "maximize",
+          "title": "Maximize",
+          "keys": "MOD+D",
+          "dispatcher": "fullscreen",
+          "args": "1"
+        },
+        {
+          "id": "fullscreen-spoof",
+          "title": "Fake fullscreen (the app thinks it is fullscreen)",
+          "keys": "MOD+ALT+F",
+          "dispatcher": "fullscreenstate",
+          "args": "0 3"
+        },
+        {
+          "id": "center",
+          "title": "Center window",
+          "keys": "MOD+C",
+          "dispatcher": "centerwindow",
+          "args": ""
+        },
+        {
+          "id": "splitratio-down",
+          "title": "Decrease split ratio",
+          "keys": "MOD+semicolon",
+          "dispatcher": "layoutmsg",
+          "args": "splitratio -0.1",
+          "flags": "e"
+        },
+        {
+          "id": "splitratio-up",
+          "title": "Increase split ratio",
+          "keys": "MOD+apostrophe",
+          "dispatcher": "layoutmsg",
+          "args": "splitratio +0.1",
+          "flags": "e"
+        },
+        {
+          "id": "group-toggle",
+          "title": "Create / dissolve window group (tabs)",
+          "keys": "",
+          "dispatcher": "togglegroup",
+          "args": ""
+        },
+        {
+          "id": "group-next",
+          "title": "Next tab in group",
+          "keys": "",
+          "dispatcher": "changegroupactive",
+          "args": "f"
+        },
+        {
+          "id": "group-prev",
+          "title": "Previous tab in group",
+          "keys": "",
+          "dispatcher": "changegroupactive",
+          "args": "b"
+        },
+        {
+          "id": "group-out",
+          "title": "Move window out of group",
+          "keys": "",
+          "dispatcher": "moveoutofgroup",
+          "args": ""
+        },
+        {
+          "id": "group-lock",
+          "title": "Lock group (no new windows join)",
+          "keys": "",
+          "dispatcher": "lockactivegroup",
+          "args": "toggle"
+        }
+      ]
+    },
+    {
+      "id": "focus",
+      "title": "Focus and Moving",
+      "binds": [
+        {
+          "id": "focus-left",
+          "title": "Focus: left",
+          "keys": "MOD+left",
+          "dispatcher": "movefocus",
+          "args": "l"
+        },
+        {
+          "id": "focus-right",
+          "title": "Focus: right",
+          "keys": "MOD+right",
+          "dispatcher": "movefocus",
+          "args": "r"
+        },
+        {
+          "id": "focus-up",
+          "title": "Focus: up",
+          "keys": "MOD+up",
+          "dispatcher": "movefocus",
+          "args": "u"
+        },
+        {
+          "id": "focus-down",
+          "title": "Focus: down",
+          "keys": "MOD+down",
+          "dispatcher": "movefocus",
+          "args": "d"
+        },
+        {
+          "id": "focus-bracket-left",
+          "title": "Focus left ([)",
+          "keys": "MOD+bracketleft",
+          "dispatcher": "movefocus",
+          "args": "l"
+        },
+        {
+          "id": "focus-bracket-right",
+          "title": "Focus right (])",
+          "keys": "MOD+bracketright",
+          "dispatcher": "movefocus",
+          "args": "r"
+        },
+        {
+          "id": "move-left",
+          "title": "Move window left",
+          "keys": "MOD+SHIFT+left",
+          "dispatcher": "movewindow",
+          "args": "l"
+        },
+        {
+          "id": "move-right",
+          "title": "Move window right",
+          "keys": "MOD+SHIFT+right",
+          "dispatcher": "movewindow",
+          "args": "r"
+        },
+        {
+          "id": "move-up",
+          "title": "Move window up",
+          "keys": "MOD+SHIFT+up",
+          "dispatcher": "movewindow",
+          "args": "u"
+        },
+        {
+          "id": "move-down",
+          "title": "Move window down",
+          "keys": "MOD+SHIFT+down",
+          "dispatcher": "movewindow",
+          "args": "d"
+        },
+        {
+          "id": "resize-left",
+          "title": "Shrink (horizontal)",
+          "keys": "MOD+ALT+left",
+          "dispatcher": "resizeactive",
+          "args": "-40 0",
+          "flags": "e"
+        },
+        {
+          "id": "resize-right",
+          "title": "Grow (horizontal)",
+          "keys": "MOD+ALT+right",
+          "dispatcher": "resizeactive",
+          "args": "40 0",
+          "flags": "e"
+        },
+        {
+          "id": "resize-up",
+          "title": "Shrink (vertical)",
+          "keys": "MOD+ALT+up",
+          "dispatcher": "resizeactive",
+          "args": "0 -40",
+          "flags": "e"
+        },
+        {
+          "id": "resize-down",
+          "title": "Grow (vertical)",
+          "keys": "MOD+ALT+down",
+          "dispatcher": "resizeactive",
+          "args": "0 40",
+          "flags": "e"
+        },
+        {
+          "id": "mouse-move",
+          "title": "Move with mouse",
+          "keys": "MOD+mouse:272",
+          "dispatcher": "movewindow",
+          "args": "",
+          "flags": "m",
+          "editable": false
+        },
+        {
+          "id": "mouse-resize",
+          "title": "Resize with mouse",
+          "keys": "MOD+mouse:273",
+          "dispatcher": "resizewindow",
+          "args": "",
+          "flags": "m",
+          "editable": false
+        },
+        {
+          "id": "window-switcher",
+          "title": "Window switcher (ALT+Tab)",
+          "keys": "ALT+Tab",
+          "dispatcher": "exec",
+          "args": "~/.config/hypr/scripts/windowswitch.py",
+          "require": "SWITCHER_ENABLED!=false && WINDOW_SWITCHER!=off"
+        },
+        {
+          "id": "window-switcher-last",
+          "title": "Back to last window",
+          "keys": "ALT+grave",
+          "dispatcher": "exec",
+          "args": "~/.config/hypr/scripts/windowswitch.py last",
+          "require": "SWITCHER_ENABLED!=false && WINDOW_SWITCHER!=off"
+        }
+      ]
+    },
+    {
+      "id": "workspace",
+      "title": "Workspaces",
+      "binds": [
+        {
+          "id": "special-toggle",
+          "title": "Scratchpad (special workspace)",
+          "keys": "MOD+S",
+          "dispatcher": "togglespecialworkspace",
+          "args": "magic"
+        },
+        {
+          "id": "special-move",
+          "title": "Send window to scratchpad",
+          "keys": "MOD+ALT+S",
+          "dispatcher": "movetoworkspacesilent",
+          "args": "special:magic"
+        },
+        {
+          "id": "ws-next",
+          "title": "Next workspace",
+          "keys": "MOD+Tab",
+          "dispatcher": "workspace",
+          "args": "e+1"
+        },
+        {
+          "id": "ws-prev",
+          "title": "Previous workspace",
+          "keys": "MOD+SHIFT+Tab",
+          "dispatcher": "workspace",
+          "args": "e-1"
+        },
+        {
+          "id": "ws-last",
+          "title": "Back to last used workspace",
+          "keys": "MOD+grave",
+          "dispatcher": "workspace",
+          "args": "previous"
+        },
+        {
+          "id": "ws-left",
+          "title": "Workspace to the left",
+          "keys": "MOD+CTRL+left",
+          "dispatcher": "workspace",
+          "args": "r-1"
+        },
+        {
+          "id": "ws-right",
+          "title": "Workspace to the right",
+          "keys": "MOD+CTRL+right",
+          "dispatcher": "workspace",
+          "args": "r+1"
+        },
+        {
+          "id": "ws-up5",
+          "title": "5 workspaces back",
+          "keys": "MOD+CTRL+up",
+          "dispatcher": "workspace",
+          "args": "r-5"
+        },
+        {
+          "id": "ws-down5",
+          "title": "5 workspaces forward",
+          "keys": "MOD+CTRL+down",
+          "dispatcher": "workspace",
+          "args": "r+5"
+        },
+        {
+          "id": "ws-page-up",
+          "title": "Previous workspace (PgUp)",
+          "keys": "MOD+Page_Up",
+          "dispatcher": "workspace",
+          "args": "r-1"
+        },
+        {
+          "id": "ws-page-down",
+          "title": "Next workspace (PgDn)",
+          "keys": "MOD+Page_Down",
+          "dispatcher": "workspace",
+          "args": "r+1"
+        },
+        {
+          "id": "move-ws-left",
+          "title": "Send window to the workspace on the left",
+          "keys": "MOD+SHIFT+Page_Up",
+          "dispatcher": "movetoworkspace",
+          "args": "r-1"
+        },
+        {
+          "id": "move-ws-right",
+          "title": "Send window to the workspace on the right",
+          "keys": "MOD+SHIFT+Page_Down",
+          "dispatcher": "movetoworkspace",
+          "args": "r+1"
+        },
+        {
+          "id": "move-ws-wheel-left",
+          "title": "Send window to the workspace on the left (wheel)",
+          "keys": "MOD+SHIFT+mouse_down",
+          "dispatcher": "movetoworkspace",
+          "args": "r-1",
+          "editable": false
+        },
+        {
+          "id": "move-ws-wheel-right",
+          "title": "Send window to the workspace on the right (wheel)",
+          "keys": "MOD+SHIFT+mouse_up",
+          "dispatcher": "movetoworkspace",
+          "args": "r+1",
+          "editable": false
+        },
+        {
+          "id": "ws-wheel-next",
+          "title": "Wheel: next workspace",
+          "keys": "MOD+mouse_up",
+          "dispatcher": "workspace",
+          "args": "+1",
+          "editable": false
+        },
+        {
+          "id": "ws-wheel-prev",
+          "title": "Wheel: previous workspace",
+          "keys": "MOD+mouse_down",
+          "dispatcher": "workspace",
+          "args": "-1",
+          "editable": false
+        },
+        {
+          "id": "workspace-overview",
+          "title": "Workspace overview",
+          "keys": "MOD+SHIFT+grave",
+          "dispatcher": "hyprexpo:expo",
+          "args": "toggle",
+          "require": "HAS_HYPREXPO"
+        }
+      ]
+    },
+    {
+      "id": "capture",
+      "title": "Screenshots and Clipboard",
+      "binds": [
+        {
+          "id": "screenshot-full",
+          "title": "Copy full screen to clipboard",
+          "keys": "Print",
+          "dispatcher": "exec",
+          "args": "grim - | wl-copy",
+          "flags": "l"
+        },
+        {
+          "id": "screenshot-full-save",
+          "title": "Save full screen + copy to clipboard",
+          "keys": "CTRL+Print",
+          "dispatcher": "exec",
+          "args": "mkdir -p \"{{SCREENSHOT_DIR_SH}}\" && grim \"{{SCREENSHOT_DIR_SH}}/Screenshot_$(date +%Y-%m-%d_%H.%M.%S).png\" && grim - | wl-copy",
+          "flags": "l"
+        },
+        {
+          "id": "screenshot-region",
+          "title": "Screenshot of a selected region",
+          "keys": "MOD+SHIFT+S",
+          "dispatcher": "exec",
+          "args": "{{SCREENSHOT_CMD}}",
+          "require": "SCREENSHOT_CMD"
+        },
+        {
+          "id": "clipboard-history",
+          "title": "Clipboard history",
+          "keys": "MOD+V",
+          "dispatcher": "exec",
+          "args": "cliphist list | {{CMD_DMENU}} | cliphist decode | wl-copy",
+          "require": "HAS_CLIPBOARD"
+        },
+        {
+          "id": "color-picker",
+          "title": "Pick a color from the screen",
+          "keys": "MOD+SHIFT+C",
+          "dispatcher": "exec",
+          "args": "hyprpicker -a",
+          "require": "HAS_HYPRLAND_EXTRAS"
+        },
+        {
+          "id": "replay-toggle",
+          "title": "Toggle instant replay",
+          "keys": "MOD+ALT+R",
+          "dispatcher": "exec",
+          "args": "~/.config/hypr/scripts/record.sh replay-toggle",
+          "require": "HAS_INSTANT_REPLAY"
+        },
+        {
+          "id": "replay-save",
+          "title": "Save the last moments",
+          "keys": "MOD+ALT+G",
+          "dispatcher": "exec",
+          "args": "~/.config/hypr/scripts/record.sh replay-save",
+          "require": "HAS_INSTANT_REPLAY"
+        },
+        {
+          "id": "record-toggle",
+          "title": "Start/stop screen recording",
+          "keys": "MOD+SHIFT+R",
+          "dispatcher": "exec",
+          "args": "~/.config/hypr/scripts/record.sh record-toggle",
+          "require": "HAS_INSTANT_REPLAY"
+        }
+      ]
+    },
+    {
+      "id": "media",
+      "title": "Media and Hardware",
+      "binds": [
+        {
+          "id": "volume-up",
+          "title": "Volume up",
+          "keys": "XF86AudioRaiseVolume",
+          "dispatcher": "exec",
+          "args": "{{CMD_VOLUME_UP}}",
+          "flags": "el",
+          "require": "HAS_AUDIO_TOOLS || HAS_SWAYOSD"
+        },
+        {
+          "id": "volume-down",
+          "title": "Volume down",
+          "keys": "XF86AudioLowerVolume",
+          "dispatcher": "exec",
+          "args": "{{CMD_VOLUME_DOWN}}",
+          "flags": "el",
+          "require": "HAS_AUDIO_TOOLS || HAS_SWAYOSD"
+        },
+        {
+          "id": "volume-mute",
+          "title": "Mute",
+          "keys": "XF86AudioMute",
+          "dispatcher": "exec",
+          "args": "{{CMD_VOLUME_MUTE}}",
+          "flags": "l",
+          "require": "HAS_AUDIO_TOOLS || HAS_SWAYOSD"
+        },
+        {
+          "id": "mic-mute",
+          "title": "Mute microphone",
+          "keys": "XF86AudioMicMute",
+          "dispatcher": "exec",
+          "args": "{{CMD_MIC_MUTE}}",
+          "flags": "l",
+          "require": "HAS_AUDIO_TOOLS || HAS_SWAYOSD"
+        },
+        {
+          "id": "media-play",
+          "title": "Play / pause",
+          "keys": "XF86AudioPlay",
+          "dispatcher": "exec",
+          "args": "playerctl play-pause",
+          "flags": "l",
+          "require": "HAS_AUDIO_TOOLS"
+        },
+        {
+          "id": "media-pause",
+          "title": "Play/pause (Pause key)",
+          "keys": "XF86AudioPause",
+          "dispatcher": "exec",
+          "args": "playerctl play-pause",
+          "flags": "l",
+          "require": "HAS_AUDIO_TOOLS"
+        },
+        {
+          "id": "media-next",
+          "title": "Next track",
+          "keys": "XF86AudioNext",
+          "dispatcher": "exec",
+          "args": "playerctl next",
+          "flags": "l",
+          "require": "HAS_AUDIO_TOOLS"
+        },
+        {
+          "id": "media-prev",
+          "title": "Previous track",
+          "keys": "XF86AudioPrev",
+          "dispatcher": "exec",
+          "args": "playerctl previous",
+          "flags": "l",
+          "require": "HAS_AUDIO_TOOLS"
+        },
+        {
+          "id": "media-next-key",
+          "title": "Next track",
+          "keys": "MOD+SHIFT+N",
+          "dispatcher": "exec",
+          "args": "playerctl next",
+          "flags": "l",
+          "require": "HAS_AUDIO_TOOLS"
+        },
+        {
+          "id": "media-prev-key",
+          "title": "Previous track",
+          "keys": "MOD+SHIFT+B",
+          "dispatcher": "exec",
+          "args": "playerctl previous",
+          "flags": "l",
+          "require": "HAS_AUDIO_TOOLS"
+        },
+        {
+          "id": "media-play-key",
+          "title": "Play/pause",
+          "keys": "MOD+SHIFT+P",
+          "dispatcher": "exec",
+          "args": "playerctl play-pause",
+          "flags": "l",
+          "require": "HAS_AUDIO_TOOLS"
+        },
+        {
+          "id": "volume-mute-key",
+          "title": "Toggle mute",
+          "keys": "MOD+SHIFT+M",
+          "dispatcher": "exec",
+          "args": "{{CMD_VOLUME_MUTE}}",
+          "flags": "l",
+          "require": "HAS_AUDIO_TOOLS || HAS_SWAYOSD"
+        },
+        {
+          "id": "mic-mute-key",
+          "title": "Toggle microphone mute",
+          "keys": "MOD+ALT+M",
+          "dispatcher": "exec",
+          "args": "{{CMD_MIC_MUTE}}",
+          "flags": "l",
+          "require": "HAS_AUDIO_TOOLS || HAS_SWAYOSD"
+        },
+        {
+          "id": "brightness-up",
+          "title": "Brightness up",
+          "keys": "XF86MonBrightnessUp",
+          "dispatcher": "exec",
+          "args": "{{CMD_BRIGHTNESS_UP}}",
+          "flags": "el",
+          "require": "HAS_BRIGHTNESS || HAS_SWAYOSD"
+        },
+        {
+          "id": "brightness-down",
+          "title": "Brightness down",
+          "keys": "XF86MonBrightnessDown",
+          "dispatcher": "exec",
+          "args": "{{CMD_BRIGHTNESS_DOWN}}",
+          "flags": "el",
+          "require": "HAS_BRIGHTNESS || HAS_SWAYOSD"
+        },
+        {
+          "id": "night-mode",
+          "title": "Toggle night light",
+          "keys": "MOD+ALT+N",
+          "dispatcher": "exec",
+          "args": "pgrep hyprsunset && pkill hyprsunset || hyprsunset -t {{NIGHT_TEMP}}",
+          "require": "HAS_HYPRSUNSET"
+        },
+        {
+          "id": "screen-shader",
+          "title": "Screen filter menu",
+          "keys": "MOD+SHIFT+G",
+          "dispatcher": "exec",
+          "args": "~/.config/hypr/scripts/shader.sh",
+          "require": "HAS_HYPRLAND_EXTRAS"
+        },
+        {
+          "id": "zoom-out",
+          "title": "Zoom out",
+          "keys": "MOD+minus",
+          "dispatcher": "exec",
+          "args": "hyprctl -q keyword cursor:zoom_factor $(hyprctl getoption cursor:zoom_factor | awk '/float/ {z=$2-0.3; print (z<1?1:z)}')",
+          "flags": "e"
+        },
+        {
+          "id": "zoom-in",
+          "title": "Zoom in",
+          "keys": "MOD+equal",
+          "dispatcher": "exec",
+          "args": "hyprctl -q keyword cursor:zoom_factor $(hyprctl getoption cursor:zoom_factor | awk '/float/ {print $2+0.3}')",
+          "flags": "e"
+        }
+      ]
+    }
+  ]
+}

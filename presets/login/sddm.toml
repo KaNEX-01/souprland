@@ -1,0 +1,249 @@
+# SDDM login screen themes — the community's most-used ones.
+#
+# The settings app's "Login Screen" page shows this list: themes that are not
+# installed are installed from the AUR (in a terminal, paru/yay); installed ones can be
+# selected and edited. Any theme installed under /usr/share/sddm/themes that is not
+# listed here also shows up on the page and is tuned with the same generic editor; this
+# file only adds the description, package name, the folder of preset looks, the
+# wallpaper key and the "paint with my palette" mapping.
+#
+# Edits are NOT written to the theme's own file: SDDM reads <ConfigFile>.user
+# on top of the theme's settings (sddm ThemeConfig::setTo).
+# The preset look + the user's changes are written to that file; package
+# updates don't overwrite it.
+#
+# Fields:
+#   dirs        folder name(s) under /usr/share/sddm/themes; may be a glob
+#   presets     folder of preset-look .conf files inside the theme folder
+#   background  wallpaper key(s) ("Section/key")
+#   background_dir     folder inside the theme where the wallpaper is copied
+#   background_prefix  prefix for the value written to the key (e.g. "Backgrounds/")
+#   palette     "Section/key" = palette role (BG, BG_DARK, SURFACE, FG,
+#               SUBTEXT, ACCENT, ACCENT2, RED, GREEN, YELLOW, CYAN)
+#   set_with_palette  fixed values also written when painting with the palette
+
+[[theme]]
+id = "astronaut"
+title = "Astronaut"
+desc = "The most popular SDDM theme: 10 preset looks (astronaut, black hole, cyberpunk, Japanese aesthetic, pixel sakura…), blurred form, virtual keyboard."
+repo = "https://github.com/Keyitdev/sddm-astronaut-theme"
+stars = 3282
+license = "GPL-3.0"
+aur = ["sddm-astronaut-theme"]
+dirs = ["sddm-astronaut-theme"]
+presets = "Themes"
+background = ["General/Background"]
+background_dir = "Backgrounds"
+background_prefix = "Backgrounds/"
+[theme.palette]
+"General/HeaderTextColor" = "FG"
+"General/DateTextColor" = "FG"
+"General/TimeTextColor" = "FG"
+"General/FormBackgroundColor" = "BG"
+"General/BackgroundColor" = "BG"
+"General/DimBackgroundColor" = "BG"
+"General/LoginFieldBackgroundColor" = "SURFACE"
+"General/PasswordFieldBackgroundColor" = "SURFACE"
+"General/LoginFieldTextColor" = "FG"
+"General/PasswordFieldTextColor" = "FG"
+"General/UserIconColor" = "FG"
+"General/PasswordIconColor" = "FG"
+"General/PlaceholderTextColor" = "SUBTEXT"
+"General/WarningColor" = "RED"
+"General/LoginButtonTextColor" = "BG"
+"General/LoginButtonBackgroundColor" = "ACCENT"
+"General/SystemButtonsIconsColor" = "FG"
+"General/SessionButtonTextColor" = "FG"
+"General/VirtualKeyboardButtonTextColor" = "FG"
+"General/DropdownTextColor" = "FG"
+"General/DropdownSelectedBackgroundColor" = "ACCENT"
+"General/DropdownBackgroundColor" = "BG"
+"General/HighlightTextColor" = "BG"
+"General/HighlightBackgroundColor" = "ACCENT"
+"General/HighlightBorderColor" = "ACCENT"
+"General/HoverUserIconColor" = "ACCENT"
+"General/HoverPasswordIconColor" = "ACCENT"
+"General/HoverSystemButtonsIconsColor" = "ACCENT"
+"General/HoverSessionButtonTextColor" = "ACCENT"
+"General/HoverVirtualKeyboardButtonTextColor" = "ACCENT"
+
+[[theme]]
+id = "silent"
+title = "SilentSDDM"
+desc = "Modern and highly configurable: separate lock screen + login screen, animated background support, 16 preset looks (Catppuccin, Nord, Gruvbox, Everforest, Rei, Ken…)."
+repo = "https://github.com/uiriansan/SilentSDDM"
+stars = 1667
+license = "GPL-3.0"
+aur = ["sddm-silent-theme"]
+dirs = ["silent"]
+presets = "configs"
+background = ["LockScreen/background", "LoginScreen/background"]
+background_dir = "backgrounds"
+background_prefix = ""
+[theme.set_with_palette]
+"LockScreen/use-background-color" = "false"
+"LoginScreen/use-background-color" = "false"
+[theme.palette]
+"LockScreen/background-color" = "BG"
+"LoginScreen/background-color" = "BG"
+"LockScreen.Clock/color" = "FG"
+"LockScreen.Date/color" = "FG"
+"LockScreen.Message/color" = "FG"
+"LoginScreen.LoginArea.Avatar/active-border-color" = "ACCENT"
+"LoginScreen.LoginArea.Avatar/inactive-border-color" = "SUBTEXT"
+"LoginScreen.LoginArea.Username/color" = "FG"
+"LoginScreen.LoginArea.PasswordInput/content-color" = "FG"
+"LoginScreen.LoginArea.PasswordInput/background-color" = "SURFACE"
+"LoginScreen.LoginArea.PasswordInput/border-color" = "ACCENT"
+"LoginScreen.LoginArea.LoginButton/background-color" = "ACCENT"
+"LoginScreen.LoginArea.LoginButton/active-background-color" = "ACCENT"
+"LoginScreen.LoginArea.LoginButton/content-color" = "FG"
+"LoginScreen.LoginArea.LoginButton/active-content-color" = "BG"
+"LoginScreen.LoginArea.LoginButton/border-color" = "ACCENT"
+"LoginScreen.LoginArea.Spinner/color" = "ACCENT"
+"LoginScreen.LoginArea.WarningMessage/normal-color" = "FG"
+"LoginScreen.LoginArea.WarningMessage/warning-color" = "YELLOW"
+"LoginScreen.LoginArea.WarningMessage/error-color" = "RED"
+"LoginScreen.MenuArea.Popups/background-color" = "BG"
+"LoginScreen.MenuArea.Popups/active-option-background-color" = "ACCENT"
+"LoginScreen.MenuArea.Popups/content-color" = "FG"
+"LoginScreen.MenuArea.Popups/active-content-color" = "BG"
+"LoginScreen.MenuArea.Popups/border-color" = "ACCENT"
+"LoginScreen.MenuArea.Session/background-color" = "SURFACE"
+"LoginScreen.MenuArea.Session/content-color" = "FG"
+"LoginScreen.MenuArea.Session/active-content-color" = "ACCENT"
+"LoginScreen.MenuArea.Layout/background-color" = "SURFACE"
+"LoginScreen.MenuArea.Layout/content-color" = "FG"
+"LoginScreen.MenuArea.Layout/active-content-color" = "ACCENT"
+"LoginScreen.MenuArea.Keyboard/background-color" = "SURFACE"
+"LoginScreen.MenuArea.Keyboard/content-color" = "FG"
+"LoginScreen.MenuArea.Keyboard/active-content-color" = "ACCENT"
+"LoginScreen.MenuArea.Power/background-color" = "SURFACE"
+"LoginScreen.MenuArea.Power/content-color" = "FG"
+"LoginScreen.MenuArea.Power/active-content-color" = "ACCENT"
+"LoginScreen.VirtualKeyboard/background-color" = "BG"
+"LoginScreen.VirtualKeyboard/key-content-color" = "FG"
+"LoginScreen.VirtualKeyboard/key-color" = "SURFACE"
+"LoginScreen.VirtualKeyboard/key-active-background-color" = "ACCENT"
+"LoginScreen.VirtualKeyboard/selection-background-color" = "ACCENT"
+"LoginScreen.VirtualKeyboard/selection-content-color" = "BG"
+"LoginScreen.VirtualKeyboard/primary-color" = "ACCENT"
+"LoginScreen.VirtualKeyboard/border-color" = "ACCENT"
+"Tooltips/content-color" = "FG"
+"Tooltips/background-color" = "SURFACE"
+
+[[theme]]
+id = "catppuccin"
+title = "Catppuccin"
+desc = "The official Catppuccin theme; each flavor (Latte, Frappé, Macchiato, Mocha) and accent color is its own folder. A plain, centered form."
+repo = "https://github.com/catppuccin/sddm"
+stars = 529
+license = "MIT"
+aur = ["catppuccin-sddm-theme-mocha"]
+dirs = ["catppuccin-*"]
+background = ["General/Background"]
+background_dir = "backgrounds"
+background_prefix = "backgrounds/"
+[theme.set_with_background]
+"General/CustomBackground" = "true"
+
+[[theme]]
+id = "where-is-my"
+title = "Where is my SDDM theme?"
+desc = "Ultra minimal: just a password field in the middle of the screen. Background color, text and cursor are configurable."
+repo = "https://github.com/stepanzubkov/where-is-my-sddm-theme"
+stars = 446
+license = "MIT"
+aur = ["where-is-my-sddm-theme-git"]
+dirs = ["where_is_my_sddm_theme"]
+background = ["General/background"]
+background_dir = ""
+background_prefix = ""
+[theme.palette]
+"General/backgroundFill" = "BG"
+"General/basicTextColor" = "FG"
+"General/passwordTextColor" = "FG"
+"General/passwordCursorColor" = "ACCENT"
+"General/passwordInputBorderColor" = "ACCENT"
+"General/wrongPasswordBorderColor" = "RED"
+
+[[theme]]
+id = "pixie"
+title = "Pixie"
+desc = "Material 3-inspired, with rounded cards; can pick its colors from the background by itself (autoColor)."
+repo = "https://github.com/xCaptaiN09/pixie-sddm"
+stars = 351
+license = "MIT"
+aur = ["pixie-sddm-git"]
+dirs = ["pixie"]
+background = ["General/background"]
+background_dir = "assets"
+background_prefix = "assets/"
+[theme.set_with_palette]
+"General/autoColor" = "false"
+[theme.palette]
+"General/accentColor" = "ACCENT"
+"General/backgroundColor" = "BG"
+"General/textColor" = "FG"
+
+[[theme]]
+id = "sugar-dark"
+title = "Sugar Dark"
+desc = "Classic: a dark form with time and date over a blurred background. Few but clear settings."
+repo = "https://github.com/MarianArlt/sddm-sugar-dark"
+stars = 310
+license = "GPL-3.0"
+aur = ["sddm-sugar-dark"]
+dirs = ["sugar-dark"]
+background = ["General/Background"]
+background_dir = ""
+background_prefix = ""
+[theme.palette]
+"General/MainColor" = "FG"
+"General/AccentColor" = "ACCENT"
+
+[[theme]]
+id = "corners"
+title = "Corners"
+desc = "Elements spread to the corners of the screen (clock, user, session, power). Every color is set separately."
+repo = "https://github.com/aczw/sddm-theme-corners"
+stars = 300
+license = "GPL-3.0"
+aur = ["sddm-theme-corners-git"]
+dirs = ["corners"]
+background = ["General/BgSource"]
+background_dir = "backgrounds"
+background_prefix = "backgrounds/"
+[theme.palette]
+"General/UserBorderColor" = "ACCENT"
+"General/UserColor" = "FG"
+"General/InputColor" = "BG"
+"General/InputTextColor" = "FG"
+"General/InputBorderColor" = "ACCENT"
+"General/LoginButtonTextColor" = "BG"
+"General/LoginButtonColor" = "ACCENT"
+"General/PopupColor" = "ACCENT"
+"General/PopupActiveColor" = "BG"
+"General/PopupActiveTextColor" = "FG"
+"General/SessionButtonColor" = "ACCENT"
+"General/SessionIconColor" = "BG"
+"General/PowerButtonColor" = "ACCENT"
+"General/PowerIconColor" = "BG"
+"General/DateColor" = "FG"
+"General/TimeColor" = "FG"
+
+[[theme]]
+id = "eucalyptus-drop"
+title = "Eucalyptus Drop"
+desc = "A Qt6 fork of Sugar Candy: partial/full blur, form placed left/center/right, shadows."
+repo = "https://gitlab.com/Matt.Jolly/sddm-eucalyptus-drop"
+license = "GPL-3.0"
+aur = ["sddm-eucalyptus-drop"]
+dirs = ["eucalyptus-drop"]
+background = ["General/Background"]
+background_dir = "Backgrounds"
+background_prefix = "Backgrounds/"
+[theme.palette]
+"General/MainColour" = "FG"
+"General/AccentColour" = "ACCENT"
+"General/BackgroundColour" = "BG"

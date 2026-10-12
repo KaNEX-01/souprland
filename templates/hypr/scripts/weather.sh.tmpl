@@ -1,0 +1,64 @@
+{{! require: MANAGE_HYPR_CONFIGS }}
+{{! mode: 755 }}
+#!/usr/bin/env bash
+# Weather — data source for Waybar's "custom/weather" module.
+#
+# Output is Waybar's JSON format: {"text": ..., "tooltip": ..., "class": ...}
+# Location and unit come from settings.conf (WEATHER_LOCATION / WEATHER_UNIT).
+#
+# The cache is a MUST: the Waybar module may rerun at short intervals, and
+# hitting the network every time is slow and needlessly loads wttr.in.
+# The result is kept for {{WEATHER_CACHE_MINUTES}} minutes; --refresh skips
+# the cache (this runs when the module is clicked).
+set -uo pipefail
+
+CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/hyprsetup/weather.json"
+MAX_AGE=$(( {{WEATHER_CACHE_MINUTES}} * 60 ))
+LOCATION="{{WEATHER_LOCATION_VALUE}}"     # empty = wttr.in guesses from the IP
+UNIT_FLAG="{{WEATHER_UNIT_FLAG}}"         # m = °C, u = °F
+UNIT_SYMBOL="{{WEATHER_UNIT_SYMBOL}}"
+
+if [[ "${1:-}" == "--refresh" ]]; then
+    rm -f "$CACHE"
+fi
+
+# If the cache is fresh, do not touch the network.
+if [[ -s "$CACHE" ]]; then
+    age=$(( $(date +%s) - $(stat -c %Y "$CACHE" 2>/dev/null || echo 0) ))
+    if (( age < MAX_AGE )); then
+        cat "$CACHE"
+        exit 0
+    fi
+fi
+
+if ! command -v curl >/dev/null 2>&1; then
+    printf '{"text": "", "tooltip": "curl is not installed"}\n'
+    exit 0
+fi
+
+# wttr.in's one-line format: icon + temperature. No %S/%s; "format=%c+%t"
+# gives icon and temperature, "?<flag>" picks the unit. The timeout is kept
+# short: the bar must not freeze without network.
+raw=$(curl -fsS --max-time 6 \
+      "https://wttr.in/${LOCATION}?format=%c+%t&${UNIT_FLAG}" 2>/dev/null)
+raw="${raw//$'\n'/}"
+# Drop the leading plus sign in temperatures like "+21" and extra spaces.
+raw="$(printf '%s' "$raw" | sed -E 's/\+([0-9])/\1/g; s/  +/ /g; s/^ //; s/ $//')"
+
+if [[ -z "$raw" ]]; then
+    # No network: show the OLD cache if there is one — the bar suddenly going
+    # blank is worse than a stale temperature.
+    if [[ -s "$CACHE" ]]; then
+        cat "$CACHE"
+    else
+        printf '{"text": "", "tooltip": "Could not fetch the weather"}\n'
+    fi
+    exit 0
+fi
+
+where="${LOCATION:-your location}"
+out=$(printf '{"text": "%s", "tooltip": "%s — %s (wttr.in, %s)", "class": "weather"}\n' \
+      "$raw" "$where" "$raw" "$UNIT_SYMBOL")
+mkdir -p "$(dirname "$CACHE")"
+printf '%s\n' "$out" >"$CACHE"
+printf '%s\n' "$out"

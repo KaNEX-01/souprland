@@ -1,0 +1,144 @@
+# Brainitech/Brain_Shell — r/hyprland "Brain Shell v0.1.0 Released!"
+# https://www.reddit.com/r/hyprland/comments/1u1b2xq/
+# Posted 2026-06-09 (u/Brainiac_Playz); the installed commit is that day's last
+# (9c56fca, dev → main merge). MIT. Quickshell desktop shell: dashboard,
+# system panel, Kanban tasks, app launcher, network/bluetooth/VPN,
+# notifications, audio, screen recording, clipboard history; colors from the wallpaper
+# (matugen).
+#
+# The author only publishes the shell; the Hyprland config stays the
+# user's. User-level jobs of install-arch.sh: the repo goes to
+# ~/.local/src/Brain_Shell, startup lines into hyprland.conf (here
+# ~/.config/hypr/rice.conf / rice.lua — this project's config sources
+# it), ~/.config/Brain_Shell/src/user_data, ~/.cache/brain-shell/
+# colors.json, wallpapers into ~/Pictures/Wallpapers, keybinding conflict
+# check. NOT TAKEN (sudo): pacman -Syu, NetworkManager/bluetooth/upower
+# services, envycontrol / auto-cpufreq / nbfc-linux (hardware tools; the
+# shell's related tabs stay empty without them).
+default_variant = "brain"
+provides = ["bar", "widget", "launcher", "notify", "wallpaper"]
+
+post_install = [
+  "mkdir -p ~/.config/Brain_Shell/src/user_data ~/.cache/brain-shell ~/Pictures/Wallpapers ~/.config/matugen/templates && touch ~/.cache/brain-shell/colors.json",
+  "chmod +x ~/.config/Brain_Shell/hyprsetup-keybind-check.py",
+  "hyprctl reload >/dev/null 2>&1 || true",
+]
+
+notes = [
+  "If the shell's keybindings (SUPER+D dashboard, SUPER+Q launcher, SUPER+V clipboard history…) clash with yours, they are left unbound in the shell — yours win. To reassign: dashboard → Config → Keybinds.",
+  "Colors are generated from the wallpaper with matugen; matugen is required (author's note).",
+  "The hardware tabs (GPU switching, CPU frequency, fan) need envycontrol / auto-cpufreq / nbfc-linux; they aren't installed because they enable system services.",
+  "The author's hypridle setup isn't taken: idle and lock come from this project's Session page.",
+]
+
+[source]
+repo = "https://github.com/Brainitech/Brain_Shell"
+commit = "9c56fca3dc4815df844a50da7bbb1c1a40309018"
+post = "https://www.reddit.com/r/hyprland/comments/1u1b2xq/brain_shell_v010_released/"
+license = "MIT"
+
+[[install]]
+from = "."
+to = "~/.local/src/Brain_Shell"
+
+[[file]]
+to = "~/.config/hypr/rice.conf"
+content = "# Brain Shell (hyprsetup profile) — the startup lines the author's\n# dots-extra/install-arch.sh adds to hyprland.conf. The hypridle line is NOT\n# taken: idle/lock belong to this project (Session page) — two hypridles would run.\nexec-once = awww-daemon\n# Keybinding check first (ones clashing with yours are unbound in the shell), then the shell.\nexec-once = python3 ~/.config/Brain_Shell/hyprsetup-keybind-check.py; quickshell -c ~/.local/src/Brain_Shell\nexec-once = systemctl --user start hyprpolkitagent\nexec-once = wl-paste --type text --watch cliphist store\nexec-once = wl-paste --type image --watch cliphist store\n\n# The shell's own keybindings: Dashboard → Config → Keybinds (the shell generates this file).\n# Brain_ShellKeybinds\nsource = ~/.config/Brain_Shell/Brain_ShellKeybinds.conf\n"
+[[file]]
+to = "~/.config/hypr/rice.lua"
+content = "-- Brain Shell (hyprsetup profile) — the startup lines the author's install-arch.sh\n-- adds to hyprland.lua (except hypridle: that belongs to this project).\nhl.on(\"hyprland.start\", function()\n    hl.exec_cmd(\"awww-daemon\")\n    hl.exec_cmd(\"python3 ~/.config/Brain_Shell/hyprsetup-keybind-check.py; quickshell -c ~/.local/src/Brain_Shell\")\n    hl.exec_cmd(\"systemctl --user start hyprpolkitagent\")\n    hl.exec_cmd(\"wl-paste --type text --watch cliphist store\")\n    hl.exec_cmd(\"wl-paste --type image --watch cliphist store\")\nend)\n\n-- Brain_ShellKeybinds\npcall(dofile, os.getenv(\"HOME\") .. \"/.config/Brain_Shell/Brain_ShellKeybinds.lua\")\n"
+[[file]]
+to = "~/.config/Brain_Shell/hyprsetup-keybind-check.py"
+content = "#!/usr/bin/env python3\n\"\"\"hyprsetup: unbinds the Brain Shell keybindings that clash with yours.\n\nThe same check the author's installer (dots-extra/install-arch.sh) does; that\none ran only once, at install time. Here it runs at every login, before the shell\nstarts: if you change your keybindings, the shell's still step aside.\nThe shell doesn't bind a keybinding left empty; it can be reassigned from\nDashboard → Config → Keybinds.\n\"\"\"\nimport json, os, subprocess\n\nDEFAULTS = {\n    \"dashboard-home\": (\"SUPER\", \"D\"), \"dashboard-stats\": (\"CTRL + SHIFT\", \"ESCAPE\"),\n    \"dashboard-kanban\": (\"SUPER\", \"Z\"), \"dashboard-launcher\": (\"SUPER\", \"Q\"),\n    \"dashboard-config\": (\"SUPER\", \"C\"), \"PowerMenu-toggle\": (\"SUPER\", \"ESCAPE\"),\n    \"notification-toggle\": (\"SUPER\", \"N\"), \"wallpaper-toggle\": (\"SUPER\", \"W\"),\n    \"clipboard-toggle\": (\"SUPER\", \"V\"), \"wifi-toggle\": (\"SUPER + ALT\", \"W\"),\n    \"bluetooth-toggle\": (\"SUPER + ALT\", \"B\"), \"vpn-toggle\": (\"SUPER + ALT\", \"G\"),\n    \"hotspot-toggle\": (\"SUPER + ALT\", \"H\"), \"audioOut-toggle\": (\"SUPER\", \"A\"),\n    \"audioIn-toggle\": (\"SUPER + ALT\", \"I\"), \"audioMix-toggle\": (\"SUPER\", \"M\"),\n    \"focus-toggle\": (\"SUPER\", \"B\"), \"screenrec-on\": (\"ALT\", \"F9\"),\n}\nBITS = {\"SHIFT\": 1, \"CTRL\": 4, \"ALT\": 8, \"SUPER\": 64}\npath = os.path.expanduser(\"~/.config/Brain_Shell/src/user_data/keybinds.json\")\ntry:\n    saved = json.load(open(path))\nexcept (OSError, ValueError):\n    saved = {}\ntry:\n    binds = json.loads(subprocess.check_output([\"hyprctl\", \"binds\", \"-j\"],\n                                               stderr=subprocess.DEVNULL))\nexcept (OSError, subprocess.CalledProcessError, ValueError):\n    raise SystemExit(0)\ntheirs = {(b.get(\"modmask\"), str(b.get(\"key\", \"\")).lower()) for b in binds\n          if not b.get(\"submap\") and not b.get(\"mouse\")\n          and \"Brain_Shell\" not in str(b.get(\"arg\", \"\"))}\nchanged = False\nfor action, (mods, key) in DEFAULTS.items():\n    if action in saved:\n        mods, key = saved[action].get(\"mods\", \"\"), saved[action].get(\"key\", \"\")\n    if not key:\n        continue\n    mask = sum(BITS.get(p.strip(), 0) for p in mods.upper().split(\"+\"))\n    if (mask, key.lower()) in theirs:\n        saved[action] = {\"mods\": \"\", \"key\": \"\"}\n        changed = True\nif changed:\n    os.makedirs(os.path.dirname(path), exist_ok=True)\n    json.dump(saved, open(path, \"w\"), indent=2)\n"
+
+# The shell writes its keybinding file on first start; until then the source line
+# reads an empty file (otherwise Hyprland reports "file not found"). The shell overwrites it.
+[[file]]
+to = "~/.config/Brain_Shell/Brain_ShellKeybinds.conf"
+content = "# Brain Shell keybindings — generated by the shell on first start\n"
+[[file]]
+to = "~/.config/Brain_Shell/Brain_ShellKeybinds.lua"
+content = "-- Brain Shell keybindings — generated by the shell on first start\n"
+
+[[fix]]
+file = "~/.local/src/Brain_Shell/src/services/config_tab/KeybindService.qml"
+replace = ["/.config/hypr/hyprland.lua", "/.config/hypr/rice.lua",
+           "/.config/hypr/hyprland.conf", "/.config/hypr/rice.conf"]
+why = "on every start the shell appended its own keybinding file to the END of hyprland.conf/.lua: it modified the file this project generates and bound its keybindings after yours. The marker is already in rice.conf/rice.lua, so nothing is appended."
+
+[packages]
+repo = ["qt6-base", "qt6-declarative", "qt6-multimedia", "qt6-5compat", "qt6ct",
+        "pipewire", "pipewire-pulse", "wireplumber", "playerctl", "mpv-mpris", "networkmanager",
+        "bluez", "bluez-utils", "brightnessctl", "upower", "libnotify", "polkit", "python",
+        "wl-clipboard", "slurp", "xdg-user-dirs", "wf-recorder", "cava", "imagemagick", "wtype",
+        "lm_sensors", "hyprsunset", "hyprlock", "hyprpolkitagent", "hypridle",
+        "xdg-desktop-portal-hyprland", "ttf-jetbrains-mono-nerd", "ttf-nerd-fonts-symbols-common",
+        "quickshell", "awww", "matugen", "cliphist", "mpd-mpris", "hyprshutdown"]
+aur = ["grimblast-git"]
+
+
+[variants.brain]
+title = "BRAIN SHELL — cream (as posted)"
+wallpaper = "~/.local/src/Brain_Shell/src/assets/wallpapers/brain-shell-default-0.png"
+wallpaper_dest = "~/Pictures/Wallpapers/brain-shell-default-0.png"
+apply = [
+  "mkdir -p ~/.config/Brain_Shell/src/user_data ~/.cache/brain-shell && printf '{\"currentWall\":\"%s\",\"wallpaperDir\":\"%s/Pictures/Wallpapers\",\"scheme\":\"content\"}' {wallpaper} \"$HOME\" > ~/.config/Brain_Shell/src/user_data/wallpaper.json",
+  "awww img {wallpaper} && ln -sf {wallpaper} ~/.curr_wall && ln -sf {wallpaper} ~/.curr_wall_static.jpg",
+  "matugen image {wallpaper} -c ~/.local/src/Brain_Shell/src/config/matugen.toml --source-color-index 0 --type scheme-content",
+]
+credit = "src/assets/wallpapers/brain-shell-default-0.png from the author's repo"
+
+[variants.portre]
+title = "Blue-haired portrait"
+wallpaper = "~/.local/src/Brain_Shell/src/assets/wallpapers/brain-shell-default-1.png"
+wallpaper_dest = "~/Pictures/Wallpapers/brain-shell-default-1.png"
+apply = [
+  "mkdir -p ~/.config/Brain_Shell/src/user_data ~/.cache/brain-shell && printf '{\"currentWall\":\"%s\",\"wallpaperDir\":\"%s/Pictures/Wallpapers\",\"scheme\":\"content\"}' {wallpaper} \"$HOME\" > ~/.config/Brain_Shell/src/user_data/wallpaper.json",
+  "awww img {wallpaper} && ln -sf {wallpaper} ~/.curr_wall && ln -sf {wallpaper} ~/.curr_wall_static.jpg",
+  "matugen image {wallpaper} -c ~/.local/src/Brain_Shell/src/config/matugen.toml --source-color-index 0 --type scheme-content",
+]
+credit = "src/assets/wallpapers/brain-shell-default-1.png from the author's repo"
+
+[variants.orman]
+title = "Green mountain forest"
+wallpaper = "~/.local/src/Brain_Shell/src/assets/wallpapers/brain-shell-default-2.jpg"
+wallpaper_dest = "~/Pictures/Wallpapers/brain-shell-default-2.jpg"
+apply = [
+  "mkdir -p ~/.config/Brain_Shell/src/user_data ~/.cache/brain-shell && printf '{\"currentWall\":\"%s\",\"wallpaperDir\":\"%s/Pictures/Wallpapers\",\"scheme\":\"content\"}' {wallpaper} \"$HOME\" > ~/.config/Brain_Shell/src/user_data/wallpaper.json",
+  "awww img {wallpaper} && ln -sf {wallpaper} ~/.curr_wall && ln -sf {wallpaper} ~/.curr_wall_static.jpg",
+  "matugen image {wallpaper} -c ~/.local/src/Brain_Shell/src/config/matugen.toml --source-color-index 0 --type scheme-content",
+]
+credit = "src/assets/wallpapers/brain-shell-default-2.jpg from the author's repo"
+
+[variants.cicekler]
+title = "Anime among blue flowers"
+wallpaper = "~/.local/src/Brain_Shell/src/assets/wallpapers/brain-shell-default-3.jpg"
+wallpaper_dest = "~/Pictures/Wallpapers/brain-shell-default-3.jpg"
+apply = [
+  "mkdir -p ~/.config/Brain_Shell/src/user_data ~/.cache/brain-shell && printf '{\"currentWall\":\"%s\",\"wallpaperDir\":\"%s/Pictures/Wallpapers\",\"scheme\":\"content\"}' {wallpaper} \"$HOME\" > ~/.config/Brain_Shell/src/user_data/wallpaper.json",
+  "awww img {wallpaper} && ln -sf {wallpaper} ~/.curr_wall && ln -sf {wallpaper} ~/.curr_wall_static.jpg",
+  "matugen image {wallpaper} -c ~/.local/src/Brain_Shell/src/config/matugen.toml --source-color-index 0 --type scheme-content",
+]
+credit = "src/assets/wallpapers/brain-shell-default-3.jpg from the author's repo"
+
+[variants.porsche]
+title = "Red Porsche, parking lot"
+wallpaper = "~/.local/src/Brain_Shell/src/assets/wallpapers/brain-shell-default-4.jpg"
+wallpaper_dest = "~/Pictures/Wallpapers/brain-shell-default-4.jpg"
+apply = [
+  "mkdir -p ~/.config/Brain_Shell/src/user_data ~/.cache/brain-shell && printf '{\"currentWall\":\"%s\",\"wallpaperDir\":\"%s/Pictures/Wallpapers\",\"scheme\":\"content\"}' {wallpaper} \"$HOME\" > ~/.config/Brain_Shell/src/user_data/wallpaper.json",
+  "awww img {wallpaper} && ln -sf {wallpaper} ~/.curr_wall && ln -sf {wallpaper} ~/.curr_wall_static.jpg",
+  "matugen image {wallpaper} -c ~/.local/src/Brain_Shell/src/config/matugen.toml --source-color-index 0 --type scheme-content",
+]
+credit = "src/assets/wallpapers/brain-shell-default-4.jpg from the author's repo"
+
+[variants.siborg]
+title = "Cyborg portrait (dark)"
+wallpaper = "~/.local/src/Brain_Shell/src/assets/wallpapers/brain-shell-default-5.jpg"
+wallpaper_dest = "~/Pictures/Wallpapers/brain-shell-default-5.jpg"
+apply = [
+  "mkdir -p ~/.config/Brain_Shell/src/user_data ~/.cache/brain-shell && printf '{\"currentWall\":\"%s\",\"wallpaperDir\":\"%s/Pictures/Wallpapers\",\"scheme\":\"content\"}' {wallpaper} \"$HOME\" > ~/.config/Brain_Shell/src/user_data/wallpaper.json",
+  "awww img {wallpaper} && ln -sf {wallpaper} ~/.curr_wall && ln -sf {wallpaper} ~/.curr_wall_static.jpg",
+  "matugen image {wallpaper} -c ~/.local/src/Brain_Shell/src/config/matugen.toml --source-color-index 0 --type scheme-content",
+]
+credit = "src/assets/wallpapers/brain-shell-default-5.jpg from the author's repo"

@@ -1,0 +1,317 @@
+# end-4/dots-hyprland — illogical-impulse (Quickshell)
+# https://github.com/end-4/dots-hyprland
+# The most-starred Hyprland setup on GitHub (2026-09-26: 16.2k). Not a
+# Reddit post but the author's continuously updated repo: the installed
+# commit is 2f0c8bf (2026-09-14), the current state of the Hyprland 0.55+ Lua
+# config. GPL-3.0.
+#
+# What the author's "./setup install" script (sdata/subcmd-install/3.files-legacy.sh)
+# copies, as is: everything under dots/.config into ~/.config, hypr/ as a whole,
+# (hyprland/ + custom/ + hyprland.lua, hyprlock, hypridle), Quickshell
+# the shell into ~/.config/quickshell. The shell's submodule (shape drawing,
+# rounded-polygon-qmljs) and the UI font Google Sans Flex come from the author's separate
+# repos, at the same pinned commits.
+#
+# The user-level steps also match the author's: the Python virtualenv
+# (~/.local/state/quickshell/.venv, uv + Python 3.12, sdata/uv/
+# requirements.txt) is installed in the build step; the GNOME font/dark theme
+# settings are applied after install. NOT TAKEN (needs sudo): adding to the i2c/input/video
+# groups, the i2c-dev module, the ydotool and bluetooth services,
+# MicroTeX (LaTeX rendering in the AI chat; the author's own package).
+default_variant = "varsayilan"
+provides = ["bar", "widget", "launcher", "notify", "wallpaper", "theming"]
+
+build = [
+  # The author's install-python-packages (sdata/lib/package-installers.sh):
+  # color generation, thumbnails and region-finding scripts run in this env.
+  "uv venv --allow-existing --prompt .venv ~/.local/state/quickshell/.venv -p 3.12",
+  "VIRTUAL_ENV=$HOME/.local/state/quickshell/.venv uv pip install -r ~/.local/state/quickshell/requirements.txt",
+]
+
+post_install = [
+  "fc-cache -f >/dev/null 2>&1 || true",
+  "gsettings set org.gnome.desktop.interface font-name 'Google Sans Flex Medium 11 @opsz=11,wght=500' 2>/dev/null || true",
+  "gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true",
+  "kwriteconfig6 --file kdeglobals --group KDE --key widgetStyle Darkly 2>/dev/null || true",
+  "chmod +x ~/.config/hypr/hyprland/scripts/*.sh ~/.config/hypr/custom/scripts/*.sh 2>/dev/null || true",
+  "hyprctl reload >/dev/null 2>&1 || true",
+]
+
+notes = [
+  "The Hyprland config is Lua (hyprland.lua, Hyprland 0.55+). The shell (bar, side bars, overview, notifications, lock screen) starts on first login; the author's recommended place for your own additions is ~/.config/hypr/custom/.",
+  "Colors are generated from the wallpaper (Material You). To change the wallpaper: Ctrl+SUPER+T or settings (SUPER+I) → Wallpaper & colors; light/dark and scheme type (Tonal Spot, Expressive, Fruit Salad…) are chosen there.",
+  "The Python virtualenv is set up with uv during install (~/.local/state/quickshell/.venv; uv downloads Python 3.12 if needed; ~300 MB including opencv).",
+  "The welcome window is skipped (the look applies the wallpaper); open it with SUPER+SHIFT+ALT+/.",
+  "Steps needing sudo are not done: ddcutil for brightness (i2c group) and the ydotool service for the virtual keyboard. If needed: sudo usermod -aG video,i2c,input $USER and systemctl --user enable --now ydotool.",
+  "The AI side bar (Gemini, Ollama…) needs an API key; the key is stored in gnome-keyring.",
+]
+
+[source]
+repo = "https://github.com/end-4/dots-hyprland"
+commit = "2f0c8bf42b803f4d597572f2a014d4e78d7d9f26"
+license = "GPL-3.0"
+
+# --- Hyprland (the author's script: syncs hypr/hyprland, installs custom if missing,
+# hyprland.lua + hyprlock + hypridle; the old hyprland.conf is moved aside) ---
+[[install]]
+from = "dots/.config/hypr"
+to = "~/.config/hypr"
+
+# --- Quickshell shell + submodule ---
+[[install]]
+from = "dots/.config/quickshell"
+to = "~/.config/quickshell"
+[[install]]
+from = "."
+to = "~/.config/quickshell/ii/modules/common/widgets/shapes"
+repo = "https://github.com/end-4/rounded-polygon-qmljs"
+license = "Apache-2.0"
+commit = "e31ec4cb4ebf6a46b267f5c42eabf6874916fa16"
+
+# --- Other configs (the author's "MISC" loop) ---
+[[install]]
+from = "dots/.config/foot"
+to = "~/.config/foot"
+[[install]]
+from = "dots/.config/fuzzel"
+to = "~/.config/fuzzel"
+[[install]]
+from = "dots/.config/kitty"
+to = "~/.config/kitty"
+[[install]]
+from = "dots/.config/matugen"
+to = "~/.config/matugen"
+[[install]]
+from = "dots/.config/wlogout"
+to = "~/.config/wlogout"
+[[install]]
+from = "dots/.config/Kvantum"
+to = "~/.config/Kvantum"
+[[install]]
+from = "dots/.config/kde-material-you-colors"
+to = "~/.config/kde-material-you-colors"
+[[install]]
+from = "dots/.config/kdeglobals"
+to = "~/.config/kdeglobals"
+[[install]]
+from = "dots/.config/darklyrc"
+to = "~/.config/darklyrc"
+[[install]]
+from = "dots/.config/fontconfig"
+to = "~/.config/fontconfig"
+[[install]]
+from = "dots/.config/xdg-desktop-portal"
+to = "~/.config/xdg-desktop-portal"
+[[install]]
+from = "dots/.local/share/icons/illogical-impulse.svg"
+to = "~/.local/share/icons/illogical-impulse.svg"
+
+# App-specific settings (browser/editor flags, Dolphin, Konsole, mpv):
+# optional, since they overwrite the user's own settings.
+[[install]]
+from = "dots/.config/mpv"
+to = "~/.config/mpv"
+group = "extra"
+[[install]]
+from = "dots/.config/dolphinrc"
+to = "~/.config/dolphinrc"
+group = "extra"
+[[install]]
+from = "dots/.config/konsolerc"
+to = "~/.config/konsolerc"
+group = "extra"
+[[install]]
+from = "dots/.local/share/konsole"
+to = "~/.local/share/konsole"
+group = "extra"
+[[install]]
+from = "dots/.local/share/kxmlgui5"
+to = "~/.local/share/kxmlgui5"
+group = "extra"
+[[install]]
+from = "dots/.config/chrome-flags.conf"
+to = "~/.config/chrome-flags.conf"
+group = "extra"
+[[install]]
+from = "dots/.config/code-flags.conf"
+to = "~/.config/code-flags.conf"
+group = "extra"
+[[install]]
+from = "dots/.config/thorium-flags.conf"
+to = "~/.config/thorium-flags.conf"
+group = "extra"
+
+# Shell (fish + starship; the author doesn't touch fish/conf.d).
+[[install]]
+from = "dots/.config/fish/config.fish"
+to = "~/.config/fish/config.fish"
+group = "shell"
+[[install]]
+from = "dots/.config/fish/auto-Hypr.fish"
+to = "~/.config/fish/auto-Hypr.fish"
+group = "shell"
+[[install]]
+from = "dots/.config/starship.toml"
+to = "~/.config/starship.toml"
+group = "shell"
+[[install]]
+from = "dots/.config/zshrc.d"
+to = "~/.config/zshrc.d"
+group = "shell"
+
+# Package list for the Python virtualenv (read by the build step).
+[[install]]
+from = "sdata/uv/requirements.txt"
+to = "~/.local/state/quickshell/requirements.txt"
+
+# UI font (the author's install_google_sans_flex; OFL-1.1).
+[[install]]
+from = "."
+to = "~/.local/share/fonts/illogical-impulse-google-sans-flex"
+repo = "https://github.com/end-4/google-sans-flex"
+license = "OFL-1.1"
+commit = "251aa5abd30496368f634e54ce2a508fe5a2fdfa"
+
+# The welcome window (first start) would reset the wallpaper to the default and
+# override the look; the selected variant applies the look.
+[[file]]
+to = "~/.local/state/quickshell/user/first_run.txt"
+content = "This file is just here to confirm you've been greeted :>"
+
+[packages]
+repo = [
+  # Quickshell + the shell's Qt modules (dependencies of
+  # illogical-impulse-quickshell-git; the author's pinned commit predates 0.3.1)
+  "quickshell", "qt6-5compat", "qt6-imageformats", "qt6-multimedia", "qt6-positioning",
+  "qt6-quicktimeline", "qt6-sensors", "qt6-svg", "qt6-tools", "qt6-translations",
+  "qt6-virtualkeyboard", "qt6-wayland", "kirigami", "kdialog", "syntax-highlighting",
+  # audio
+  "cava", "pavucontrol-qt", "wireplumber", "pipewire-pulse", "libdbusmenu-gtk3", "playerctl",
+  "easyeffects",
+  # brightness / location
+  "geoclue", "brightnessctl", "ddcutil",
+  # core tools
+  "bc", "cliphist", "curl", "wget", "ripgrep", "jq", "xdg-user-dirs", "rsync", "go-yq",
+  # fonts and themes
+  "adw-gtk-theme", "breeze", "eza", "fish", "fontconfig", "kitty", "foot", "matugen",
+  "starship", "ttf-jetbrains-mono-nerd", "ttf-material-symbols-variable",
+  # Hyprland
+  "hyprsunset", "wl-clipboard", "hypridle", "hyprlock", "hyprpicker",
+  # KDE components (settings, network, bluetooth, polkit)
+  "bluedevil", "gnome-keyring", "networkmanager", "plasma-nm", "polkit-kde-agent",
+  "dolphin", "systemsettings",
+  # portals
+  "xdg-desktop-portal", "xdg-desktop-portal-kde", "xdg-desktop-portal-gtk",
+  "xdg-desktop-portal-hyprland",
+  # Python environment
+  "uv", "clang", "gtk4", "libadwaita", "libsoup3", "libportal-gtk4", "gobject-introspection",
+  # screenshots / recording
+  "hyprshot", "slurp", "swappy", "tesseract", "tesseract-data-eng", "wf-recorder",
+  # toolkit and windows
+  "upower", "wtype", "ydotool", "fuzzel", "glib2", "imagemagick", "songrec",
+  "translate-shell", "libqalculate",
+]
+aur = ["wlogout", "darkly-bin", "breeze-plus", "otf-space-grotesk", "ttf-readex-pro", "ttf-rubik-vf",
+       "ttf-twemoji", "qt6-avif-image-plugin", "bibata-cursor-theme-bin"]
+
+# Looks: colors from the wallpaper via switchwall.sh (matugen + the author's
+# generate_colors_material.py). The shell writes its settings file on first start;
+# if the look runs before that, an empty file is opened and the shell fills in
+# the gaps with defaults.
+[variants.varsayilan]
+title = "Default — dark purple shapes (Tonal Spot)"
+wallpaper = "~/.config/quickshell/ii/assets/images/default_wallpaper.png"
+apply = [
+  "mkdir -p ~/.config/illogical-impulse && { [ -s ~/.config/illogical-impulse/config.json ] || echo '{}' > ~/.config/illogical-impulse/config.json; }",
+  "ILLOGICAL_IMPULSE_VIRTUAL_ENV=$HOME/.local/state/quickshell/.venv ~/.config/quickshell/ii/scripts/colors/switchwall.sh --image {wallpaper} --mode dark --type scheme-tonal-spot",
+]
+credit = "quickshell/ii/assets/images/default_wallpaper.png from the author's repo (the shell's first-run wallpaper)"
+
+[variants.acik]
+title = "Light — same shapes, light theme"
+wallpaper = "~/.config/quickshell/ii/assets/images/default_wallpaper.png"
+apply = [
+  "mkdir -p ~/.config/illogical-impulse && { [ -s ~/.config/illogical-impulse/config.json ] || echo '{}' > ~/.config/illogical-impulse/config.json; }",
+  "ILLOGICAL_IMPULSE_VIRTUAL_ENV=$HOME/.local/state/quickshell/.venv ~/.config/quickshell/ii/scripts/colors/switchwall.sh --image {wallpaper} --mode light --type scheme-tonal-spot",
+]
+credit = "default_wallpaper.png from the author's repo, light mode"
+
+[variants.turuncu]
+title = "Orange roses — warm Material (dark)"
+wallpaper = "https://upload.wikimedia.org/wikipedia/commons/7/73/Orange_rose_bouquet_%28Unsplash%29.jpg"
+wallpaper_dest = "~/Pictures/Wallpapers/end4-turuncu.jpg"
+apply = [
+  "mkdir -p ~/.config/illogical-impulse && { [ -s ~/.config/illogical-impulse/config.json ] || echo '{}' > ~/.config/illogical-impulse/config.json; }",
+  "ILLOGICAL_IMPULSE_VIRTUAL_ENV=$HOME/.local/state/quickshell/.venv ~/.config/quickshell/ii/scripts/colors/switchwall.sh --image {wallpaper} --mode dark --type scheme-tonal-spot",
+]
+credit = "Look-alike (the source of the wallpaper in the author's \"wow look its orange\" screenshot is not given): Orange rose bouquet (Unsplash) — Wikimedia Commons, CC0"
+
+# The settings app's Bar page recognizes and configures this bar (ricebar.py).
+# The shell creates the settings file on first start.
+[bar]
+kind = "quickshell"
+label = "illogical-impulse (Quickshell)"
+config = "~/.config/illogical-impulse/config.json"
+[[bar.field]]
+key = "bottom"
+title = "Altta"
+type = "bool"
+path = "bar.bottom"
+[[bar.field]]
+key = "vertical"
+title = "Vertical (side)"
+type = "bool"
+path = "bar.vertical"
+[[bar.field]]
+key = "cornerStyle"
+title = "Corner style"
+type = "int"
+path = "bar.cornerStyle"
+min = 0
+max = 2
+subtitle = "0 hug · 1 float · 2 plain rectangle"
+[[bar.field]]
+key = "autoHide"
+title = "Auto-hide"
+type = "bool"
+path = "bar.autoHide.enable"
+[[bar.field]]
+key = "shown"
+title = "Workspaces shown"
+type = "int"
+path = "bar.workspaces.shown"
+min = 1
+max = 20
+[[bar.field]]
+key = "showAppIcons"
+title = "App icons in workspaces"
+type = "bool"
+path = "bar.workspaces.showAppIcons"
+[[bar.field]]
+key = "weather"
+title = "Weather"
+type = "bool"
+path = "bar.weather.enable"
+
+# --- Mix parts (python -m hyprsetup mix; see python/hyprsetup/mix.py) ---
+[[part]]
+slot = "terminal"
+title = "Kitty (illogical-impulse)"
+paths = ["~/.config/kitty"]
+commands = { CMD_TERMINAL = "kitty" }
+packages = ["kitty"]
+
+[[part]]
+slot = "terminal"
+id = "foot"
+title = "Foot (illogical-impulse)"
+paths = ["~/.config/foot"]
+commands = { CMD_TERMINAL = "foot" }
+packages = ["foot"]
+
+[[part]]
+slot = "launcher"
+title = "Fuzzel (illogical-impulse)"
+paths = ["~/.config/fuzzel"]
+commands = { CMD_LAUNCHER = "fuzzel" }
+packages = ["fuzzel"]

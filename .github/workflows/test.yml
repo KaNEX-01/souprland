@@ -1,0 +1,33 @@
+name: test
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    # The target platform itself: package names (pacman -Si check) and
+    # GTK4/libadwaita versions match the user's system, and the settings
+    # app's page setup tests run instead of being skipped.
+    container: cachyos/cachyos:latest
+    steps:
+      - name: Dependencies
+        run: |
+          pacman -Syu --noconfirm --needed git shellcheck jq python fish ruff \
+              gtk4 libadwaita python-gobject python-cairo imagemagick \
+              xorg-server-xvfb xorg-xauth
+          # install.sh refuses to run as root (--dry-run test);
+          # the tests run as a regular user.
+          useradd -m tester
+
+      - uses: actions/checkout@v4
+
+      # The render matrix does not install anything, it only renders the
+      # templates into a temp dir. GTK windows are not drawn on screen, but
+      # GTK needs a display to start: xvfb-run provides a virtual X server.
+      - name: tools/test.sh
+        run: |
+          chown -R tester: "$GITHUB_WORKSPACE"
+          runuser -u tester -- env GDK_BACKEND=x11 xvfb-run -a ./tools/test.sh

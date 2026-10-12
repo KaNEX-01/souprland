@@ -1,0 +1,142 @@
+# pywal-compatible color files (~/.cache/wal) — with the wallpaper colors.
+#
+# Every tool that reads pywal takes its colors from here: Pywalfox (Firefox),
+# pywal.nvim / pywal16.nvim, VS Code "Wal Theme", wal-discord, cava/dunst
+# scripts… This project doesn't run pywal; it writes the same files itself.
+title = "pywal compatibility (~/.cache/wal)"
+desc = "colors.json, colors, colors.sh, colors.css, colors.Xresources — for any tool that reads pywal, like Pywalfox, pywal.nvim or VS Code Wal Theme."
+reload = "command -v pywalfox >/dev/null && pywalfox update; command -v xrdb >/dev/null && [ -n \"$DISPLAY\" ] && xrdb -merge ~/.cache/wal/colors.Xresources; true"
+
+[[file]]
+path = "~/.cache/wal/colors.json"
+syntax = "pywal"
+template = """
+{{
+ "wallpaper": "{wallpaper}",
+ "alpha": "100",
+ "special": {{
+  "background": "{background}",
+  "foreground": "{foreground}",
+  "cursor": "{cursor}"
+ }},
+ "colors": {{
+  "color0": "{color0}",
+  "color1": "{color1}",
+  "color2": "{color2}",
+  "color3": "{color3}",
+  "color4": "{color4}",
+  "color5": "{color5}",
+  "color6": "{color6}",
+  "color7": "{color7}",
+  "color8": "{color8}",
+  "color9": "{color9}",
+  "color10": "{color10}",
+  "color11": "{color11}",
+  "color12": "{color12}",
+  "color13": "{color13}",
+  "color14": "{color14}",
+  "color15": "{color15}"
+ }}
+}}
+"""
+
+[[file]]
+path = "~/.cache/wal/colors"
+syntax = "pywal"
+template = """
+{color0}
+{color1}
+{color2}
+{color3}
+{color4}
+{color5}
+{color6}
+{color7}
+{color8}
+{color9}
+{color10}
+{color11}
+{color12}
+{color13}
+{color14}
+{color15}
+"""
+
+[[file]]
+path = "~/.cache/wal/colors.sh"
+syntax = "pywal"
+template = """
+wallpaper='{wallpaper}'
+background='{background}'
+foreground='{foreground}'
+cursor='{cursor}'
+color0='{color0}'
+color1='{color1}'
+color2='{color2}'
+color3='{color3}'
+color4='{color4}'
+color5='{color5}'
+color6='{color6}'
+color7='{color7}'
+color8='{color8}'
+color9='{color9}'
+color10='{color10}'
+color11='{color11}'
+color12='{color12}'
+color13='{color13}'
+color14='{color14}'
+color15='{color15}'
+"""
+
+[[file]]
+path = "~/.cache/wal/colors.css"
+syntax = "pywal"
+template = """
+:root {{
+  --wallpaper: url("{wallpaper}");
+  --background: {background};
+  --foreground: {foreground};
+  --cursor: {cursor};
+  --color0: {color0};
+  --color1: {color1};
+  --color2: {color2};
+  --color3: {color3};
+  --color4: {color4};
+  --color5: {color5};
+  --color6: {color6};
+  --color7: {color7};
+  --color8: {color8};
+  --color9: {color9};
+  --color10: {color10};
+  --color11: {color11};
+  --color12: {color12};
+  --color13: {color13};
+  --color14: {color14};
+  --color15: {color15};
+}}
+"""
+
+[[file]]
+path = "~/.cache/wal/colors.Xresources"
+syntax = "pywal"
+template = """
+*.background: {background}
+*.foreground: {foreground}
+*.cursorColor: {cursor}
+*.color0: {color0}
+*.color1: {color1}
+*.color2: {color2}
+*.color3: {color3}
+*.color4: {color4}
+*.color5: {color5}
+*.color6: {color6}
+*.color7: {color7}
+*.color8: {color8}
+*.color9: {color9}
+*.color10: {color10}
+*.color11: {color11}
+*.color12: {color12}
+*.color13: {color13}
+*.color14: {color14}
+*.color15: {color15}
+"""

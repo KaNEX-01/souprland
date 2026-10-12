@@ -1,0 +1,1171 @@
+{
+  "version": 1,
+  "_comment": "Component catalog. To add a new tool, just add a 'component' here; no code changes needed. If it needs a custom install step, define hook_<id>() in modules/*.sh.",
+  "profiles": {
+    "minimal": [
+      "hyprland",
+      "portal",
+      "polkit",
+      "waybar",
+      "kitty",
+      "wofi",
+      "mako",
+      "hyprpaper",
+      "pipewire",
+      "networkmanager",
+      "clipboard",
+      "fonts-base",
+      "screenshot-base",
+      "xdg-dirs"
+    ],
+    "standard": [
+      "hyprland",
+      "portal",
+      "polkit",
+      "qt-wayland",
+      "waybar",
+      "kitty",
+      "wofi",
+      "mako",
+      "hyprpaper",
+      "hyprlock",
+      "hypridle",
+      "pipewire",
+      "audio-tools",
+      "networkmanager",
+      "bluetooth",
+      "dolphin",
+      "clipboard",
+      "screenshot-base",
+      "screenshot-annotate",
+      "fonts-base",
+      "fonts-extra",
+      "gtk-theme",
+      "qt-theme",
+      "icon-theme",
+      "cursor-theme",
+      "brightness",
+      "power",
+      "sddm",
+      "cli-tools",
+      "xdg-dirs",
+      "firefox",
+      "nwg-displays",
+      "hyprmod",
+      "swayosd",
+      "starship"
+    ],
+    "full": [
+      "hyprland",
+      "portal",
+      "polkit",
+      "qt-wayland",
+      "hyprland-extras",
+      "waybar",
+      "kitty",
+      "wofi",
+      "mako",
+      "hyprpaper",
+      "hyprlock",
+      "hypridle",
+      "hyprsunset",
+      "pipewire",
+      "audio-tools",
+      "networkmanager",
+      "bluetooth",
+      "dolphin",
+      "clipboard",
+      "screenshot-base",
+      "screenshot-annotate",
+      "screen-record",
+      "fonts-base",
+      "fonts-extra",
+      "gtk-theme",
+      "qt-theme",
+      "icon-theme",
+      "cursor-theme",
+      "brightness",
+      "power",
+      "sddm",
+      "cli-tools",
+      "dev-tools",
+      "gaming",
+      "xdg-dirs",
+      "firefox",
+      "archive",
+      "fastfetch",
+      "nwg-displays",
+      "hyprmod",
+      "matugen",
+      "swayosd",
+      "cava",
+      "instant-replay",
+      "starship",
+      "firefox-theme"
+    ]
+  },
+  "categories": [
+    {
+      "id": "core",
+      "title": "Core (required)",
+      "select": "multi",
+      "required": true,
+      "components": [
+        {
+          "id": "hyprland",
+          "title": "Hyprland",
+          "desc": "Wayland tiling compositor and its core helpers",
+          "repo": [
+            "hyprland",
+            "hyprland-guiutils",
+            "hyprcursor",
+            "hyprutils",
+            "gnome-themes-extra"
+          ],
+          "aur": []
+        },
+        {
+          "id": "portal",
+          "title": "XDG Desktop Portal",
+          "desc": "Screen sharing, file picker and app integration",
+          "repo": [
+            "xdg-desktop-portal-hyprland",
+            "xdg-desktop-portal-gtk"
+          ],
+          "aur": []
+        },
+        {
+          "id": "polkit",
+          "title": "Polkit Agent",
+          "desc": "Privilege escalation dialogs (hyprpolkitagent)",
+          "repo": [
+            "hyprpolkitagent"
+          ],
+          "aur": [],
+          "exec": "systemctl --user start hyprpolkitagent.service"
+        }
+      ]
+    },
+    {
+      "id": "compositor-extra",
+      "title": "Hyprland Extras",
+      "select": "multi",
+      "components": [
+        {
+          "id": "qt-wayland",
+          "title": "Qt Wayland support",
+          "desc": "Runs Qt5/Qt6 apps natively under Wayland",
+          "repo": [
+            "qt5-wayland",
+            "qt6-wayland"
+          ],
+          "aur": []
+        },
+        {
+          "id": "hyprland-extras",
+          "title": "hyprpicker + hyprshade tools",
+          "desc": "Color picker and screen filters",
+          "repo": [
+            "hyprpicker"
+          ],
+          "aur": [
+            "hyprshade"
+          ]
+        },
+        {
+          "id": "hyprsunset",
+          "title": "hyprsunset",
+          "desc": "Night mode / blue light filter",
+          "repo": [
+            "hyprsunset"
+          ],
+          "aur": []
+        },
+        {
+          "id": "swayosd",
+          "title": "SwayOSD",
+          "desc": "On-screen display for volume/brightness/CapsLock",
+          "repo": [
+            "swayosd"
+          ],
+          "aur": [],
+          "exec": "swayosd-server"
+        },
+        {
+          "id": "dock",
+          "title": "Dock",
+          "desc": "Floating app bar at the bottom: icons of pinned and open apps (nwg-dock-hyprland)",
+          "repo": [
+            "nwg-dock-hyprland"
+          ],
+          "aur": []
+        }
+      ]
+    },
+    {
+      "id": "bar",
+      "title": "Status Bar",
+      "select": "single",
+      "var": "BAR",
+      "components": [
+        {
+          "id": "waybar",
+          "title": "Waybar",
+          "desc": "The most common status bar, configured with JSONC",
+          "repo": [
+            "waybar"
+          ],
+          "aur": [],
+          "exec": "waybar"
+        },
+        {
+          "id": "hyprpanel",
+          "title": "HyprPanel",
+          "desc": "AGS-based, feature-rich panel (AUR, heavy)",
+          "repo": [],
+          "aur": [
+            "ags-hyprpanel-git"
+          ],
+          "exec": "hyprpanel"
+        },
+        {
+          "id": "quickshell-bar",
+          "title": "Quickshell (bar)",
+          "desc": "QtQuick-based; draws the bar and widgets in a SINGLE process, in one shell.qml. If Quickshell is also chosen as the widget engine, both share the same file and no second process starts. A repo package (unlike HyprPanel, no AUR needed).",
+          "repo": [
+            "quickshell"
+          ],
+          "aur": [],
+          "exec": "quickshell -p ~/.config/quickshell/shell.qml"
+        },
+        {
+          "id": "wayle",
+          "title": "Wayle",
+          "desc": "Full desktop shell written in Rust + GTK4: bar, notification center, OSD and wallpaper in one. Configured with TOML, reloads live. Successor project by HyprPanel's developer (HyprPanel is archived). Comes from the AUR but is prebuilt, and all its dependencies are in the official repos.",
+          "repo": [],
+          "aur": [
+            "wayle-bin"
+          ],
+          "exec": "wayle panel start"
+        }
+      ]
+    },
+    {
+      "id": "widget",
+      "title": "Widget Engine",
+      "select": "single",
+      "var": "WIDGET_ENGINE",
+      "components": [
+        {
+          "id": "eww",
+          "title": "eww",
+          "desc": "Engine for desktop widgets. Which widgets to show is chosen separately (--widgets / presets/widget/). Works independently of the chosen bar preset.",
+          "repo": [],
+          "aur": [
+            "eww"
+          ],
+          "exec": "eww daemon"
+        },
+        {
+          "id": "quickshell",
+          "title": "Quickshell",
+          "desc": "QtQuick-based shell engine. Comes with all 6 of eww's widgets + 9 extra widgets (volume, brightness, disk, temperature, uptime, world clocks, keyboard layout, system info card, workspaces) — which ones to show is chosen separately (--widgets / presets/widget/).",
+          "repo": [
+            "quickshell"
+          ],
+          "aur": [],
+          "exec": "quickshell -p ~/.config/quickshell/shell.qml",
+          "url": "https://quickshell.outfoxxed.me"
+        }
+      ]
+    },
+    {
+      "id": "terminal",
+      "title": "Terminal Emulator",
+      "select": "single",
+      "var": "TERMINAL",
+      "components": [
+        {
+          "id": "kitty",
+          "desktop": "kitty.desktop",
+          "title": "Kitty",
+          "desc": "GPU-accelerated, with ligature and graphics support",
+          "repo": [
+            "kitty"
+          ],
+          "aur": [],
+          "exec": "kitty"
+        },
+        {
+          "id": "alacritty",
+          "desktop": "Alacritty.desktop",
+          "title": "Alacritty",
+          "desc": "Minimal and fast, TOML config",
+          "repo": [
+            "alacritty"
+          ],
+          "aur": [],
+          "exec": "alacritty"
+        },
+        {
+          "id": "foot",
+          "desktop": "foot.desktop",
+          "title": "foot",
+          "desc": "Very lightweight, pure Wayland terminal",
+          "repo": [
+            "foot"
+          ],
+          "aur": [],
+          "exec": "foot"
+        },
+        {
+          "id": "ghostty",
+          "desktop": "com.mitchellh.ghostty.desktop",
+          "title": "Ghostty",
+          "desc": "Modern, fast terminal",
+          "repo": [
+            "ghostty"
+          ],
+          "aur": [],
+          "exec": "ghostty"
+        },
+        {
+          "id": "wezterm",
+          "desktop": "org.wezfurlong.wezterm.desktop",
+          "title": "WezTerm",
+          "desc": "GPU terminal configured with Lua, with tabs/splits and its own multiplexer",
+          "repo": [
+            "wezterm"
+          ],
+          "aur": [],
+          "exec": "wezterm"
+        }
+      ]
+    },
+    {
+      "id": "launcher",
+      "title": "App Launcher",
+      "select": "single",
+      "var": "LAUNCHER",
+      "components": [
+        {
+          "id": "wofi",
+          "title": "wofi",
+          "desc": "GTK-based, themeable with CSS",
+          "repo": [
+            "wofi"
+          ],
+          "aur": [],
+          "exec": "wofi --show drun"
+        },
+        {
+          "id": "rofi",
+          "title": "rofi (wayland)",
+          "desc": "Powerful mode system, lots of ready-made themes",
+          "repo": [
+            "rofi"
+          ],
+          "aur": [],
+          "exec": "rofi -show drun"
+        },
+        {
+          "id": "fuzzel",
+          "title": "fuzzel",
+          "desc": "Lightweight and fast, pure Wayland",
+          "repo": [
+            "fuzzel"
+          ],
+          "aur": [],
+          "exec": "fuzzel"
+        },
+        {
+          "id": "walker",
+          "title": "walker",
+          "desc": "Modern module-based launcher: calculator, clipboard, emoji, file and window search in one box (AUR; data backend elephant)",
+          "repo": [],
+          "aur": [
+            "walker-bin",
+            "elephant-bin",
+            "elephant-desktopapplications-bin",
+            "elephant-menus-bin",
+            "elephant-calc-bin",
+            "elephant-websearch-bin",
+            "elephant-clipboard-bin",
+            "elephant-symbols-bin",
+            "elephant-files-bin",
+            "elephant-windows-bin",
+            "elephant-runner-bin",
+            "elephant-providerlist-bin",
+            "elephant-todo-bin",
+            "elephant-bookmarks-bin",
+            "elephant-unicode-bin",
+            "elephant-bluetooth-bin",
+            "elephant-wireplumber-bin",
+            "elephant-playerctl-bin",
+            "elephant-archlinuxpkgs-bin",
+            "elephant-snippets-bin"
+          ],
+          "exec": "walker"
+        },
+        {
+          "id": "tofi",
+          "title": "tofi",
+          "desc": "Extremely lightweight and very fast to open; no icon support (AUR)",
+          "repo": [],
+          "aur": [
+            "tofi"
+          ],
+          "exec": "tofi-drun"
+        }
+      ]
+    },
+    {
+      "id": "notify",
+      "title": "Notification Daemon",
+      "select": "single",
+      "var": "NOTIFIER",
+      "components": [
+        {
+          "id": "mako",
+          "title": "mako",
+          "desc": "Lightweight Wayland notification daemon",
+          "repo": [
+            "mako"
+          ],
+          "aur": [],
+          "exec": "mako"
+        },
+        {
+          "id": "dunst",
+          "title": "dunst",
+          "desc": "Mature and highly configurable",
+          "repo": [
+            "dunst"
+          ],
+          "aur": [],
+          "exec": "dunst"
+        },
+        {
+          "id": "swaync",
+          "title": "SwayNotificationCenter",
+          "desc": "Notification center panel and control buttons",
+          "repo": [
+            "swaync"
+          ],
+          "aur": [],
+          "exec": "swaync"
+        }
+      ]
+    },
+    {
+      "id": "wallpaper",
+      "title": "Wallpaper",
+      "select": "single",
+      "var": "WALLPAPER_DAEMON",
+      "components": [
+        {
+          "id": "hyprpaper",
+          "title": "hyprpaper",
+          "desc": "Hyprland's own wallpaper daemon",
+          "repo": [
+            "hyprpaper"
+          ],
+          "aur": [],
+          "exec": "hyprpaper"
+        },
+        {
+          "id": "swww",
+          "title": "awww (swww)",
+          "desc": "Animated transitions and GIF support. awww is the new name of the swww project; both the Arch package and the commands (awww, awww-daemon) use this name.",
+          "repo": [
+            "awww"
+          ],
+          "aur": [],
+          "exec": "awww-daemon"
+        },
+        {
+          "id": "waypaper",
+          "title": "waypaper",
+          "desc": "Graphical wallpaper picker (AUR)",
+          "repo": [],
+          "aur": [
+            "waypaper"
+          ],
+          "exec": "waypaper --restore"
+        },
+        {
+          "id": "wallpaperengine",
+          "title": "linux-wallpaperengine",
+          "desc": "Steam Wallpaper Engine wallpapers (requires owning Wallpaper Engine)",
+          "repo": [],
+          "aur": [
+            "linux-wallpaperengine-git"
+          ],
+          "url": "https://github.com/Almamu/linux-wallpaperengine"
+        }
+      ]
+    },
+    {
+      "id": "session",
+      "title": "Lock Screen & Idle",
+      "select": "multi",
+      "components": [
+        {
+          "id": "hyprlock",
+          "title": "hyprlock",
+          "desc": "Hyprland lock screen",
+          "repo": [
+            "hyprlock"
+          ],
+          "aur": [],
+          "exec": "hyprlock"
+        },
+        {
+          "id": "hypridle",
+          "title": "hypridle",
+          "desc": "Idle manager (auto-lock, screen off)",
+          "repo": [
+            "hypridle"
+          ],
+          "aur": [],
+          "exec": "hypridle"
+        },
+        {
+          "id": "wlogout",
+          "title": "wlogout",
+          "desc": "Graphical logout menu",
+          "repo": [
+            "wlogout"
+          ],
+          "aur": [],
+          "exec": "wlogout"
+        }
+      ]
+    },
+    {
+      "id": "audio",
+      "title": "Audio",
+      "select": "multi",
+      "components": [
+        {
+          "id": "pipewire",
+          "title": "PipeWire audio stack",
+          "desc": "PipeWire + WirePlumber + PulseAudio compatibility. The JACK layer (pipewire-jack) is not required: it conflicts with jack2, and apps that need JACK pull it in as their own dependency anyway.",
+          "repo": [
+            "pipewire",
+            "pipewire-alsa",
+            "pipewire-pulse",
+            "wireplumber"
+          ],
+          "aur": []
+        },
+        {
+          "id": "audio-tools",
+          "title": "Audio tools",
+          "desc": "pavucontrol, pamixer, playerctl",
+          "repo": [
+            "pavucontrol",
+            "pamixer",
+            "playerctl"
+          ],
+          "aur": []
+        }
+      ]
+    },
+    {
+      "id": "network",
+      "title": "Network & Bluetooth",
+      "select": "multi",
+      "components": [
+        {
+          "id": "networkmanager",
+          "title": "NetworkManager",
+          "desc": "Network management and tray applet",
+          "repo": [
+            "networkmanager",
+            "network-manager-applet"
+          ],
+          "aur": [],
+          "services": [
+            "NetworkManager.service"
+          ]
+        },
+        {
+          "id": "bluetooth",
+          "title": "Bluetooth",
+          "desc": "bluez + blueman graphical manager",
+          "repo": [
+            "bluez",
+            "bluez-utils",
+            "blueman"
+          ],
+          "aur": [],
+          "services": [
+            "bluetooth.service"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "files",
+      "title": "File Manager",
+      "select": "single",
+      "var": "FILEMANAGER",
+      "components": [
+        {
+          "id": "thunar",
+          "desktop": "thunar.desktop",
+          "title": "Thunar",
+          "desc": "Lightweight GTK file manager + archive/preview plugins",
+          "repo": [
+            "thunar",
+            "thunar-archive-plugin",
+            "thunar-volman",
+            "tumbler",
+            "gvfs",
+            "gvfs-mtp"
+          ],
+          "aur": [],
+          "exec": "thunar"
+        },
+        {
+          "id": "nautilus",
+          "desktop": "org.gnome.Nautilus.desktop",
+          "title": "Nautilus",
+          "desc": "GNOME Files",
+          "repo": [
+            "nautilus",
+            "gvfs"
+          ],
+          "aur": [],
+          "exec": "nautilus"
+        },
+        {
+          "id": "nemo",
+          "desktop": "nemo.desktop",
+          "title": "Nemo",
+          "desc": "Cinnamon file manager",
+          "repo": [
+            "nemo",
+            "nemo-fileroller",
+            "gvfs"
+          ],
+          "aur": [],
+          "exec": "nemo"
+        },
+        {
+          "id": "dolphin",
+          "desktop": "org.kde.dolphin.desktop",
+          "title": "Dolphin",
+          "desc": "KDE file manager — split view, tabs, previews (theme applied via kdeglobals)",
+          "repo": [
+            "dolphin",
+            "kio-admin",
+            "kdegraphics-thumbnailers",
+            "ffmpegthumbs",
+            "gvfs",
+            "plasma-integration"
+          ],
+          "aur": [],
+          "exec": "env QT_QPA_PLATFORMTHEME=kde dolphin"
+        },
+        {
+          "id": "yazi",
+          "title": "Yazi",
+          "desc": "Terminal-based, very fast file manager",
+          "repo": [
+            "yazi",
+            "ffmpegthumbnailer",
+            "poppler",
+            "imagemagick"
+          ],
+          "aur": [],
+          "exec": "yazi"
+        }
+      ]
+    },
+    {
+      "id": "capture",
+      "title": "Screenshots & Recording",
+      "select": "multi",
+      "components": [
+        {
+          "id": "screenshot-base",
+          "title": "grim + slurp",
+          "desc": "Taking screenshots and selecting regions",
+          "repo": [
+            "grim",
+            "slurp"
+          ],
+          "aur": []
+        },
+        {
+          "id": "screenshot-annotate",
+          "title": "swappy",
+          "desc": "Drawing/annotating on screenshots",
+          "repo": [
+            "swappy"
+          ],
+          "aur": []
+        },
+        {
+          "id": "clipboard",
+          "title": "Clipboard management",
+          "desc": "wl-clipboard + cliphist clipboard history",
+          "repo": [
+            "wl-clipboard",
+            "cliphist"
+          ],
+          "aur": [],
+          "exec": "wl-paste --watch cliphist store"
+        },
+        {
+          "id": "screen-record",
+          "title": "Screen recording",
+          "desc": "wf-recorder + OBS Studio (general-purpose recording)",
+          "repo": [
+            "wf-recorder",
+            "obs-studio"
+          ],
+          "aur": []
+        },
+        {
+          "id": "instant-replay",
+          "title": "Instant replay (gpu-screen-recorder)",
+          "desc": "ShadowPlay-style: saves the last N seconds retroactively",
+          "repo": [
+            "gpu-screen-recorder",
+            "gpu-screen-recorder-notification"
+          ],
+          "aur": [],
+          "url": "https://git.dec05eba.com/gpu-screen-recorder/about/"
+        }
+      ]
+    },
+    {
+      "id": "theming",
+      "title": "Theme & Appearance",
+      "select": "multi",
+      "components": [
+        {
+          "id": "gtk-theme",
+          "title": "GTK theme tools",
+          "desc": "nwg-look + Adwaita/Catppuccin GTK theme",
+          "repo": [
+            "nwg-look"
+          ],
+          "aur": [
+            "gtk-engine-murrine",
+            "catppuccin-gtk-theme-mocha",
+            "catppuccin-gtk-theme-latte"
+          ]
+        },
+        {
+          "id": "qt-theme",
+          "title": "Qt theme tools",
+          "desc": "qt5ct/qt6ct + Kvantum",
+          "repo": [
+            "qt5ct",
+            "qt6ct",
+            "kvantum",
+            "kvantum-qt5"
+          ],
+          "aur": []
+        },
+        {
+          "id": "icon-theme",
+          "title": "Icon theme",
+          "desc": "Papirus icon set",
+          "repo": [
+            "papirus-icon-theme"
+          ],
+          "aur": []
+        },
+        {
+          "id": "cursor-theme",
+          "title": "Cursor theme",
+          "desc": "Bibata, Capitaine, Vimix, Qogir, Layan, Numix cursor sets",
+          "repo": [
+            "capitaine-cursors",
+            "vimix-cursors"
+          ],
+          "aur": [
+            "bibata-cursor-theme-bin",
+            "qogir-cursor-theme",
+            "layan-cursor-theme-git",
+            "numix-cursor-theme"
+          ]
+        },
+        {
+          "id": "matugen",
+          "title": "matugen (Material You)",
+          "desc": "Extracts a palette from the wallpaper — for THEME=\"auto\"",
+          "repo": [],
+          "aur": [
+            "matugen-bin"
+          ]
+        },
+        {
+          "id": "plymouth",
+          "title": "Plymouth boot animation",
+          "desc": "An animation instead of kernel messages at boot (touches the initramfs)",
+          "repo": [
+            "plymouth"
+          ],
+          "aur": []
+        },
+        {
+          "id": "firefox-theme",
+          "title": "Firefox UI theme",
+          "desc": "Colors the browser with the theme palette via userChrome.css",
+          "repo": [],
+          "aur": []
+        },
+        {
+          "id": "discord-theme",
+          "title": "Discord theme (Vencord/Equicord)",
+          "desc": "quickCss.css — 'Custom CSS' must be enabled in Vencord settings",
+          "repo": [],
+          "aur": []
+        },
+        {
+          "id": "spicetify",
+          "title": "Spotify theme (spicetify)",
+          "desc": "Colors Spotify with the theme palette; reset when Spotify updates",
+          "repo": [],
+          "aur": [
+            "spicetify-cli"
+          ],
+          "url": "https://spicetify.app"
+        }
+      ]
+    },
+    {
+      "id": "fonts",
+      "title": "Fonts",
+      "select": "multi",
+      "components": [
+        {
+          "id": "fonts-base",
+          "title": "Base fonts",
+          "desc": "JetBrains Mono Nerd Font + Noto + emoji",
+          "repo": [
+            "ttf-jetbrains-mono-nerd",
+            "noto-fonts",
+            "noto-fonts-emoji",
+            "ttf-nerd-fonts-symbols"
+          ],
+          "aur": []
+        },
+        {
+          "id": "fonts-extra",
+          "title": "Extra fonts",
+          "desc": "CJK, Font Awesome, Cascadia Code",
+          "repo": [
+            "noto-fonts-cjk",
+            "woff2-font-awesome",
+            "ttf-cascadia-code-nerd"
+          ],
+          "aur": []
+        }
+      ]
+    },
+    {
+      "id": "hardware",
+      "title": "Hardware & Power",
+      "select": "multi",
+      "components": [
+        {
+          "id": "brightness",
+          "title": "Brightness control",
+          "desc": "brightnessctl (laptop screen brightness)",
+          "repo": [
+            "brightnessctl"
+          ],
+          "aur": []
+        },
+        {
+          "id": "power",
+          "title": "Power management",
+          "desc": "power-profiles-daemon + upower",
+          "repo": [
+            "power-profiles-daemon",
+            "upower"
+          ],
+          "aur": [],
+          "services": [
+            "power-profiles-daemon.service"
+          ]
+        },
+        {
+          "id": "nvidia",
+          "title": "NVIDIA drivers",
+          "desc": "nvidia-open-dkms + Wayland/EGL support (NVIDIA GPUs only). The open module supports Turing (GTX 16xx / RTX 20) and newer; older cards need nvidia-580xx-dkms from the AUR.",
+          "repo": [
+            "nvidia-open-dkms",
+            "nvidia-utils",
+            "egl-wayland",
+            "libva-nvidia-driver"
+          ],
+          "aur": []
+        },
+        {
+          "id": "amd",
+          "title": "AMD graphics support",
+          "desc": "Mesa + Vulkan + VA-API",
+          "repo": [
+            "mesa",
+            "vulkan-radeon"
+          ],
+          "aur": []
+        },
+        {
+          "id": "intel",
+          "title": "Intel graphics support",
+          "desc": "Vulkan + VA-API drivers",
+          "repo": [
+            "vulkan-intel",
+            "intel-media-driver"
+          ],
+          "aur": []
+        }
+      ]
+    },
+    {
+      "id": "plugins",
+      "title": "Hyprland Plugins (hyprpm)",
+      "select": "multi",
+      "components": [
+        {
+          "id": "hyprexpo",
+          "title": "hyprexpo",
+          "desc": "Shows all workspaces in a grid (overview)",
+          "repo": [],
+          "aur": [],
+          "plugin_repo": "https://github.com/hyprwm/hyprland-plugins",
+          "plugin_name": "hyprexpo",
+          "url": "https://github.com/hyprwm/hyprland-plugins"
+        },
+        {
+          "id": "hyprbars",
+          "title": "hyprbars",
+          "desc": "Adds title bars to windows",
+          "repo": [],
+          "aur": [],
+          "plugin_repo": "https://github.com/hyprwm/hyprland-plugins",
+          "plugin_name": "hyprbars",
+          "url": "https://github.com/hyprwm/hyprland-plugins"
+        },
+        {
+          "id": "borders-plus-plus",
+          "title": "borders-plus-plus",
+          "desc": "A second border layer",
+          "repo": [],
+          "aur": [],
+          "plugin_repo": "https://github.com/hyprwm/hyprland-plugins",
+          "plugin_name": "borders-plus-plus",
+          "url": "https://github.com/hyprwm/hyprland-plugins"
+        },
+        {
+          "id": "hyprtrails",
+          "title": "hyprtrails",
+          "desc": "Trail effect when windows move",
+          "repo": [],
+          "aur": [],
+          "plugin_repo": "https://github.com/hyprwm/hyprland-plugins",
+          "plugin_name": "hyprtrails",
+          "url": "https://github.com/hyprwm/hyprland-plugins"
+        },
+        {
+          "id": "hy3",
+          "title": "hy3",
+          "desc": "i3/sway-style tabbed and split layout engine",
+          "repo": [],
+          "aur": [],
+          "plugin_repo": "https://github.com/outfoxxed/hy3",
+          "plugin_name": "hy3",
+          "url": "https://github.com/outfoxxed/hy3"
+        }
+      ]
+    },
+    {
+      "id": "guitools",
+      "title": "Graphical Settings Tools",
+      "select": "multi",
+      "components": [
+        {
+          "id": "nwg-displays",
+          "title": "nwg-displays",
+          "desc": "Arrange displays with drag and drop (generates monitors.conf and workspaces.conf)",
+          "repo": [
+            "nwg-displays"
+          ],
+          "aur": [],
+          "exec": "nwg-displays"
+        },
+        {
+          "id": "hyprmod",
+          "title": "HyprMod",
+          "desc": "GTK4 Hyprland settings app — successor to the archived ML4W Hyprland Settings",
+          "repo": [],
+          "aur": [
+            "hyprmod"
+          ],
+          "exec": "hyprmod",
+          "url": "https://github.com/mylinuxforwork/hyprland-settings"
+        }
+      ]
+    },
+    {
+      "id": "login",
+      "title": "Display Manager",
+      "select": "single",
+      "var": "LOGIN_MANAGER",
+      "components": [
+        {
+          "id": "sddm",
+          "title": "SDDM",
+          "desc": "Qt-based graphical login screen — takes your theme's colors via sddm-astronaut-theme",
+          "repo": [
+            "sddm"
+          ],
+          "aur": [
+            "sddm-astronaut-theme"
+          ],
+          "services": [
+            "sddm.service"
+          ]
+        },
+        {
+          "id": "ly",
+          "title": "ly",
+          "desc": "Lightweight TUI login screen",
+          "repo": [
+            "ly"
+          ],
+          "aur": [],
+          "services": [
+            "ly.service"
+          ]
+        },
+        {
+          "id": "greetd",
+          "title": "greetd + tuigreet",
+          "desc": "Minimal, scriptable login manager",
+          "repo": [
+            "greetd",
+            "greetd-tuigreet"
+          ],
+          "aur": [],
+          "services": [
+            "greetd.service"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "extras",
+      "title": "Extra Applications",
+      "select": "multi",
+      "components": [
+        {
+          "id": "cli-tools",
+          "title": "Terminal tools",
+          "desc": "btop, ripgrep, fd, bat, eza, fzf, zoxide",
+          "repo": [
+            "btop",
+            "ripgrep",
+            "fd",
+            "bat",
+            "eza",
+            "fzf",
+            "zoxide"
+          ],
+          "aur": []
+        },
+        {
+          "id": "fastfetch",
+          "title": "fastfetch",
+          "desc": "System info viewer",
+          "repo": [
+            "fastfetch"
+          ],
+          "aur": []
+        },
+        {
+          "id": "archive",
+          "desktop": "org.gnome.FileRoller.desktop",
+          "title": "Archive support",
+          "desc": "unzip, 7zip, unrar, file-roller",
+          "repo": [
+            "unzip",
+            "7zip",
+            "unrar",
+            "file-roller"
+          ],
+          "aur": []
+        },
+        {
+          "id": "dev-tools",
+          "desktop": "nvim.desktop",
+          "title": "Development tools",
+          "desc": "neovim, lazygit, github-cli",
+          "repo": [
+            "neovim",
+            "lazygit",
+            "github-cli"
+          ],
+          "aur": []
+        },
+        {
+          "id": "gaming",
+          "title": "Gaming tools",
+          "desc": "gamemode + mangohud (lowers latency together with ALLOW_TEARING)",
+          "repo": [
+            "gamemode",
+            "mangohud"
+          ],
+          "aur": []
+        },
+        {
+          "id": "firefox",
+          "desktop": "firefox.desktop",
+          "title": "Firefox",
+          "desc": "Web browser (native Wayland support)",
+          "repo": [
+            "firefox"
+          ],
+          "aur": []
+        },
+        {
+          "id": "xdg-dirs",
+          "title": "XDG user directories",
+          "desc": "Standard directories like Downloads, Documents, etc.",
+          "repo": [
+            "xdg-user-dirs"
+          ],
+          "aur": []
+        },
+        {
+          "id": "cava",
+          "title": "cava",
+          "desc": "Terminal audio visualizer (also used in the bar and widgets)",
+          "repo": [
+            "cava"
+          ],
+          "aur": []
+        },
+        {
+          "id": "starship",
+          "title": "Starship prompt",
+          "desc": "Fast prompt showing git status, language version and duration",
+          "repo": [
+            "starship"
+          ],
+          "aur": [],
+          "url": "https://starship.rs"
+        }
+      ]
+    }
+  ]
+}

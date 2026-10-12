@@ -1,0 +1,31 @@
+{{! require: MANAGE_HYPR_CONFIGS && WALLPAPER_DAEMON==hyprpaper && HAS_HYPRPAPER }}
+####################################################################
+#  hyprpaper.conf — wallpaper
+#
+#  For multiple displays, one wallpaper { } block per display:
+#      wallpaper {
+#          monitor = DP-1
+#          path = ~/Pictures/wallpapers/a.png
+#      }
+#  (before hyprpaper 0.8: "preload = …" + "wallpaper = DP-1, …")
+####################################################################
+
+ipc = on
+splash = false
+
+{{#if HYPRPAPER_LEGACY}}
+preload = {{WALLPAPER_PATH}}
+
+# Empty display name = all displays
+wallpaper = , {{WALLPAPER_PATH}}
+{{/if}}
+{{#unless HYPRPAPER_LEGACY}}
+# Empty display name = all displays (fallback). hyprpaper 0.8 does not know
+# "preload" or "wallpaper = display, path" lines; it treats the config as
+# invalid and shows no wallpaper at all.
+wallpaper {
+    monitor =
+    path = {{WALLPAPER_PATH}}
+    fit_mode = cover
+}
+{{/unless}}

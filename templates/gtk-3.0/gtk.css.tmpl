@@ -1,0 +1,39 @@
+/* gtk.css — GTK3 (Adwaita/Adwaita-dark) accent colors · theme: {{THEME}}
+ *
+ * When the "gtk-theme" component is not selected, GTK_THEME_NAME stays
+ * Adwaita/Adwaita-dark (see modules/theme.sh:hook_gtk_theme, render.py:244) —
+ * then GTK3 apps (older Nautilus versions, the xdg-desktop-portal-gtk file
+ * chooser, many GTK3-only tools) keep GNOME's default blue/gray palette
+ * whatever THEME is, so the "system color" always looks the same.
+ * Adwaita reads these named colors; redefining them here ties the
+ * accent/background/text colors to THEME (or CUSTOM_COLORS) without
+ * installing a separate GTK3 theme package. Order matters: GTK loads the
+ * user's ~/.config/gtk-3.0/gtk.css AFTER the selected theme's own CSS, so
+ * the @define-color lines here override the theme's own definitions.
+ */
+
+@define-color theme_bg_color {{HEX_BG}};
+@define-color theme_fg_color {{HEX_FG}};
+@define-color theme_base_color {{HEX_BG_DARK}};
+@define-color theme_text_color {{HEX_FG}};
+
+@define-color theme_selected_bg_color {{HEX_ACCENT}};
+@define-color theme_selected_fg_color {{HEX_BG_DARK}};
+
+@define-color insensitive_bg_color {{HEX_SURFACE}};
+@define-color insensitive_fg_color {{HEX_SUBTEXT}};
+@define-color insensitive_base_color {{HEX_SURFACE}};
+
+@define-color theme_unfocused_bg_color {{HEX_BG}};
+@define-color theme_unfocused_fg_color {{HEX_SUBTEXT}};
+@define-color theme_unfocused_base_color {{HEX_BG_DARK}};
+@define-color theme_unfocused_selected_bg_color {{HEX_ACCENT}};
+@define-color theme_unfocused_selected_fg_color {{HEX_BG_DARK}};
+
+@define-color borders {{HEX_SURFACE}};
+@define-color unfocused_borders {{HEX_SURFACE}};
+
+@define-color warning_color {{HEX_YELLOW}};
+@define-color error_color {{HEX_RED}};
+@define-color success_color {{HEX_GREEN}};
+@define-color destructive_color {{HEX_RED}};

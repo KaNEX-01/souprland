@@ -1,0 +1,9 @@
+{{! require: MANAGE_HYPR_CONFIGS && THEME_SCHEDULE }}
+[Unit]
+Description=hyprsetup — day/night theme
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.config/hypr/scripts/theme-schedule.sh

@@ -1,0 +1,70 @@
+{{! require: MANAGE_HYPR_CONFIGS }}
+{{! mode: 755 }}
+#!/usr/bin/env bash
+# Keybinding card — opened with {{MOD_KEY}} + / (and {{MOD_KEY}} + F1).
+#
+# The main view is the GTK4 card (python/hyprsetup/gui/cheatsheet.py):
+# keybindings are listed by category, searchable and EACH WITH ITS NAME. Its
+# source is config/keybinds.json, so it says "Screenshot of a selected region"
+# instead of "exec, grim -g ...".
+#
+# If the card cannot open (no GTK, app not installed), the old plain list read
+# from the generated config is shown in dmenu — the keybinding must never die
+# silently.
+set -uo pipefail
+
+if [[ -x "$HOME/.local/bin/hyprsetup" ]]; then
+    exec "$HOME/.local/bin/hyprsetup" cheatsheet
+fi
+
+if command -v hyprsetup >/dev/null 2>&1; then
+    exec hyprsetup cheatsheet
+fi
+
+# -------------------------------------------------------------- fallback ---
+# Depending on HYPR_LANG, keybindings live either in the classic keybinds.conf
+# or, in Lua mode, in hyprland/keybinds.lua — whichever exists is read.
+CONF_CONF="$HOME/.config/hypr/keybinds.conf"
+CONF_LUA="$HOME/.config/hypr/hyprland/keybinds.lua"
+
+if [[ -r "$CONF_CONF" ]]; then
+    # Make "bind = MOD, KEY, dispatcher, arg" lines readable.
+    listing=$(
+        grep -E '^\s*bind[elm]*\s*=' "$CONF_CONF" |
+        sed -E 's/^\s*bind[elm]*\s*=\s*//' |
+        awk -F', *' '{
+            mods = $1; key = $2; action = $3;
+            arg = "";
+            for (i = 4; i <= NF; i++) arg = arg (i > 4 ? ", " : "") $i;
+            gsub(/\$mod/, "{{MOD_KEY}}", mods);
+            if (mods == "") mods = "—";
+            printf "%-28s  %-16s %s\n", mods " + " key, action, arg;
+        }'
+    )
+elif [[ -r "$CONF_LUA" ]]; then
+    # Extracts the key combo and the call from "hl.bind("MOD + KEY", hl.dsp...(...))"
+    # lines; the dispatcher text may be less readable than in conf, but the
+    # key combos are identical.
+    listing=$(
+        grep -E '^\s*hl\.bind\(' "$CONF_LUA" |
+        sed -E 's/^\s*hl\.bind\(\s*"([^"]*)"\s*,\s*(.*)\)\s*\)?\s*$/\1\t\2/' |
+        awk -F'\t' '{ printf "%-28s  %s\n", $1, $2 }'
+    )
+else
+    echo "keybinds.conf / hyprland/keybinds.lua not found"; exit 1
+fi
+
+# When run from a keybinding there is no terminal, so a dmenu-like viewer is
+# used first, falling back to a new terminal window.
+if command -v wofi >/dev/null 2>&1; then
+    printf '%s\n' "$listing" | wofi --dmenu --prompt "Keybindings" >/dev/null || true
+elif command -v rofi >/dev/null 2>&1; then
+    printf '%s\n' "$listing" | rofi -dmenu -p "Keybindings" >/dev/null || true
+elif command -v fuzzel >/dev/null 2>&1; then
+    printf '%s\n' "$listing" | fuzzel --dmenu --prompt "Keybindings: " >/dev/null || true
+elif [[ -t 1 ]]; then
+    printf '%s\n' "$listing" | ${PAGER:-less}
+else
+    tmp=$(mktemp); printf '%s\n' "$listing" >"$tmp"
+    {{CMD_TERMINAL}} {{TERMINAL_EXEC_FLAG}} less "$tmp"
+fi

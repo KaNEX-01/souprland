@@ -1,0 +1,41 @@
+{{! require: MANAGE_HYPR_CONFIGS && HYPR_LANG==lua }}
+{{! target: hypr/hyprland/autostart.lua }}
+----------------------------------------------------------------------
+-- hyprland/autostart.lua — apps started at login
+--
+-- The lines here are generated from the components you selected.
+-- Put your own additions in custom.lua.
+----------------------------------------------------------------------
+
+hl.on("hyprland.start", function()
+    -- So the XDG portal starts with the right environment variables
+    hl.exec_cmd("dbus-update-activation-environment --systemd --all")
+    hl.exec_cmd("systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
+end)
+
+{{AUTOSTART_LINES}}
+
+{{#if VIS_ENABLE}}
+-- Audio visualizer — bars along the bottom edge reacting to music (cava)
+hl.on("hyprland.start", function() hl.exec_cmd("~/.config/hypr/scripts/visualizer.sh start") end)
+{{/if}}
+
+{{#if NOTIFY_HISTORY}}
+-- Notification history — the bar panel's Notifications tab (current session only)
+hl.on("hyprland.start", function() hl.exec_cmd("~/.config/hypr/scripts/notifylog.py run") end)
+{{/if}}
+
+{{#if GAMEMODE_AUTO}}
+-- Game mode — turns off effects in fullscreen games, pauses Wallpaper Engine
+hl.on("hyprland.start", function() hl.exec_cmd("~/.config/hypr/scripts/gamemode.py watch") end)
+{{/if}}
+
+{{#if DOCK_ENABLE}}
+-- Dock — app bar floating at the screen edge (nwg-dock-hyprland)
+hl.on("hyprland.start", function() hl.exec_cmd("~/.config/hypr/scripts/dock.sh start") end)
+{{/if}}
+
+{{#if HAS_HYPRSUNSET}}
+-- Night mode (off by default; toggle with SUPER+SHIFT+N)
+-- hl.on("hyprland.start", function() hl.exec_cmd("hyprsunset -t 4000") end)
+{{/if}}

@@ -1,0 +1,156 @@
+{{! require: MANAGE_HYPR_CONFIGS && HYPR_LANG==lua }}
+{{! target: hypr/hyprland/windowrules.lua }}
+----------------------------------------------------------------------
+-- hyprland/windowrules.lua — window and layer rules
+--
+-- To find a window's class/title:
+--     hyprctl clients | grep -E 'class|title'
+----------------------------------------------------------------------
+
+-- ------------------------------------------------- general improvements -
+{{#if RULE_SUPPRESS_MAXIMIZE}}
+-- Keep apps from maximizing themselves
+hl.window_rule({
+    name = "suppress-maximize",
+    match = { class = ".*" },
+    suppress_event = "maximize",
+})
+{{/if}}
+
+-- Do not focus the empty XWayland windows created while dragging
+hl.window_rule({
+    name = "no-focus-empty-xwayland-drag",
+    match = { class = "^$", title = "^$", xwayland = true, float = true },
+    no_focus = true,
+})
+
+{{#if GLOBAL_OPACITY}}
+-- Global opacity for all windows (GLOBAL_OPACITY)
+hl.window_rule({
+    name = "global-opacity",
+    match = { class = ".*" },
+    opacity = "{{GLOBAL_OPACITY}} override {{GLOBAL_OPACITY}} override",
+})
+-- Except apps where visual accuracy matters
+hl.window_rule({
+    name = "global-opacity-exempt",
+    match = { class = "^(firefox|chromium|mpv|vlc|obs|gimp|krita)$" },
+    opacity = "1.0 override 1.0 override",
+})
+{{/if}}
+
+{{#if XWAYLAND_NO_BLUR}}
+-- Turn off blur for XWayland apps (performance)
+hl.window_rule({
+    name = "xwayland-no-blur",
+    match = { xwayland = true },
+    no_blur = true,
+})
+{{/if}}
+
+{{#if RULE_FLOAT_TOOLS}}
+-- ------------------------------------------------------ floating windows --
+hl.window_rule({ name = "float-audio-net-tools", match = { class = "^(pavucontrol|blueman-manager|nm-connection-editor)$" }, float = true })
+hl.window_rule({ name = "float-polkit", match = { class = "^(org.kde.polkit-kde-authentication-agent-1)$" }, float = true })
+hl.window_rule({ name = "float-portal-gtk", match = { class = "^(xdg-desktop-portal-gtk)$" }, float = true })
+hl.window_rule({ name = "float-theme-tools", match = { class = "^(nwg-look|qt5ct|qt6ct|kvantummanager)$" }, float = true })
+hl.window_rule({ name = "float-archive-manager", match = { class = "^(file-roller|org.gnome.FileRoller)$" }, float = true })
+-- "Dosya Aç" / "Farklı Kaydet" are the Turkish-locale titles of the same dialogs.
+hl.window_rule({ name = "float-file-dialogs", match = { title = "^(Open File|Save File|Save As|Open Folder|Dosya Aç|Farklı Kaydet)$" }, float = true })
+
+hl.window_rule({
+    name = "size-center-audio-net-tools",
+    match = { class = "^(pavucontrol|blueman-manager)$" },
+    size = "900 600",
+    center = true,
+})
+{{/if}}
+
+-- ----------------------------------------------- MOD+I settings panel ----
+-- The panel opened with {{MOD_KEY}} + I (python/hyprsetup/gui/quick.py). It sits
+-- at the top center of the screen, below the status bar, and slides in from the
+-- top. The full app opened from the menu (dev.hyprsetup.Gui) floats and slides
+-- the same way. For the reasons see the comments in the conf version (windowrules.conf.tmpl).
+hl.window_rule({
+    name = "hyprsetup-quick-settings",
+    match = { class = "^(dev\\.hyprsetup\\.(Quick|Gui))$" },
+    float = true,
+    size = "{{QUICK_PANEL_SIZE}}",
+    move = "{{QUICK_PANEL_MOVE}}",
+    animation = "slide",
+})
+
+-- The install terminal opened by the settings app (the sudo password is asked
+-- here): keep it from ending up below the floating settings app (see windowrules.conf.tmpl).
+hl.window_rule({
+    name = "hyprsetup-terminal",
+    match = { class = "^(dev\\.hyprsetup\\.Terminal)$" },
+    float = true,
+    size = "60% 60%",
+    center = true,
+})
+
+-- ---------------------------------------------------- ALT+Tab switcher ----
+-- python/hyprsetup/gui/switcher.py — window picker with thumbnails. Floats in
+-- the center, sized by its content (see windowrules.conf.tmpl).
+hl.window_rule({
+    name = "hyprsetup-switcher",
+    match = { class = "^(dev\\.hyprsetup\\.Switcher)$" },
+    float = true,
+    center = true,
+    -- No open animation: ALT+Tab must appear instantly. NOT "animation = none":
+    -- Hyprland ignores style names it does not know and falls back to the
+    -- default (see the long note in the conf version).
+    {{SWITCHER_ANIM_LUA}},
+    no_shadow = true,
+})
+
+{{#if RULE_PIP}}
+-- --------------------------------------------------- picture-in-picture ---
+hl.window_rule({
+    name = "picture-in-picture",
+    match = { title = "^(Picture-in-Picture)$" },
+    float = true,
+    pin = true,
+    size = "{{PIP_SIZE}}",
+    move = "{{PIP_MOVE}}",
+})
+{{/if}}
+
+{{#if ALLOW_TEARING}}
+-- ---------------------------------------------------------------- games ---
+-- allow_tearing is on, so tearing is allowed in fullscreen games
+hl.window_rule({ name = "tearing-steam", match = { class = "^(steam_app_\\d+)$" }, immediate = true })
+hl.window_rule({ name = "tearing-exe", match = { title = ".*\\.exe$" }, immediate = true })
+{{/if}}
+
+-- ---------------------------------------------------------------- layers --
+{{#if HAS_WAYBAR}}
+hl.layer_rule({ name = "waybar-blur", match = { namespace = "^(waybar)$" }, blur = true, ignore_alpha = 0.3 })
+{{/if}}
+{{#if HAS_DOCK}}
+hl.layer_rule({ name = "dock-blur", match = { namespace = "^(nwg-dock)$" }, blur = true, ignore_alpha = 0.3 })
+{{/if}}
+{{#if HAS_WAYBAR}}
+hl.layer_rule({ name = "barpanel-blur", match = { namespace = "^(hyprsetup-panel)$" }, blur = true, ignore_alpha = 0.3, no_anim = true })
+{{/if}}
+{{#if HAS_WOFI}}
+hl.layer_rule({ name = "wofi-blur", match = { namespace = "^(wofi)$" }, blur = true, ignore_alpha = 0.5 })
+{{/if}}
+{{#if HAS_FUZZEL}}
+hl.layer_rule({ name = "fuzzel-blur", match = { namespace = "^(launcher)$" }, blur = true })
+{{/if}}
+{{#if HAS_MAKO}}
+hl.layer_rule({ name = "mako-blur", match = { namespace = "^(notifications)$" }, blur = true, ignore_alpha = 0.3 })
+{{/if}}
+{{#if HAS_SWAYNC}}
+-- swaync layers are not blurred (see windowrules.conf).
+{{/if}}
+
+{{WINDOWRULE_LINES}}
+
+-- ------------------------------------------------------------- examples ---
+-- Open a given app on a given workspace:
+--   hl.window_rule({ name = "firefox-ws2", match = { class = "^(firefox)$" }, workspace = "2 silent" })
+-- Available match fields: class, initial_class, title, initial_title,
+-- xwayland, float, fullscreen, pin, focus, workspace, tag

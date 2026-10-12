@@ -1,0 +1,138 @@
+# ilyamiro/serpantinum — r/hyprland "Quickshell can do insane things" (3)
+# https://www.reddit.com/r/hyprland/comments/1th2stg/
+# Posted 2026-05-18: a preview of the "Serpantinum" shell the author was then
+# developing in their NixOS repo (welcome: "A desktop shell built for
+# YOU", lock screen with blurred clock, list launcher, pink kitty+fastfetch).
+# That history is gone; the state in the video, welcome screen included, was first
+# released with v2.0.0 (2026-08-30) — that commit is installed. imperative-dots
+# as of the post date has no welcome/serpantinum.
+#
+# The author's deploy_package (install/modules/deploy.sh), as is: bin/ and src/
+# under ~/.local/share/serpantinum, kitty/cava/fastfetch into ~/.config,
+# compositors/hyprland into ~/.config/hypr (Lua config), settings.json
+# into ~/.config/serpantinum (adding wallpaperDir). NOT TAKEN: the SDDM theme
+# (writes to /usr/share and /etc with sudo, removes other display managers
+# with pacman -Rns), the telemetry module, /usr/local/bin links,
+# system services.
+
+default_variant = "pembe"
+
+post_install = [
+  "chmod +x ~/.local/share/serpantinum/bin/* 2>/dev/null || true",
+  "find ~/.local/share/serpantinum/src/scripts -type f -name '*.sh' -exec chmod +x {} + 2>/dev/null || true",
+  "bash ~/.local/share/serpantinum/src/scripts/location.sh --refresh >/dev/null 2>&1 || true",
+  "hyprctl reload >/dev/null 2>&1 || true",
+]
+
+notes = [
+  "The Hyprland config is Lua (hyprland.lua, Hyprland 0.56+); with this profile hyprsetup's own settings pages don't write to Hyprland.",
+  "The shell starts at login with 'serpantinumd start'; log out and back in after installing. On first start the author's welcome screen appears.",
+  "The SDDM theme, telemetry and system services (NetworkManager, power-profiles-daemon) aren't installed; enable them by hand if needed.",
+  "The wallpaper is downloaded from the author's shell-wallpapers repo via a raw URL pinned to the commit containing the file (not copied into the repo).",
+]
+
+[source]
+repo = "https://github.com/ilyamiro/serpantinum"
+commit = "990615ff0d205d185f0a6ca2f3cc83a8769c380a"
+post = "https://www.reddit.com/r/hyprland/comments/1th2stg/quickshell_can_do_insane_things/"
+license = "AGPL-3.0"
+
+[[install]]
+from = "bin"
+to = "~/.local/share/serpantinum/bin"
+[[install]]
+from = "src"
+to = "~/.local/share/serpantinum/src"
+[[install]]
+from = "config/kitty"
+to = "~/.config/kitty"
+[[install]]
+from = "config/cava"
+to = "~/.config/cava"
+[[install]]
+from = "config/fastfetch"
+to = "~/.config/fastfetch"
+[[install]]
+from = "config/serpantinum"
+to = "~/.config/serpantinum"
+[[install]]
+from = "compositors/hyprland"
+to = "~/.config/hypr"
+
+[[link]]
+to = "~/.local/bin/serpantinum"
+target = "~/.local/share/serpantinum/bin/serpantinum"
+[[link]]
+to = "~/.local/bin/serpantinumd"
+target = "~/.local/share/serpantinum/bin/serpantinumd"
+
+[[fix]]
+file = "~/.config/serpantinum/settings.json"
+replace = ["{\n  \"general\"", "{\n  \"wallpaperDir\": \"{home}/Pictures/Wallpapers/serpantinum\",\n  \"general\""]
+why = "the author's init_serpantinum_config adds wallpaperDir with jq; a separate folder makes sure the wallpaper picked at random on first start is the look's"
+[[fix]]
+file = "~/.config/hypr/config/env.lua"
+append = "-- hyprsetup: the author links the commands into /usr/local/bin with sudo; instead\nhl.env(\"PATH\", os.getenv(\"HOME\") .. \"/.local/bin:\" .. (os.getenv(\"PATH\") or \"\"))\n"
+why = "serpantinumd/serpantinum are in ~/.local/bin, which may not be on the Hyprland session's PATH"
+
+[packages]
+repo = ["kitty", "cava", "zbar", "pavucontrol", "alsa-utils", "wl-clipboard", "fd",
+        "qt6-multimedia", "qt6-5compat", "ripgrep", "cliphist", "jq", "socat",
+        "inotify-tools", "pamixer", "brightnessctl", "acpi", "iw", "bluez", "bluez-utils",
+        "libnotify", "networkmanager", "lm_sensors", "bc", "matugen", "pipewire",
+        "wireplumber", "pipewire-pulse", "pipewire-alsa", "libpulse", "python",
+        "imagemagick", "wget", "file", "git", "psmisc", "ffmpeg", "fastfetch", "quickshell",
+        "unzip", "python-websockets", "qt6-websockets", "grim", "playerctl", "satty",
+        "xdg-desktop-portal-gtk", "slurp", "wmctrl", "power-profiles-daemon", "easyeffects",
+        "nautilus", "qt5-wayland", "qt5-quickcontrols", "qt5-quickcontrols2",
+        "qt5-graphicaleffects", "qt6-wayland", "qt5ct", "qt6ct", "gpu-screen-recorder",
+        "wf-recorder", "adw-gtk-theme"]
+aur = ["wl-gammarelay-rs"]
+
+[variants.pembe]
+title = "Pink flat mountains"
+wallpaper = "https://raw.githubusercontent.com/ilyamiro/shell-wallpapers/4f5994aff60403f88d3f0378e6f9c9d0a00b0289/images/ddg_1779119885466509172.jpg"
+wallpaper_dest = "~/Pictures/Wallpapers/serpantinum/pembe.jpg"
+apply = [
+  "q=$(find ~/.local/share/serpantinum/src/quickshell -type f \\( -name Shell.qml -o -name Bar.qml \\) | head -n 1); quickshell -p \"$q\" ipc call wallpaper setWallpaper all {wallpaper} fade >/dev/null 2>&1; quickshell -p \"$q\" ipc call matugen generate {wallpaper} '' '' >/dev/null 2>&1 || true",
+]
+credit = "ilyamiro/shell-wallpapers (post 3)"
+
+# The settings app's Bar page recognizes and configures this bar (ricebar.py).
+[bar]
+kind = "quickshell"
+label = "Serpantinum (Quickshell)"
+config = "~/.config/serpantinum/settings.json"
+[[bar.field]]
+key = "position"
+title = "Konum"
+type = "choice"
+path = "bar.position"
+choices = ["top", "bottom", "left", "right"]
+[[bar.field]]
+key = "width"
+title = "Width"
+type = "int"
+path = "bar.width"
+min = 30
+max = 100
+unit = "%"
+[[bar.field]]
+key = "opacity"
+title = "Opacity"
+type = "int"
+path = "bar.opacity"
+min = 20
+max = 100
+unit = "%"
+[[bar.field]]
+key = "style"
+title = "Stil"
+type = "choice"
+path = "bar.style"
+choices = ["fill", "solid"]
+[[bar.field]]
+key = "autohide"
+title = "Auto-hide"
+type = "bool"
+path = "bar.autohide"

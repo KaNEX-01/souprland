@@ -1,0 +1,182 @@
+# zephardev/hyprcraft — r/hyprland "HyprCraft coffee at sunset"
+# https://www.reddit.com/r/hyprland/comments/1n8wzk5/
+# Posted 2025-09-05T05:37Z; the commit is the last one before that (9ee55c4).
+# The repo was in the middle of a half-finished reorganization at the time; the
+# screenshots are from the author's own machine. The gaps are fixed below.
+
+hypr_entry = "hypr.conf"
+
+post_install = [
+  "chmod +x ~/.config/hypr/scripts/*.sh ~/.config/rofi/*/*.sh 2>/dev/null || true",
+  "hyprctl reload >/dev/null 2>&1 || true",
+  "pkill -x waybar; waybar >/dev/null 2>&1 &",
+]
+
+notes = [
+  "The desktop wallpapers (cat on snowy stairs, girl in the clouds, crane in the rain) came from ad1822's removed Drive folder; an openly licensed photo on the same subject (Wikimedia Commons) is installed instead.",
+  "The lock screen's two helper scripts aren't in the repo; equivalents showing the same information were written.",
+]
+
+default_variant = "merdiven"
+
+[source]
+repo = "https://github.com/zephardev/hyprcraft"
+commit = "9ee55c480faca11eebf4101441028019216590f7"
+post = "https://www.reddit.com/r/hyprland/comments/1n8wzk5/hyprcraft_coffee_at_sunset/"
+license = "MIT"
+
+[[install]]
+from = "configs/.config/hypr"
+to = "~/.config/hypr"
+[[install]]
+from = "configs/.config/waybar"
+to = "~/.config/waybar"
+[[install]]
+from = "configs/.config/rofi"
+to = "~/.config/rofi"
+[[install]]
+from = "configs/.config/dunst"
+to = "~/.config/dunst"
+[[install]]
+from = "configs/.config/kitty"
+to = "~/.config/kitty"
+[[install]]
+from = "configs/.config/cava"
+to = "~/.config/cava"
+[[install]]
+from = "configs/.config/fastfetch"
+to = "~/.config/fastfetch"
+[[install]]
+from = "configs/.config/yazi"
+to = "~/.config/yazi"
+# The lock screen in the gallery: added to the repo 6.5 hours after the post.
+[[install]]
+from = "configs/.config/hypr/hyprlock.conf"
+to = "~/.config/hypr/hyprlock.conf"
+commit = "077674f54e20792e8b2673153728fdb657d1093c"
+# Bar style: in the commit at post time config.jsonc names the groups "group-1…9"
+# but style.css still looked for the old names (#group-workspaces…)
+# — the boxes were never drawn and the bar stayed plain text. The style of the boxed
+# bar in the gallery was added to the repo 6.5 hours after the post.
+[[install]]
+from = "configs/.config/waybar/style.css"
+to = "~/.config/waybar/style.css"
+commit = "e296735e19788c54eabcdf755fc93f03b20b35f3"
+# Lock screen background (swords in hand) — added to the repo in October 2025.
+[[install]]
+from = "Configs/.config/hypr/assets"
+to = "~/.config/hypr/assets"
+commit = "2a30191e079d06685843d2131db61c696b16f924"
+[[install]]
+from = "configs/.config/nvim"
+to = "~/.config/nvim"
+group = "editor"
+
+[[fix]]
+file = "~/.config/hypr/system/monitors.conf"
+create = "# hyprsetup: the author's hypr.conf wants this file but it isn't in the repo\nmonitor = , preferred, auto, 1\n"
+why = "hypr.conf sources system/monitors.conf, which isn't in the repo"
+[[fix]]
+file = "~/.config/hypr/hypr.conf"
+replace = ["source = ~/.config/hypr/system/keybinds.conf", "source = ~/.config/hypr/input/keybinds.conf"]
+why = "the keybindings are under input/keybinds.conf in the repo"
+[[fix]]
+file = "~/.config/hypr/ui/decoration.conf"
+replace = ["source = ~/.config/hypr/mocha.conf", "source = ~/.config/hypr/ui/mocha.conf"]
+why = "the theme file is under ui/mocha.conf in the repo"
+[[fix]]
+file = "~/.config/hypr/input/keybinds.conf"
+replace = ["bind = $mainMod SHIFT, T, $terminal-float", "bind = $mainMod SHIFT, T, exec, $terminal-float"]
+why = "the author's line is missing 'exec' (it didn't work in the original either)"
+[[fix]]
+file = "~/.config/hypr/input/input.conf"
+replace = ["  sensivity = 0", "  # sensivity = 0  (hyprsetup: typo; had no effect in the original either, the value is the default anyway)"]
+why = "the 'sensivity' typo causes a config error in Hyprland"
+[[fix]]
+file = "~/.config/hypr/hyprlock.conf"
+replace = ["~/.config/hypr/appearance/mocha.conf", "~/.config/hypr/ui/mocha.conf"]
+why = "the theme file is under ui/mocha.conf in the repo"
+[[fix]]
+file = "~/.config/hypr/scripts/songdetail.sh"
+create = "#!/usr/bin/env bash\n# hyprsetup: the author's script isn't in the repo; the 'song  artist' line on the lock screen\nplayerctl metadata --format '{{title}}  {{artist}}' 2>/dev/null\n"
+why = "the script hyprlock.conf calls was never added to the repo"
+[[fix]]
+file = "~/.config/hypr/scripts/ipaddr.sh"
+create = "#!/usr/bin/env bash\n# hyprsetup: the author's script isn't in the repo; the IP line on the lock screen (local address)\nip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i==\"src\") print $(i+1)}'\n"
+why = "the script hyprlock.conf calls was never added to the repo"
+
+[[fix]]
+file = "~/.config/rofi/wallselect/script.sh"
+replace = ["echo \"preload = $SELECTED\" > \"$CONFIG_PATH\"\necho \"wallpaper = eDP-1, $SELECTED\" >> \"$CONFIG_PATH\"", "printf 'wallpaper {\\n    monitor =\\n    path = %s\\n    fit_mode = cover\\n}\\n' \"$SELECTED\" > \"$CONFIG_PATH\""]
+why = "hyprpaper 0.8 syntax (no preload, wallpaper { } block); all displays instead of the author's laptop panel (eDP-1)"
+
+[[fix]]
+file = "~/.config/kitty/kitty.conf"
+append = "# hyprsetup: the author's kitty.conf is empty, so the Catppuccin theme was never loaded\ninclude theme.conf\n"
+why = "kitty.conf is empty; theme.conf (Catppuccin Mocha) wasn't included"
+
+[packages]
+repo = ["waybar", "rofi", "dunst", "kitty", "hyprpaper", "hypridle", "hyprlock",
+        "network-manager-applet", "cava", "fastfetch", "yazi", "btop",
+        "hyprshot", "pavucontrol", "thunar", "brightnessctl", "playerctl",
+        "cliphist", "wl-clipboard", "jq", "libnotify", "ttf-jetbrains-mono-nerd"]
+aur = ["wlogout"]
+
+[variants.merdiven]
+title = "Snowy stairs"
+wallpaper = "https://upload.wikimedia.org/wikipedia/commons/c/cc/Snowy_Steps_%28145711789%29.jpeg"
+wallpaper_dest = "~/Pictures/Wallpaper/hyprcraft-merdiven.jpg"
+apply = [
+  "printf 'wallpaper {\\n    monitor =\\n    path = %s\\n    fit_mode = cover\\n}\\nsplash = false\\nipc = on\\n' {wallpaper} > ~/.config/hypr/hyprpaper.conf",
+  "pkill -x hyprpaper; sleep 0.3; hyprpaper >/dev/null 2>&1 &",
+]
+credit = "Look-alike (the author's source was removed): Jason Knauer, Snowy Steps — Wikimedia Commons, CC BY 3.0"
+
+# The settings app's Bar page recognizes and configures this bar (ricebar.py).
+[bar]
+kind = "waybar"
+label = "Waybar (HyprCraft)"
+config = "~/.config/waybar/config.jsonc"
+style = "~/.config/waybar/style.css"
+
+# --- Mix parts (python -m hyprsetup mix; see python/hyprsetup/mix.py) ---
+[[part]]
+slot = "bar"
+title = "Waybar (Catppuccin, sunset)"
+paths = ["~/.config/waybar"]
+needs = ["~/.config/rofi"]
+start = "waybar"
+provides = ["bar"]
+packages = ["waybar"]
+
+[[part]]
+slot = "launcher"
+title = "Rofi launcher (+ clipboard, wifi, wallpaper picker)"
+paths = ["~/.config/rofi"]
+commands = { CMD_LAUNCHER = "~/.config/rofi/launcher/launcher.sh" }
+packages = ["rofi"]
+
+[[part]]
+slot = "notify"
+title = "Dunst notifications"
+paths = ["~/.config/dunst"]
+start = "dunst"
+provides = ["notify"]
+packages = ["dunst"]
+
+[[part]]
+slot = "terminal"
+title = "Kitty"
+paths = ["~/.config/kitty"]
+commands = { CMD_TERMINAL = "kitty" }
+packages = ["kitty"]
+
+[[part]]
+slot = "lock"
+title = "Hyprlock lock screen (song + IP)"
+paths = ["~/.config/hypr/hyprlock.conf"]
+needs = ["~/.config/hypr/ui/mocha.conf", "~/.config/hypr/scripts/songdetail.sh",
+         "~/.config/hypr/scripts/ipaddr.sh"]
+wallpaper_lines = true
+commands = { LOCK_CMD = "hyprlock" }
+packages = ["hyprlock"]

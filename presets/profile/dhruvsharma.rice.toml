@@ -1,0 +1,144 @@
+# dhrruvsharma/shell — r/hyprland "Finally 100% quickshell rice, now replaced
+# rofi as well" (9)
+# https://www.reddit.com/r/hyprland/comments/1seokvc/
+# Posted 2026-04-07 06:55 UTC; the installed commit is "rice is 100%
+# quickshell based now" from 24 minutes earlier (9513908). The repo has no installer: folders
+# follow the ~/.config layout, used on the author's own machine (/home/igris).
+# No license stated (not copied into the repo; downloaded from the author's repo at install time).
+#
+# Adaptations:
+# - /home/igris paths are rewritten to the home directory.
+# - The ~/.config/scripts the shell calls (find-apps.sh, change-layout.sh) were
+#   added to the repo the same day, 9 hours after the post (9e23087); taken from there.
+# - ~/.local/bin/setwall, which applies the wallpaper, is the author's personal script
+#   and was never published. The note in the shell ("setwall uses swww internally") and
+#   the matugen config show what it does: an equivalent is written (awww + matugen).
+# - NVIDIA environment variables are commented out only on non-NVIDIA machines
+#   (GBM_BACKEND=nvidia-drm prevents the session from starting on other GPUs).
+
+default_variant = "portre"
+shims = ["swww"]
+
+post_install = [
+  "chmod +x ~/.local/bin/setwall ~/.config/scripts/*.sh ~/.config/quickshell/modules/wallpaper/wp-script.sh ~/.config/rofi/scripts/*.sh ~/.config/rofi/modes/*.sh ~/.config/rofi/powermenu/*.sh 2>/dev/null || true",
+  "hyprctl reload >/dev/null 2>&1 || true",
+]
+
+notes = [
+  "Wallpapers are downloaded from the author's dhrruvsharma/wallpapers repo at a URL pinned to the first commit containing the file (no license stated; not copied into the repo). The shell's wallpaper picker reads ~/Pictures/wallpapers (SUPER+W); SUPER+SHIFT+W opens the online Wallhaven panel.",
+  "The AI chat panel (quickshell/scripts/aikira) needs a separate FastAPI service (requirements.txt, aikira.service); it isn't installed.",
+  "The author's personal app keybindings (WebStorm, GoLand, Postman, Slack, vesktop…) are kept as is; they won't work if the apps aren't installed.",
+  "The window layout is scrolling (layout = scrolling).",
+]
+
+[source]
+repo = "https://github.com/dhrruvsharma/shell"
+commit = "95139083cb183e686cdc755bdeec617982eb68c3"
+post = "https://www.reddit.com/r/hyprland/comments/1seokvc/finally_100_quickshell_rice_now_replaced_rofi_as/"
+license = ""
+
+[[install]]
+from = "hypr"
+to = "~/.config/hypr"
+[[install]]
+from = "quickshell"
+to = "~/.config/quickshell"
+[[install]]
+from = "matugen"
+to = "~/.config/matugen"
+[[install]]
+from = "kitty"
+to = "~/.config/kitty"
+[[install]]
+from = "cava"
+to = "~/.config/cava"
+[[install]]
+from = "rofi"
+to = "~/.config/rofi"
+[[install]]
+from = "scripts"
+to = "~/.config/scripts"
+commit = "9e2308746da6da04356798584c59ad44beb8a7c0"
+
+[[file]]
+to = "~/.local/bin/setwall"
+content = "#!/usr/bin/env bash\n# hyprsetup: the author's ~/.local/bin/setwall isn't in the repo; rewritten from\n# how it is used (quickshell/modules/wallpaper/wp-script.sh: \"setwall uses swww\n# internally\"; colors via the ~/.config/matugen/config.toml templates).\n[ -f \"$1\" ] || { echo \"usage: setwall <image> [awww img options]\" >&2; exit 1; }\nawww img \"$1\" \"${@:2}\"\nmatugen image \"$1\" --source-color-index 0\n"
+
+[[fix]]
+file = "~/.config/hypr/colors.conf"
+replace = ["/home/igris", "{home}"]
+why = "the author's home directory path"
+[[fix]]
+file = "~/.config/hypr/hyprland.conf"
+replace = ["/home/igris", "{home}"]
+why = "the author's home directory path"
+[[fix]]
+file = "~/.config/matugen/config.toml"
+replace = ["/home/igris", "{home}"]
+why = "the author's home directory path"
+[[fix]]
+file = "~/.config/quickshell/modules/wallpaper/Wallpaper.qml"
+replace = ["/home/igris", "{home}"]
+why = "the author's home directory path"
+[[fix]]
+file = "~/.config/quickshell/modules/wallpaper/wp-script.sh"
+replace = ["/home/igris", "{home}"]
+why = "the author's home directory path"
+[[fix]]
+file = "~/.config/quickshell/services/AppRegistry.qml"
+replace = ["/home/igris", "{home}"]
+why = "the author's home directory path"
+[[fix]]
+file = "~/.config/quickshell/services/Wallhaven.qml"
+replace = ["/home/igris", "{home}"]
+why = "the author's home directory path"
+[[fix]]
+file = "~/.config/hypr/hyprland.conf"
+replace = ["env = LIBVA_DRIVER_NAME,nvidia", "# (hyprsetup: no NVIDIA) env = LIBVA_DRIVER_NAME,nvidia", "env = __GLX_VENDOR_LIBRARY_NAME,nvidia", "# (hyprsetup: no NVIDIA) env = __GLX_VENDOR_LIBRARY_NAME,nvidia", "env = GBM_BACKEND,nvidia-drm", "# (hyprsetup: no NVIDIA) env = GBM_BACKEND,nvidia-drm", "env = NVD_BACKEND,direct", "# (hyprsetup: no NVIDIA) env = NVD_BACKEND,direct"]
+why = "specific to the author's NVIDIA machine; on other GPUs GBM_BACKEND=nvidia-drm keeps the session from starting"
+gpu = "no-nvidia"
+
+[packages]
+repo = ["quickshell", "awww", "matugen", "cliphist", "kdeconnect", "network-manager-applet",
+        "networkmanager", "kitty", "cava", "wf-recorder", "jq", "curl", "kvantum", "qt6ct",
+        "dolphin", "python", "python-requests", "brightnessctl", "playerctl", "libnotify",
+        "ttf-jetbrains-mono", "noto-fonts", "ttf-iosevka-nerd", "ttf-nerd-fonts-symbols",
+        "ttf-firacode-nerd"]
+aur = ["grimblast-git", "bibata-cursor-theme-bin", "ttf-material-design-icons-webfont"]
+
+[variants.portre]
+title = "Red-gray portrait"
+wallpaper = "https://raw.githubusercontent.com/dhrruvsharma/wallpapers/2e73a52aa8224f1ad7f0154b5c5fe46c71c90af3/3qwx1v.jpg"
+wallpaper_dest = "~/Pictures/wallpapers/3qwx1v.jpg"
+apply = ["~/.local/bin/setwall {wallpaper} --transition-type any --transition-duration 1"]
+credit = "dhrruvsharma/wallpapers — 3qwx1v (Wallhaven), added to the repo the day after the post"
+
+[variants.wlop-dans]
+title = "WLOP \u2014 Dance (mor-turuncu)"
+wallpaper = "https://raw.githubusercontent.com/dhrruvsharma/wallpapers/80862221c429c18b470aab27a39b3aa70c48a811/dance_by_wlop_dend7pf-pre.jpg"
+wallpaper_dest = "~/Pictures/wallpapers/dance_by_wlop_dend7pf-pre.jpg"
+apply = ["~/.local/bin/setwall {wallpaper} --transition-type any --transition-duration 1"]
+credit = "dhrruvsharma/wallpapers \u2014 WLOP \"Dance\""
+
+# The settings app's Bar page recognizes this bar (ricebar.py).
+[bar]
+kind = "quickshell"
+label = "dhruvsharma (Quickshell)"
+note = "The shell's settings live in the author's QML code; there is no settings file."
+
+# --- Mix parts (python -m hyprsetup mix; see python/hyprsetup/mix.py) ---
+[[part]]
+slot = "terminal"
+title = "Kitty"
+paths = ["~/.config/kitty"]
+commands = { CMD_TERMINAL = "kitty" }
+packages = ["kitty"]
+
+[[part]]
+slot = "lock"
+title = "Hyprlock lock screen"
+paths = ["~/.config/hypr/hyprlock.conf"]
+wallpaper_lines = true
+commands = { LOCK_CMD = "hyprlock" }
+packages = ["hyprlock"]
+note = "The song line and profile picture depend on scripts in the author's shell; they stay empty when used on their own."

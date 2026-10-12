@@ -1,0 +1,39 @@
+{{! require: HAS_WLOGOUT }}
+{
+    "label" : "lock",
+    "action" : "{{LOCK_CMD}}",
+    "text" : "Lock",
+    "keybind" : "l"
+}
+{{#if POWERMENU_HIBERNATE}}
+{
+    "label" : "hibernate",
+    "action" : "systemctl hibernate",
+    "text" : "Hibernate",
+    "keybind" : "h"
+}
+{{/if}}
+{
+    "label" : "logout",
+    "action" : "hyprctl dispatch exit",
+    "text" : "Log out",
+    "keybind" : "e"
+}
+{
+    "label" : "shutdown",
+    "action" : "systemctl poweroff",
+    "text" : "Shut down",
+    "keybind" : "s"
+}
+{
+    "label" : "suspend",
+    "action" : "systemctl suspend",
+    "text" : "Sleep",
+    "keybind" : "u"
+}
+{
+    "label" : "reboot",
+    "action" : "systemctl reboot",
+    "text" : "Reboot",
+    "keybind" : "r"
+}

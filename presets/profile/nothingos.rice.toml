@@ -1,0 +1,170 @@
+# 0xbbuddha/dotfiles_nothing_os — r/hyprland "NothingOS" (13)
+# https://www.reddit.com/r/hyprland/comments/1w8zykk/nothingos/
+# Posted 2026-09-06 15:58 UTC; the installed commit is "new wallpaper" from
+# 17 minutes earlier (f245629) — that's the wallpaper in the gallery. MIT. Hyprland 0.56 Lua
+# config + Quickshell 0.3.
+#
+# Copies exactly what the author's scripts/install-config.sh copies. The author
+# moves hyprland.conf aside and puts hyprland.lua in place; here ~/.config/hypr
+# is replaced wholesale by the author's (the previous one is backed up). The user-level
+# steps of the author's install (shader compilation, Dolphin/GTK/icon
+# theme) run after install. NOT TAKEN: the SDDM "Nothing" session and the
+# astronaut theme (written to /usr/share with sudo).
+
+default_variant = "nothing"
+provides = ["bar", "widget", "launcher", "notify", "wallpaper", "theming"]
+
+post_install = [
+  "bash ~/.config/scripts/compile-shaders.sh >/dev/null 2>&1 || true",
+  "bash ~/.config/scripts/apply-app-theme.sh >/dev/null 2>&1 || true",
+  "update-desktop-database ~/.local/share/applications >/dev/null 2>&1 || true",
+  "gtk-update-icon-cache -f ~/.local/share/icons/hicolor >/dev/null 2>&1 || true",
+  "hyprctl reload >/dev/null 2>&1 || true",
+]
+
+notes = [
+  "The Hyprland config is Lua (hyprland.lua, Hyprland 0.56+); with this profile hyprsetup's own settings pages don't write to Hyprland. Your own keybindings: ~/.config/hypr/custom.lua.",
+  "The Dolphin/GTK/icon theme is applied with the author's apply-app-theme.sh; to revert: bash ~/.config/scripts/apply-app-theme.sh --revert",
+  "The SDDM 'Nothing' session isn't installed; the normal Hyprland login reads the same hyprland.lua.",
+  "Keybindings: SUPER for the launcher and workspaces, SUPER+I settings, SUPER+V clipboard, SUPER+G game bar.",
+]
+
+[source]
+repo = "https://github.com/0xbbuddha/dotfiles_nothing_os"
+commit = "f245629316c810c5ebc9dde8d27421eae9c02838"
+post = "https://www.reddit.com/r/hyprland/comments/1w8zykk/nothingos/"
+license = "MIT"
+
+[[install]]
+from = "hypr"
+to = "~/.config/hypr"
+[[install]]
+from = "hypr/custom.lua.example"
+to = "~/.config/hypr/custom.lua"
+[[install]]
+from = "quickshell/nothing"
+to = "~/.config/quickshell/nothing"
+[[install]]
+from = "scripts"
+to = "~/.config/scripts"
+[[install]]
+from = "theme"
+to = "~/.config/theme"
+[[install]]
+from = "applications/nothing-x.desktop"
+to = "~/.local/share/applications/nothing-x.desktop"
+[[install]]
+from = "icons/hicolor/scalable/apps"
+to = "~/.local/share/icons/hicolor/scalable/apps"
+mode = "merge"
+[[install]]
+from = "config/kitty"
+to = "~/.config/kitty"
+[[install]]
+from = "config/mpv"
+to = "~/.config/mpv"
+[[install]]
+from = "config/fontconfig"
+to = "~/.config/fontconfig"
+[[install]]
+from = "config/fastfetch"
+to = "~/.config/fastfetch"
+[[install]]
+from = "config/starship.toml"
+to = "~/.config/starship.toml"
+group = "shell"
+[[install]]
+from = "config/fish/conf.d/nothing.fish"
+to = "~/.config/fish/conf.d/nothing.fish"
+group = "shell"
+[[install]]
+from = "config/fish/functions/fastfetch.fish"
+to = "~/.config/fish/functions/fastfetch.fish"
+group = "shell"
+
+[packages]
+repo = ["hypridle", "hyprlock", "hyprpicker", "hyprcursor", "hyprsunset",
+        "xdg-desktop-portal", "xdg-desktop-portal-hyprland", "xdg-desktop-portal-gtk",
+        "xdg-desktop-portal-kde", "qt6-base", "qt6-declarative", "qt6-wayland", "qt6-svg",
+        "qt6-multimedia", "qt6-5compat", "qt6-shadertools", "gst-libav", "polkit-kde-agent",
+        "gnome-keyring", "networkmanager", "bluez", "bluez-utils", "kitty", "dolphin", "fish",
+        "starship", "fastfetch", "mpv", "eza", "ttf-jetbrains-mono-nerd", "inter-font",
+        "adw-gtk-theme", "breeze", "librsvg", "pipewire", "pipewire-pulse", "wireplumber",
+        "pavucontrol-qt", "playerctl", "upower", "brightnessctl", "cava", "wl-clipboard",
+        "cliphist", "grim", "slurp", "swappy", "hyprshot", "tesseract", "tesseract-data-eng",
+        "wf-recorder", "jq", "imagemagick", "libqalculate", "rsync", "songrec", "python",
+        "python-pillow", "python-numpy", "python-opencv", "git",
+        "quickshell"]
+aur = ["qogir-icon-theme", "ttf-nothing-font-git", "bibata-cursor-theme-bin", "darkly-bin"]
+
+[variants.nothing]
+title = "Nothing — matte black, concrete gray, red"
+wallpaper = "~/.config/hypr/wallpaper.png"
+credit = "hypr/wallpaper.png from the author's repo (as posted)"
+
+# The settings app's Bar page recognizes and configures this bar (ricebar.py).
+# The shell creates the settings file on first start.
+[bar]
+kind = "quickshell"
+label = "NothingOS (Quickshell)"
+config = "~/.config/nothing/config.json"
+[[bar.field]]
+key = "showWorkspaces"
+title = "Workspaces"
+type = "bool"
+path = "showWorkspaces"
+[[bar.field]]
+key = "showTray"
+title = "System tray"
+type = "bool"
+path = "showTray"
+[[bar.field]]
+key = "showBattery"
+title = "Battery"
+type = "bool"
+path = "showBattery"
+[[bar.field]]
+key = "barShowCpu"
+title = "CPU indicator"
+type = "bool"
+path = "barShowCpu"
+[[bar.field]]
+key = "barShowRam"
+title = "Memory indicator"
+type = "bool"
+path = "barShowRam"
+[[bar.field]]
+key = "barShowTemp"
+title = "Temperature indicator"
+type = "bool"
+path = "barShowTemp"
+[[bar.field]]
+key = "showDock"
+title = "Bottom dock"
+type = "bool"
+path = "showDock"
+[[bar.field]]
+key = "dockAutoHide"
+title = "Auto-hide the dock"
+type = "bool"
+path = "dockAutoHide"
+[[bar.field]]
+key = "showDesktopWidgets"
+title = "Desktop widgets"
+type = "bool"
+path = "showDesktopWidgets"
+[[bar.field]]
+key = "workspaceCount"
+title = "Number of workspaces"
+type = "int"
+path = "workspaceCount"
+min = 1
+max = 20
+
+# --- Mix parts (python -m hyprsetup mix; see python/hyprsetup/mix.py) ---
+[[part]]
+slot = "terminal"
+title = "Kitty (Nothing)"
+paths = ["~/.config/kitty"]
+commands = { CMD_TERMINAL = "kitty" }
+packages = ["kitty"]

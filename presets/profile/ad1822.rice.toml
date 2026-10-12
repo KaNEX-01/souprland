@@ -1,0 +1,148 @@
+# ad1822 / hyprdots — r/hyprland "It's a peace. It's my home"
+# https://www.reddit.com/r/hyprland/comments/1n5hl13/
+# Posted 2025-09-01; the commit is the one closest to that day (the author's
+# screenshot Assets/09-01-09-45-29.png is in this commit too).
+
+default_variant = "sis"
+
+post_install = [
+  "chmod +x ~/.config/waybar/scripts/* ~/.config/rofi/*/*.sh 2>/dev/null || true",
+  "hyprctl reload >/dev/null 2>&1 || true",
+  "pkill -x waybar; waybar >/dev/null 2>&1 &",
+]
+
+notes = [
+  "The wallpapers were in the author's Google Drive folder, which has been removed (404). Openly licensed photos on the same subjects (Wikimedia Commons) are installed instead.",
+  "The author's scripts write hyprpaper.conf for 'eDP-1' (the laptop panel); the look-apply step writes it for all displays.",
+  "Zen browser (exec-once, workspace 1) is optional: AUR zen-browser-bin.",
+]
+
+[source]
+repo = "https://github.com/ad1822/hyprdots"
+commit = "a92e70a264fce6d2844b0bc59b13533b2d466cc8"
+post = "https://www.reddit.com/r/hyprland/comments/1n5hl13/its_a_peace_its_my_home/"
+license = "MIT"
+
+# Directories copied by the author's setup.sh (CONFIGS=...).
+[[install]]
+from = "hypr"
+to = "~/.config/hypr"
+[[install]]
+from = "waybar"
+to = "~/.config/waybar"
+[[install]]
+from = "rofi"
+to = "~/.config/rofi"
+[[install]]
+from = "dunst"
+to = "~/.config/dunst"
+[[install]]
+from = "kitty"
+to = "~/.config/kitty"
+[[install]]
+from = "cava"
+to = "~/.config/cava"
+[[install]]
+from = "fastfetch"
+to = "~/.config/fastfetch"
+[[install]]
+from = "yazi"
+to = "~/.config/yazi"
+[[install]]
+from = "tmux"
+to = "~/.config/tmux"
+[[install]]
+from = "bin"
+to = "~/.local/bin/ad1822"
+mode = "replace"
+[[install]]
+from = "fish"
+to = "~/.config/fish"
+group = "shell"
+[[install]]
+from = "starship"
+to = "~/.config/starship"
+group = "shell"
+[[install]]
+from = "nvim"
+to = "~/.config/nvim"
+group = "editor"
+
+[packages]
+repo = ["waybar", "rofi", "dunst", "kitty", "hyprpaper", "hypridle", "hyprlock",
+        "cliphist", "wl-clipboard", "grim", "slurp", "hyprpicker", "pamixer",
+        "brightnessctl", "cava", "fastfetch", "btop", "yazi", "tmux", "playerctl",
+        "jq", "bc", "libnotify", "networkmanager",
+        "ttf-jetbrains-mono-nerd", "woff2-font-awesome"]
+aur = ["grimblast-git", "ttf-font-awesome-5", "banana-cursor-bin"]
+
+# Looks: the two wallpapers from the post's gallery. The author's wallpaper
+# scripts look under ~/Pictures/Wallpaper.
+[variants.sis]
+title = "Misty pier (gray)"
+wallpaper = "https://upload.wikimedia.org/wikipedia/commons/7/76/Rowboat_off_a_pier_on_the_Huon_River_in_the_fog_%28south%29.jpg"
+wallpaper_dest = "~/Pictures/Wallpaper/ad1822-sis.jpg"
+apply = [
+  "printf 'wallpaper {\\n    monitor =\\n    path = %s\\n    fit_mode = cover\\n}\\nsplash = false\\nipc = on\\n' {wallpaper} > ~/.config/hypr/hyprpaper.conf",
+  "pkill -x hyprpaper; sleep 0.3; hyprpaper >/dev/null 2>&1 &",
+]
+credit = "Look-alike (the author's source was removed): JustinH, misty pier on the Huon River — Wikimedia Commons, CC0"
+
+[variants.bulut]
+title = "Sea of clouds"
+wallpaper = "https://upload.wikimedia.org/wikipedia/commons/b/b5/Karst_peaks_with_sea_of_clouds_at_sunrise%2C_South_view_from_the_top_of_Mount_Nam_Xay%2C_Vang_Vieng%2C_Laos.jpg"
+wallpaper_dest = "~/Pictures/Wallpaper/ad1822-bulut.jpg"
+apply = [
+  "printf 'wallpaper {\\n    monitor =\\n    path = %s\\n    fit_mode = cover\\n}\\nsplash = false\\nipc = on\\n' {wallpaper} > ~/.config/hypr/hyprpaper.conf",
+  "pkill -x hyprpaper; sleep 0.3; hyprpaper >/dev/null 2>&1 &",
+]
+credit = "Look-alike (the author's source was removed): Basile Morin, sea of clouds from Nam Xay — Wikimedia Commons, CC BY-SA 4.0"
+
+# The settings app's Bar page recognizes and configures this bar (ricebar.py).
+[bar]
+kind = "waybar"
+label = "Waybar (ad1822)"
+config = "~/.config/waybar/config.jsonc"
+style = "~/.config/waybar/style.css"
+
+# --- Mix parts (python -m hyprsetup mix; see python/hyprsetup/mix.py) ---
+[[part]]
+slot = "bar"
+title = "Waybar — pill modules + GitHub squares"
+paths = ["~/.config/waybar"]
+needs = ["~/.config/rofi"]
+start = "waybar"
+provides = ["bar"]
+packages = ["waybar", "pamixer", "jq"]
+note = "The GitHub squares module needs the author's GitHub token (~/.config/waybar/scripts/.env)."
+
+[[part]]
+slot = "launcher"
+title = "Rofi launcher (+ power menu, clipboard, wallpaper grid)"
+paths = ["~/.config/rofi"]
+commands = { CMD_LAUNCHER = "~/.config/rofi/launcher/launcher.sh" }
+packages = ["rofi"]
+
+[[part]]
+slot = "notify"
+title = "Dunst notifications"
+paths = ["~/.config/dunst"]
+start = "dunst"
+provides = ["notify"]
+packages = ["dunst"]
+
+[[part]]
+slot = "terminal"
+title = "Kitty"
+paths = ["~/.config/kitty"]
+commands = { CMD_TERMINAL = "kitty" }
+packages = ["kitty"]
+
+[[part]]
+slot = "lock"
+title = "Hyprlock lock screen"
+paths = ["~/.config/hypr/hyprlock.conf"]
+needs = ["~/.config/hypr/mocha.conf"]
+wallpaper_lines = true
+commands = { LOCK_CMD = "hyprlock" }
+packages = ["hyprlock"]

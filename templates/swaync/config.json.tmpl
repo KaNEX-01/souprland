@@ -1,0 +1,80 @@
+{{! require: NOTIFIER==swaync && HAS_SWAYNC }}
+{
+    "$schema": "/etc/xdg/swaync/configSchema.json",
+    "positionX": "{{NOTIFY_POS_X}}",
+    "positionY": "{{NOTIFY_POS_Y}}",
+    "layer": "overlay",
+    "control-center-layer": "top",
+    "layer-shell": true,
+    "cssPriority": "user",
+    "control-center-margin-top": {{BAR_MARGIN}},
+    "control-center-margin-bottom": {{BAR_MARGIN}},
+    "control-center-margin-right": {{BAR_MARGIN}},
+    "control-center-margin-left": {{BAR_MARGIN}},
+    "notification-2fa-action": true,
+    "notification-inline-replies": true,
+    "notification-icon-size": {{NOTIFY_ICON_SIZE_VALUE}},
+    "notification-body-image-height": 100,
+    "notification-body-image-width": 200,
+    "notification-window-width": {{NOTIFY_WIDTH_VALUE}},
+    "timeout": {{NOTIFY_TIMEOUT_SEC}},
+    "timeout-low": {{NOTIFY_TIMEOUT_LOW_SEC}},
+    "timeout-critical": {{NOTIFY_TIMEOUT_CRIT_SEC}},
+    "fit-to-screen": true,
+    "keyboard-shortcuts": true,
+    "image-visibility": "when-available",
+    "transition-time": 200,
+    "hide-on-clear": true,
+    "hide-on-action": true,
+    "script-fail-notify": true,
+    "widgets": [
+        "title",
+        "dnd",
+        "notifications",
+        "mpris",
+        "volume",
+        "buttons-grid"
+    ],
+    "widget-config": {
+        "title": {
+            "text": "Notifications",
+            "clear-all-button": true,
+            "button-text": "Temizle"
+        },
+        "dnd": {
+            "text": "Do not disturb"
+        },
+        "mpris": {
+            "image-size": 92,
+            "image-radius": {{BAR_RADIUS}}
+        },
+        "volume": {
+            "label": "󰕾",
+            "show-per-app": true
+        },
+        "buttons-grid": {
+            "actions": [
+                {
+                    "label": "󰐥",
+                    "command": "{{POWERMENU_CMD}}"
+                },
+                {
+                    "label": "󰌾",
+                    "command": "{{LOCK_CMD}}"
+                },
+                {
+                    "label": "󰖩",
+                    "command": "nm-connection-editor"
+                },
+                {
+                    "label": "󰂯",
+                    "command": "blueman-manager"
+                },
+                {
+                    "label": "󰕾",
+                    "command": "pavucontrol"
+                }
+            ]
+        }
+    }
+}

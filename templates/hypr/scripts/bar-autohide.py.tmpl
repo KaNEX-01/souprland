@@ -1,0 +1,203 @@
+{{! require: MANAGE_HYPR_CONFIGS && BAR==waybar && BAR_AUTOHIDE_ON }}
+{{! mode: 755 }}
+#!/usr/bin/env python3
+"""Waybar auto-hide helper (BAR_AUTOHIDE=true).
+
+Waybar's own "mode": "hide" ties bringing the bar back to Sway's IPC; Hyprland
+has no equivalent, so there the bar never comes back. This process fills that
+gap: it watches the pointer and sends Waybar a "show" signal when it touches
+the edge the bar sits on, and "hide" when it leaves.
+
+On the Waybar side the counterpart is three lines in config.jsonc (written
+only while BAR_AUTOHIDE is on):
+
+    "start_hidden": true,       bar starts hidden
+    "on-sigusr1": "show",       SIGUSR1  → show
+    "on-sigusr2": "hide",       SIGUSR2  → hide
+
+The signals are deliberately NOT "toggle": with toggle, the state seen by a
+user pressing MOD+J and the state counted by this process would drift apart
+and the bar would end up inverted. Show/hide are idempotent, so neither side
+breaks the other.
+
+MOD+J (hypr/scripts/bar-toggle.sh) PINS the bar: while pinned this process
+stays out of it; pressing again returns to auto mode.
+
+The pointer position is read from Hyprland's IPC socket — calling `hyprctl`
+meant spawning a process several times a second; one socket connection is
+enough here.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import signal
+import socket
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+#: The edge the bar sits on and its sizes — from settings.conf.
+POSITION = "{{BAR_POSITION}}"
+BAR_SIZE = {{BAR_SIZE}}
+BAR_MARGIN = {{BAR_MARGIN}}
+
+#: How close to the edge the pointer must get for the bar to appear (pixels).
+TRIGGER = int("{{BAR_AUTOHIDE_TRIGGER}}" or 2)   # Settings → Status Bar
+#: How far below the bar the pointer must move to hide it — a margin added
+#: to the bar's own height. Without it, a pointer moving along the bar's
+#: bottom pixel keeps toggling it.
+RELEASE_PAD = int("{{BAR_AUTOHIDE_RELEASE}}" or 8)
+#: How often to read the pointer, in seconds. A 0.12 s delay is not
+#: noticeable, and the cost over the socket is negligible.
+POLL = 0.12
+
+PIN_FILE = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) \
+    / "hyprsetup" / "bar-pinned"
+
+
+def _socket_path() -> Path | None:
+    signature = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE")
+    runtime = os.environ.get("XDG_RUNTIME_DIR")
+    if not signature or not runtime:
+        return None
+    return Path(runtime) / "hypr" / signature / ".socket.sock"
+
+
+def _ask(command: str) -> object | None:
+    """Send one request to Hyprland's IPC and return the JSON reply."""
+    path = _socket_path()
+    if path is None or not path.exists():
+        return None
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+            sock.settimeout(1.0)
+            sock.connect(str(path))
+            sock.sendall(f"j/{command}".encode())
+            chunks = []
+            while True:
+                data = sock.recv(8192)
+                if not data:
+                    break
+                chunks.append(data)
+        return json.loads(b"".join(chunks) or b"null")
+    except (OSError, ValueError):
+        return None
+
+
+def _monitors() -> list[dict]:
+    data = _ask("monitors")
+    return [m for m in data if isinstance(m, dict)] if isinstance(data, list) else []
+
+
+def _waybar_pids() -> list[int]:
+    """Running waybar processes. We find them ourselves instead of pkill so
+    the signal never goes to some other process by mistake."""
+    try:
+        out = subprocess.run(["pidof", "waybar"], capture_output=True,
+                             text=True, timeout=2).stdout
+    except (OSError, subprocess.SubprocessError):
+        return []
+    return [int(p) for p in out.split() if p.isdigit()]
+
+
+def _signal_bar(show: bool) -> None:
+    sig = signal.SIGUSR1 if show else signal.SIGUSR2
+    for pid in _waybar_pids():
+        try:
+            os.kill(pid, sig)
+        except OSError:
+            pass
+
+
+def _monitor_for(x: int, y: int, monitors: list[dict]) -> dict | None:
+    """The display under the cursor. On multi-monitor setups the edge is the
+    display's edge — not the edge of the whole display arrangement."""
+    for mon in monitors:
+        mx, my = mon.get("x", 0), mon.get("y", 0)
+        mw, mh = mon.get("width", 0), mon.get("height", 0)
+        scale = mon.get("scale", 1) or 1
+        # width/height are physical pixels; layout coordinates are the scaled ones.
+        mw, mh = int(mw / scale), int(mh / scale)
+        if mx <= x < mx + mw and my <= y < my + mh:
+            return {"x": mx, "y": my, "width": mw, "height": mh}
+    return None
+
+
+def _wants_visible(x: int, y: int, mon: dict, shown: bool) -> bool:
+    """Should the bar be shown for the current pointer position.
+
+    There is hysteresis: when hidden, the pointer must come within TRIGGER of
+    the edge to show it; when shown, it must move RELEASE_PAD away from the
+    whole bar to hide it. With a single threshold, a pointer on the boundary
+    would make the bar flicker.
+    """
+    depth = BAR_SIZE + BAR_MARGIN + RELEASE_PAD
+    if POSITION == "top":
+        edge, far = y - mon["y"], y - mon["y"]
+    elif POSITION == "bottom":
+        edge = mon["y"] + mon["height"] - 1 - y
+        far = edge
+    elif POSITION == "left":
+        edge = x - mon["x"]
+        far = edge
+    else:  # right
+        edge = mon["x"] + mon["width"] - 1 - x
+        far = edge
+    return far < depth if shown else edge <= TRIGGER
+
+
+def main() -> int:
+    if _socket_path() is None:
+        print("No Hyprland session found (HYPRLAND_INSTANCE_SIGNATURE is not set)",
+              file=sys.stderr)
+        return 1
+
+    shown = False          # same starting state as start_hidden in config.jsonc
+    pinned_before = False
+    monitors = _monitors()
+    last_monitor_read = time.monotonic()
+
+    while True:
+        time.sleep(POLL)
+
+        pinned = PIN_FILE.exists()
+        if pinned:
+            # While pinned the bar is always shown; send the state once, then wait.
+            if not pinned_before or not shown:
+                _signal_bar(True)
+                shown = True
+            pinned_before = True
+            continue
+        if pinned_before:
+            # Left pinned mode: hand the decision back to the pointer.
+            pinned_before = False
+
+        # The display layout can change (cable plugged in, resolution change);
+        # refreshing once a second is enough.
+        now = time.monotonic()
+        if now - last_monitor_read > 1.0 or not monitors:
+            monitors = _monitors()
+            last_monitor_read = now
+
+        pos = _ask("cursorpos")
+        if not isinstance(pos, dict):
+            continue
+        mon = _monitor_for(int(pos.get("x", 0)), int(pos.get("y", 0)), monitors)
+        if mon is None:
+            continue
+
+        want = _wants_visible(int(pos.get("x", 0)), int(pos.get("y", 0)),
+                              mon, shown)
+        if want != shown:
+            _signal_bar(want)
+            shown = want
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        sys.exit(0)

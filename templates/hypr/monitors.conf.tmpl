@@ -1,0 +1,32 @@
+{{! require: MANAGE_HYPR_CONFIGS && MANAGE_MONITORS && HYPR_LANG==conf }}
+####################################################################
+#  monitors.conf — display configuration
+#
+#  If a tool such as nwg-displays writes this file itself, set
+#  MANAGE_MONITORS=0 in settings.conf; the script then never touches the
+#  file's CONTENTS (hyprland.conf still sources it, otherwise that tool's
+#  settings would never be applied).
+#
+#  hyprsetup:managed — this line marks who owns the file.
+#  If nwg-displays rewrites the file the line disappears and the script
+#  leaves the file alone from then on (see lib/core.sh:foreign_config_owner).
+#
+#  Format: monitor = name, resolution@refresh, position, scale
+#  To list your current displays:  hyprctl monitors all
+#
+#  Examples:
+#    monitor = DP-1, 2560x1440@165, 0x0, 1
+#    monitor = HDMI-A-1, 1920x1080@60, 2560x0, 1
+#    monitor = eDP-1, preferred, auto, 1.25
+#    monitor = , preferred, auto, 1          # default for all displays
+####################################################################
+
+{{MONITOR_LINES}}
+
+# Safe default for unknown displays
+monitor = , preferred, auto, 1
+
+# ------------------------------------------------------------ workspaces ---
+# To pin workspaces to displays, set in settings.conf:
+#   WORKSPACE_MONITOR_MAP="1:DP-1:default;2:DP-1;6:HDMI-A-1:default"
+# This setting produces workspaces.conf.

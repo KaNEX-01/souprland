@@ -1,0 +1,57 @@
+{{! require: MANAGE_HYPR_CONFIGS }}
+{{! mode: 755 }}
+#!/usr/bin/env bash
+# Microphone indicator — Waybar's "custom/mic" module.
+#
+#     mic.sh           status (JSON)
+#     mic.sh toggle    mute/unmute the default microphone
+#
+# If an app is listening to the microphone RIGHT NOW an icon shows (hover to
+# see which apps), and clicking mutes the microphone. While muted, a
+# crossed-out icon shows so you do not forget it is off. When unmuted and
+# unused a dim icon stays (class "idle") — so it can be toggled from the bar
+# at any time; this state used to leave the module empty with no control.
+#
+# "In use" = an input stream connected to a real audio source (Audio/Source).
+# Counting "Stream/Input/Audio" alone is not enough: visualizers like cava
+# that listen to the speaker output (monitor) are in that class too, and
+# the microphone would always look in use.
+set -uo pipefail
+
+SOURCE="@DEFAULT_AUDIO_SOURCE@"
+
+if [[ "${1:-}" == "toggle" ]]; then
+    wpctl set-mute "$SOURCE" toggle
+    pkill -RTMIN+10 waybar 2>/dev/null || true
+    exit 0
+fi
+
+muted=0
+wpctl get-volume "$SOURCE" 2>/dev/null | grep -q MUTED && muted=1
+
+apps=""
+if command -v pw-dump >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+    apps=$(pw-dump 2>/dev/null | jq -r '
+        [ .[] | select(.type == "PipeWire:Interface:Node") ] as $nodes
+        | ( [ $nodes[] | select(.info.props["media.class"] == "Audio/Source") | .id ] ) as $sources
+        | ( [ .[] | select(.type == "PipeWire:Interface:Link")
+              | select(.info["output-node-id"] as $o | $sources | index($o))
+              | .info["input-node-id"] ] | unique ) as $readers
+        | [ $nodes[]
+            | select(.info.props["media.class"] == "Stream/Input/Audio")
+            | select(.id as $i | $readers | index($i))
+            | .info.props["application.name"] // .info.props["node.name"] // "?" ]
+        | unique | join(", ")' 2>/dev/null)
+fi
+
+if [[ -n "$apps" ]]; then
+    if ((muted)); then
+        printf '{"text": "{{BAR_I_MIC_OFF}}", "tooltip": "Microphone muted · listening: %s\\nClick: unmute", "class": "muted-active"}\n' "$apps"
+    else
+        printf '{"text": "{{BAR_I_MIC}}", "tooltip": "Microphone in use: %s\\nClick: mute", "class": "active"}\n' "$apps"
+    fi
+elif ((muted)); then
+    printf '{"text": "{{BAR_I_MIC_OFF}}", "tooltip": "Microphone muted\\nClick: unmute", "class": "muted"}\n'
+else
+    printf '{"text": "{{BAR_I_MIC}}", "tooltip": "Microphone on · not in use\\nClick: mute · Right-click: audio panel", "class": "idle"}\n'
+fi

@@ -1,0 +1,309 @@
+# haikal-hakim/athena-eww — r/hyprland "[Hyprland + Eww] ... complete overhaul"
+# https://www.reddit.com/r/hyprland/comments/1tyv74j/
+# Posted 2026-06-06T22:47Z; the commit is the one 10 minutes before that (a42d501).
+# The author didn't share their Hyprland config; the lines that start eww and
+# the keybindings are written from their README example as ~/.config/hypr/rice.conf,
+# which this project's hyprland.conf sources.
+
+default_variant = "mocha"
+provides = ["bar", "notify", "widget", "wallpaper"]
+
+post_install = [
+  "chmod +x ~/.config/eww/*/scripts/*.sh ~/.config/eww/toggle_theme.sh 2>/dev/null || true",
+  "pkill -x waybar; pkill -x hyprpanel; pkill -x mako; pkill -x swaync; true",
+  "hyprctl reload >/dev/null 2>&1 || true",
+]
+
+notes = [
+  "The author didn't share their Hyprland config: gaps/rounding/blur were roughly measured from the video (athena.conf).",
+  "The wallpaper in the video (Arch logo over light blue waves) isn't in the repo; Arch's official blue 'conference' wallpaper (archlinux-wallpaper package, CC0) is installed instead.",
+  "Weather comes from keyless Open-Meteo; the location is hyprsetup's WEATHER_LOCATION setting (guessed from IP if empty). If an OpenWeatherMap key is entered (dashboard/scripts/weather.py), the author's original path is used.",
+]
+
+[source]
+repo = "https://github.com/haikal-hakim/athena-eww"
+commit = "a42d5010233977ecd8ebf928fe0e674567f7e92d"
+post = "https://www.reddit.com/r/hyprland/comments/1tyv74j/hyprland_eww_here_is_how_it_looks_now_after_a/"
+license = "MIT"
+
+[[install]]
+from = ".config/eww"
+to = "~/.config/eww"
+[[install]]
+from = ".config/dunst"
+to = "~/.config/dunst"
+[[install]]
+from = ".config/rofi"
+to = "~/.config/rofi"
+[[install]]
+from = ".config/fastfetch"
+to = "~/.config/fastfetch"
+# The author added the kitty config one day after the post.
+[[install]]
+from = ".config/kitty"
+to = "~/.config/kitty"
+commit = "9fe9e2fd2d39dd93aacbf2391b02a33f5e739886"
+[[install]]
+from = ".zshrc"
+to = "~/.zshrc"
+group = "shell"
+commit = "9fe9e2fd2d39dd93aacbf2391b02a33f5e739886"
+
+[[file]]
+to = "~/.config/hypr/rice.conf"
+content = """# athena-eww (hyprsetup profile) — from the author's README example.
+exec-once = eww daemon
+exec-once = sleep 2 && eww open window_bar
+exec-once = sleep 3 && eww open window_website
+exec-once = sleep 4 && eww open window_launcher
+exec-once = sleep 5 && eww open window_power
+# Wallpaper (the look writes it): with its own config, without touching the
+# user's hyprpaper.conf.
+exec-once = hyprpaper -c ~/.config/eww/hyprpaper.conf
+
+# Dashboard (MOD+D) and OSD on the volume/brightness keys. This project's
+# bindings on the same keys are removed first; otherwise volume would change twice.
+unbind = SUPER, D
+bind = SUPER, D, exec, ~/.config/eww/dashboard/scripts/toggle_dashboard.sh
+unbind = , XF86AudioRaiseVolume
+unbind = , XF86AudioLowerVolume
+unbind = , XF86MonBrightnessUp
+unbind = , XF86MonBrightnessDown
+bindel = , XF86AudioRaiseVolume, exec, bash ~/.config/eww/corner/scripts/osd_vol.sh vol-up
+bindel = , XF86AudioLowerVolume, exec, bash ~/.config/eww/corner/scripts/osd_vol.sh vol-down
+bindel = , XF86MonBrightnessUp, exec, bash ~/.config/eww/corner/scripts/osd_bright.sh bright-up
+bindel = , XF86MonBrightnessDown, exec, bash ~/.config/eww/corner/scripts/osd_bright.sh bright-down
+"""
+
+# Same thing, for this project's Lua mode (hyprland.lua → require("rice")).
+[[file]]
+to = "~/.config/hypr/rice.lua"
+content = """-- athena-eww (hyprsetup profile) — from the author's README example.
+hl.on("hyprland.start", function()
+    hl.exec_cmd("eww daemon")
+    hl.exec_cmd("sleep 2 && eww open window_bar")
+    hl.exec_cmd("sleep 3 && eww open window_website")
+    hl.exec_cmd("sleep 4 && eww open window_launcher")
+    hl.exec_cmd("sleep 5 && eww open window_power")
+    hl.exec_cmd("hyprpaper -c ~/.config/eww/hyprpaper.conf")
+end)
+
+hl.unbind("SUPER + D")
+hl.bind("SUPER + D", hl.dsp.exec_cmd("~/.config/eww/dashboard/scripts/toggle_dashboard.sh"))
+for _, key in ipairs({"XF86AudioRaiseVolume", "XF86AudioLowerVolume",
+                      "XF86MonBrightnessUp", "XF86MonBrightnessDown"}) do
+    hl.unbind(key)
+end
+local osd = "bash ~/.config/eww/corner/scripts/"
+hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd(osd .. "osd_vol.sh vol-up"), { repeating = true, locked = true })
+hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd(osd .. "osd_vol.sh vol-down"), { repeating = true, locked = true })
+hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd(osd .. "osd_bright.sh bright-up"), { repeating = true, locked = true })
+hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd(osd .. "osd_bright.sh bright-down"), { repeating = true, locked = true })
+"""
+
+# Weather: the author's weather.py wants an OpenWeatherMap key (the file has a
+# "YOUR_API_KEY" placeholder); without a key the dashboard showed "0°C Unknown".
+# If no key is entered, the data comes from keyless Open-Meteo in the format
+# weather.py expects (location: hyprsetup's WEATHER_LOCATION setting).
+[[file]]
+to = "~/.config/eww/dashboard/scripts/weather_keyless.py"
+content = '''"""hyprsetup: keyless weather (Open-Meteo), in OpenWeatherMap format.
+
+weather.py wants the author's OpenWeatherMap key (API_KEY placeholder);
+without a key the dashboard showed "0°C Unknown". This module fetches the same
+data from keyless Open-Meteo and converts it into the dicts weather.py expects,
+so the rest of the author's code runs unchanged.
+
+Location: hyprsetup's WEATHER_LOCATION setting (the HYPRSETUP_WEATHER_LOCATION
+environment variable takes precedence); if empty, wttr.in guesses from the IP — the
+same rule as the project's own weather module.
+"""
+import json
+import os
+import re
+import urllib.parse
+import urllib.request
+from datetime import datetime
+
+_WMO = {
+    0: "Clear Sky", 1: "Mainly Clear", 2: "Partly Cloudy", 3: "Overcast",
+    45: "Fog", 48: "Fog", 51: "Light Drizzle", 53: "Drizzle", 55: "Drizzle",
+    56: "Drizzle", 57: "Drizzle", 61: "Light Rain", 63: "Rain", 65: "Heavy Rain",
+    66: "Rain", 67: "Rain", 71: "Light Snow", 73: "Snow", 75: "Heavy Snow",
+    77: "Snow", 80: "Rain Shower", 81: "Rain Shower", 82: "Rain Shower",
+    85: "Snow Shower", 86: "Snow Shower", 95: "Thunderstorm", 96: "Thunderstorm",
+    99: "Thunderstorm",
+}
+
+
+def _get(url):
+    req = urllib.request.Request(url, headers={"User-Agent": "EwwWeatherWidget/1.0"})
+    with urllib.request.urlopen(req, timeout=8) as response:
+        return json.loads(response.read().decode())
+
+
+def _location():
+    name = os.environ.get("HYPRSETUP_WEATHER_LOCATION", "").strip()
+    if not name:
+        conf = os.path.expanduser("~/.config/hyprsetup/settings.conf")
+        try:
+            with open(conf, encoding="utf-8") as handle:
+                match = re.search(r'^WEATHER_LOCATION="([^"]*)"', handle.read(), re.M)
+                name = match.group(1).strip() if match else ""
+        except OSError:
+            name = ""
+    if name:
+        found = _get("https://geocoding-api.open-meteo.com/v1/search?count=1&name="
+                     + urllib.parse.quote(name))["results"][0]
+        return found["latitude"], found["longitude"], found["name"]
+    area = _get("https://wttr.in/?format=j1")["nearest_area"][0]
+    return (float(area["latitude"]), float(area["longitude"]),
+            area["areaName"][0]["value"])
+
+
+def fetch():
+    """(current_raw, forecast_raw) — (None, None) on failure."""
+    try:
+        lat, lon, place = _location()
+        data = _get(
+            "https://api.open-meteo.com/v1/forecast?"
+            f"latitude={lat}&longitude={lon}&timezone=auto&forecast_days=6"
+            "&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m"
+            "&daily=weather_code,temperature_2m_max,sunrise,sunset")
+    except Exception:
+        return None, None
+    cur, daily = data["current"], data["daily"]
+
+    def ts(text):
+        return datetime.fromisoformat(text).timestamp()
+
+    current = {
+        "name": place,
+        "dt": datetime.now().timestamp(),
+        "main": {"temp": cur["temperature_2m"], "humidity": cur["relative_humidity_2m"]},
+        "weather": [{"description": _WMO.get(cur["weather_code"], "Clouds")}],
+        "wind": {"speed": cur["wind_speed_10m"] / 3.6},
+        "sys": {"sunrise": ts(daily["sunrise"][0]), "sunset": ts(daily["sunset"][0])},
+    }
+    forecast = {"list": [
+        {"dt": ts(day + "T12:00"), "main": {"temp": temp},
+         "weather": [{"description": _WMO.get(code, "Clouds")}]}
+        for day, temp, code in zip(daily["time"], daily["temperature_2m_max"],
+                                   daily["weather_code"])
+    ]}
+    return current, forecast
+'''
+[[fix]]
+file = "~/.config/eww/dashboard/scripts/weather.py"
+replace = ["def main():\n    current_raw = fetch_current()\n    forecast_raw = fetch_forecast()\n", "def main():\n    if API_KEY == \"YOUR_API_KEY\":\n        # hyprsetup: no key entered — keyless Open-Meteo (weather_keyless.py)\n        import weather_keyless\n        current_raw, forecast_raw = weather_keyless.fetch()\n    else:\n        current_raw = fetch_current()\n        forecast_raw = fetch_forecast()\n"]
+why = "Without an OpenWeatherMap key, weather, forecast and sunrise/sunset stayed empty"
+
+[[file]]
+to = "~/.config/eww/hyprpaper.conf"
+content = """wallpaper {
+    monitor =
+    path = {home}/Pictures/Wallpapers/athena-arch.png
+    fit_mode = cover
+}
+splash = false
+ipc = on
+"""
+
+[[fix]]
+file = "~/.config/eww/dashboard/styles/folders.scss"
+create = ""
+why = "theme/manifest.scss imports this file, which isn't in the repo; when the SCSS failed to compile eww dropped all styles and drew the bar gray (no widget uses it)"
+
+[packages]
+repo = ["archlinux-wallpaper", "hyprpaper", "dunst", "jq", "curl", "socat", "python", "libnotify", "inotify-tools",
+        "networkmanager", "hyprshutdown", "power-profiles-daemon", "rofi", "kitty",
+        "fastfetch", "blueman", "bluez-utils", "brightnessctl", "wireplumber",
+        "inter-font", "ttf-jetbrains-mono-nerd"]
+aur = ["eww"]
+
+# Looks: the theme switcher in the author's control center (toggle_theme.sh).
+[variants.mocha]
+title = "Catppuccin Mocha (dark)"
+wallpaper = "/usr/share/backgrounds/archlinux/conference.png"
+wallpaper_dest = "~/Pictures/Wallpapers/athena-arch.png"
+apply = [
+  "printf 'wallpaper {\\n    monitor =\\n    path = %s\\n    fit_mode = cover\\n}\\nsplash = false\\nipc = on\\n' {wallpaper} > ~/.config/eww/hyprpaper.conf",
+  "pkill -x hyprpaper; sleep 0.3; hyprpaper -c ~/.config/eww/hyprpaper.conf >/dev/null 2>&1 &",
+  "~/.config/eww/toggle_theme.sh catppuccin_mocha",
+]
+credit = "Official Arch Linux wallpaper 'conference' (archlinux-wallpaper, CC0)"
+[variants.latte]
+title = "Catppuccin Latte (light)"
+wallpaper = "/usr/share/backgrounds/archlinux/conference.png"
+wallpaper_dest = "~/Pictures/Wallpapers/athena-arch.png"
+apply = [
+  "printf 'wallpaper {\\n    monitor =\\n    path = %s\\n    fit_mode = cover\\n}\\nsplash = false\\nipc = on\\n' {wallpaper} > ~/.config/eww/hyprpaper.conf",
+  "pkill -x hyprpaper; sleep 0.3; hyprpaper -c ~/.config/eww/hyprpaper.conf >/dev/null 2>&1 &",
+  "~/.config/eww/toggle_theme.sh catppuccin_latte",
+]
+credit = "Official Arch Linux wallpaper 'conference' (archlinux-wallpaper, CC0)"
+[variants.tokyo-night]
+title = "Tokyo Night (dark)"
+wallpaper = "/usr/share/backgrounds/archlinux/conference.png"
+wallpaper_dest = "~/Pictures/Wallpapers/athena-arch.png"
+apply = [
+  "printf 'wallpaper {\\n    monitor =\\n    path = %s\\n    fit_mode = cover\\n}\\nsplash = false\\nipc = on\\n' {wallpaper} > ~/.config/eww/hyprpaper.conf",
+  "pkill -x hyprpaper; sleep 0.3; hyprpaper -c ~/.config/eww/hyprpaper.conf >/dev/null 2>&1 &",
+  "~/.config/eww/toggle_theme.sh tokyo_night",
+]
+credit = "Official Arch Linux wallpaper 'conference' (archlinux-wallpaper, CC0)"
+[variants.tokyo-night-light]
+title = "Tokyo Night Light (light)"
+wallpaper = "/usr/share/backgrounds/archlinux/conference.png"
+wallpaper_dest = "~/Pictures/Wallpapers/athena-arch.png"
+apply = [
+  "printf 'wallpaper {\\n    monitor =\\n    path = %s\\n    fit_mode = cover\\n}\\nsplash = false\\nipc = on\\n' {wallpaper} > ~/.config/eww/hyprpaper.conf",
+  "pkill -x hyprpaper; sleep 0.3; hyprpaper -c ~/.config/eww/hyprpaper.conf >/dev/null 2>&1 &",
+  "~/.config/eww/toggle_theme.sh tokyo_night_light",
+]
+credit = "Official Arch Linux wallpaper 'conference' (archlinux-wallpaper, CC0)"
+
+# The settings app's Bar page recognizes this bar (ricebar.py).
+[bar]
+kind = "eww"
+label = "athena (eww)"
+note = "The eww bar's settings live in the author's yuck/scss files; the theme (Catppuccin/Tokyo Night) is changed from Looks."
+
+# --- Mix parts (python -m hyprsetup mix; see python/hyprsetup/mix.py) ---
+[[part]]
+slot = "bar"
+title = "Eww bar"
+paths = ["~/.config/eww"]
+start = "eww daemon; sleep 1; eww open window_bar"
+provides = ["bar"]
+aur = ["eww"]
+
+[[part]]
+slot = "widget"
+title = "Eww desktop cards (web, launcher, power)"
+paths = ["~/.config/eww"]
+start = "sleep 3; eww open-many window_website window_launcher window_power"
+provides = ["widget"]
+aur = ["eww"]
+
+[[part]]
+slot = "launcher"
+title = "Rofi (Catppuccin)"
+paths = ["~/.config/rofi"]
+commands = { CMD_LAUNCHER = "rofi -show drun" }
+packages = ["rofi"]
+
+[[part]]
+slot = "notify"
+title = "Dunst notifications"
+paths = ["~/.config/dunst"]
+start = "dunst"
+provides = ["notify"]
+packages = ["dunst"]
+
+[[part]]
+slot = "terminal"
+title = "Kitty"
+paths = ["~/.config/kitty"]
+commands = { CMD_TERMINAL = "kitty" }
+packages = ["kitty"]

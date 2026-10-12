@@ -1,0 +1,175 @@
+{{! require: MANAGE_HYPR_CONFIGS && HYPR_LANG==conf }}
+####################################################################
+#  windowrules.conf — window and layer rules
+#
+#  CAREFUL: Hyprland 0.51+ uses the new rule syntax and does NOT ACCEPT
+#  the old one. Format:
+#      windowrule = <property> <value>, match:<field> <pattern>
+#  The old "windowrule = float, class:^(x)$" form is an error.
+#
+#  To find a window's class/title:
+#      hyprctl clients | grep -E 'class|title'
+####################################################################
+
+# ------------------------------------------------- general improvements -
+{{#if RULE_SUPPRESS_MAXIMIZE}}
+# Keep apps from maximizing themselves
+windowrule = suppress_event maximize, match:class .*
+{{/if}}
+
+# Do not focus the empty XWayland windows created while dragging
+windowrule = no_focus on, match:class ^$, match:title ^$, match:xwayland 1, match:float 1
+
+{{#if GLOBAL_OPACITY}}
+# Global opacity for all windows (GLOBAL_OPACITY)
+windowrule = opacity {{GLOBAL_OPACITY}} override {{GLOBAL_OPACITY}} override, match:class .*
+# Except apps where visual accuracy matters
+windowrule = opacity 1.0 override 1.0 override, match:class ^(firefox|chromium|mpv|vlc|obs|gimp|krita)$
+{{/if}}
+
+{{#if XWAYLAND_NO_BLUR}}
+# Turn off blur for XWayland apps (performance)
+windowrule = no_blur on, match:xwayland 1
+{{/if}}
+
+{{#if RULE_FLOAT_TOOLS}}
+# ------------------------------------------------------ floating windows --
+windowrule = float on, match:class ^(pavucontrol|blueman-manager|nm-connection-editor)$
+windowrule = float on, match:class ^(org.kde.polkit-kde-authentication-agent-1)$
+windowrule = float on, match:class ^(xdg-desktop-portal-gtk)$
+windowrule = float on, match:class ^(nwg-look|qt5ct|qt6ct|kvantummanager)$
+windowrule = float on, match:class ^(file-roller|org.gnome.FileRoller)$
+# "Dosya Aç" / "Farklı Kaydet" are the Turkish-locale titles of the same dialogs.
+windowrule = float on, match:title ^(Open File|Save File|Save As|Open Folder|Dosya Aç|Farklı Kaydet)$
+
+windowrule = size 900 600, match:class ^(pavucontrol|blueman-manager)$
+windowrule = center on,    match:class ^(pavucontrol|blueman-manager)$
+{{/if}}
+
+# ----------------------------------------------- MOD+I settings panel ----
+# The panel opened with {{MOD_KEY}} + I (python/hyprsetup/gui/quick.py). It sits
+# at the TOP center of the screen, right below the status bar, and slides in
+# from the top. It floats so it does not break the tiling layout and reshuffle
+# open windows.
+#
+# "animation slide": the style parameter is a PERCENTAGE (e.g. "slide 70%"),
+# not a direction — Hyprland derives the slide direction from the window's
+# position, and the panel sits at the top, so it comes from the top. Position
+# and size come from render.py:_quick_panel_vars; with the bar on top it is
+# pushed down by the bar height + margin.
+#
+# The full app opened from the menu/command line (dev.hyprsetup.Gui) comes in
+# the same way: it floats independently of windows and slides from the top.
+# The classes stay separate because the in-app differences (start page,
+# welcome screen, closing with Esc) are chosen by mode, not by class.
+windowrule = float on,     match:class ^(dev\.hyprsetup\.(Quick|Gui))$
+windowrule = size {{QUICK_PANEL_SIZE}}, match:class ^(dev\.hyprsetup\.(Quick|Gui))$
+windowrule = move {{QUICK_PANEL_MOVE}}, match:class ^(dev\.hyprsetup\.(Quick|Gui))$
+windowrule = animation slide, match:class ^(dev\.hyprsetup\.(Quick|Gui))$
+
+# The keybinding card opened with {{MOD_KEY}} + / (python/hyprsetup/gui/cheatsheet.py).
+# A window you glance at and close: keep it out of tiling, open it centered.
+windowrule = float on,      match:class ^(dev\.hyprsetup\.Cheatsheet)$
+windowrule = size 70% 75%,  match:class ^(dev\.hyprsetup\.Cheatsheet)$
+windowrule = center on,     match:class ^(dev\.hyprsetup\.Cheatsheet)$
+
+# The install terminal opened by the settings app (the sudo password is asked
+# here). Since the settings app floats, a tiled terminal ended up BELOW it and
+# was invisible; so it floats too and opens centered. The app also passes the
+# same rules via "hyprctl dispatch exec [..]" — this line is the fallback.
+windowrule = float on,      match:class ^(dev\.hyprsetup\.Terminal)$
+windowrule = size 60% 60%,  match:class ^(dev\.hyprsetup\.Terminal)$
+windowrule = center on,     match:class ^(dev\.hyprsetup\.Terminal)$
+
+# ---------------------------------------------------- ALT+Tab switcher ----
+# python/hyprsetup/gui/switcher.py — window picker with thumbnails.
+# Floats in the center and stays out of tiling; closes itself when ALT is
+# released. Its size depends on the content (card count × SWITCHER_THUMB_WIDTH),
+# so no "size" is given.
+#
+# ANIMATION MUST BE OFF: the whole ALT+Tab should last only as long as the key
+# press and release; an open animation delays the window appearing by its
+# own duration.
+#
+# The rule is generated from the SWITCHER_ANIM setting (render.py:_switcher rule):
+#   none  -> no_anim on          (default, fastest)
+#   popin -> animation popin
+#   slide -> animation slide
+#
+# CAREFUL — "animation none" DOES NOT WORK: Hyprland does not validate the
+# style name in that field; it silently ignores unknown names and falls back to
+# the DEFAULT animation. The config also looks error-free, so the problem only
+# shows on screen. The field that really turns the animation off is "no_anim".
+windowrule = float on,   match:class ^(dev\.hyprsetup\.Switcher)$
+windowrule = center on,  match:class ^(dev\.hyprsetup\.Switcher)$
+windowrule = {{SWITCHER_ANIM_RULE}}, match:class ^(dev\.hyprsetup\.Switcher)$
+# No shadow or blur either: the switcher has its own card frame and an opaque
+# background — both would only delay the first frame.
+# (There is NO equivalent for the border — Hyprland 0.56 has no "no_border"
+# field; writing it makes the whole config fail.)
+windowrule = no_shadow on, match:class ^(dev\.hyprsetup\.Switcher)$
+windowrule = no_blur on,   match:class ^(dev\.hyprsetup\.Switcher)$
+# NOTE: there is NO "focus" rule here — Hyprland already focuses a new
+# window, and the ALT release event only reaches the focused window. (A field
+# for the opposite, like "noinitialfocus", does not exist in Hyprland 0.56;
+# writing it makes the whole config fail.)
+
+{{#if RULE_PIP}}
+# --------------------------------------------------- picture-in-picture ---
+windowrule = float on, match:title ^(Picture-in-Picture)$
+windowrule = pin on,   match:title ^(Picture-in-Picture)$
+windowrule = size {{PIP_SIZE}}, match:title ^(Picture-in-Picture)$
+windowrule = move {{PIP_MOVE}}, match:title ^(Picture-in-Picture)$
+{{/if}}
+
+{{#if ALLOW_TEARING}}
+# ---------------------------------------------------------------- games ---
+# allow_tearing is on, so tearing is allowed in fullscreen games
+windowrule = immediate on, match:class ^(steam_app_\d+)$
+windowrule = immediate on, match:title .*\.exe$
+{{/if}}
+
+# ---------------------------------------------------------------- layers --
+{{#if HAS_WAYBAR}}
+layerrule = blur on, match:namespace ^(waybar)$
+layerrule = ignore_alpha 0.3, match:namespace ^(waybar)$
+{{/if}}
+{{#if HAS_WOFI}}
+layerrule = blur on, match:namespace ^(wofi)$
+layerrule = ignore_alpha 0.5, match:namespace ^(wofi)$
+{{/if}}
+{{#if HAS_FUZZEL}}
+layerrule = blur on, match:namespace ^(launcher)$
+{{/if}}
+{{#if HAS_MAKO}}
+layerrule = blur on, match:namespace ^(notifications)$
+layerrule = ignore_alpha 0.3, match:namespace ^(notifications)$
+{{/if}}
+{{#if HAS_DOCK}}
+layerrule = blur on, match:namespace ^(nwg-dock)$
+layerrule = ignore_alpha 0.3, match:namespace ^(nwg-dock)$
+{{/if}}
+{{#if HAS_WAYBAR}}
+# Bar detail panel (hypr/scripts/barpanel.py): frosted background.
+layerrule = blur on, match:namespace ^(hyprsetup-panel)$
+layerrule = ignore_alpha 0.3, match:namespace ^(hyprsetup-panel)$
+# The panel does its own slide animation (from the bar's side); keep
+# Hyprland's from stacking on top.
+layerrule = no_anim on, match:namespace ^(hyprsetup-panel)$
+{{/if}}
+{{#if HAS_SWAYNC}}
+# swaync layers (notifications and notification center) are not blurred:
+# the layers open larger than their content, and blur left a blurry
+# rectangle around them.
+{{/if}}
+
+{{WINDOWRULE_LINES}}
+
+# ------------------------------------------------------------- examples ---
+# Open a given app on a given workspace:
+#   windowrule = workspace 2 silent, match:class ^(firefox)$
+# Tag an app and manage its rules together:
+#   windowrule = tag +game, match:class ^(steam_app_\d+)$
+#   windowrule = fullscreen on, match:tag game
+# Available match fields: class, initial_class, title, initial_title,
+# xwayland, float, fullscreen, pin, focus, workspace, tag

@@ -1,0 +1,13 @@
+# tools/test.sh runs "ruff check python/". The rule set is PINNED here:
+# ruff's default grows from version to version (77 findings in 0.16 including
+# UP/RUF/SIM/FURB); unpinned, the same code passes on one machine and fails on another.
+# The selected ones are real bug classes: syntax/runtime (E9), import
+# and name errors (F), likely bugs (B), statement rules (E4, E7).
+target-version = "py311"
+line-length = 100
+
+[lint]
+select = ["E4", "E7", "E9", "F", "B"]
+# E402: gi.require_version() must be called before the imports (gui/).
+ignore = ["E402", "E702"]
+# E702: "a.set_x(); a.set_y()" in short GTK setups is a deliberate style.

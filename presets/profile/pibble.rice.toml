@@ -1,0 +1,66 @@
+# kianblakley/pibble — r/hyprland "Text scramble effect everywhere"
+# https://www.reddit.com/r/hyprland/comments/1vp93er/
+# Posted 2026-08-15 17:42 UTC (u/HyperSpazdik); the installed commit is the last one
+# two minutes before it (915a2f9, "Merge dev into main", 17:40 UTC).
+# GPL-3.0. A single-window Quickshell launcher: clock page (weather,
+# battery, music visualizer), app drawer, wallpaper picker
+# (including animated wallpapers), clipboard history, power menu, audio and
+# notification popups; the "text scramble" effect from the post on every
+# text. Colors from the wallpaper (matugen).
+#
+# The author only publishes the shell and there is no installer (README: clone,
+# "./pibble start", bind "./pibble toggle" to a key). Here the repo is
+# installed to ~/.config/quickshell/pibble, the startup line and keybinding go into
+# ~/.config/hypr/rice.conf / rice.lua; your Hyprland settings stay.
+default_variant = "pibble"
+provides = ["launcher", "notify", "widget"]
+
+post_install = [
+  "chmod +x ~/.config/quickshell/pibble/pibble 2>/dev/null || true",
+  "mkdir -p ~/Pictures/wallpapers",
+  "hyprctl reload >/dev/null 2>&1 || true",
+]
+
+notes = [
+  "SUPER+D opens the launcher. Inside, Tab/Shift+Tab switch pages (clock, apps, wallpapers, clipboard), Ctrl+S opens settings, Escape closes.",
+  "Wallpapers are listed from ~/Pictures/wallpapers; the selection is applied with this project's wallpaper.sh (the Wallpaper Colors page follows it too).",
+  "The source of the wallpaper in the post (a red-toned anime drawing) couldn't be found; your own wallpaper stays.",
+  "There is no bar permanently at the top/bottom of the screen: pibble is a single launcher window. Your bar (this project's) stays in place.",
+]
+
+[source]
+repo = "https://github.com/kianblakley/pibble"
+commit = "915a2f983099eee66a5395d1fa34b4754e3bd5fe"
+post = "https://www.reddit.com/r/hyprland/comments/1vp93er/text_scramble_effect_everywhere/"
+license = "GPL-3.0"
+
+[[install]]
+from = "."
+to = "~/.config/quickshell/pibble"
+
+[[file]]
+to = "~/.config/hypr/rice.conf"
+content = "# pibble (hyprsetup profile) — the setup from the author's README: the shell\n# opens at session start with \"pibble start\", the launcher is bound to a keybinding.\n# SUPER+D (this project's launcher key) opens pibble; since the install brings\n# the category, your launcher keybinding leaves this key to it.\nexec-once = ~/.config/quickshell/pibble/pibble start\nexec-once = wl-paste --watch cliphist store\nbind = SUPER, D, exec, ~/.config/quickshell/pibble/pibble toggle\n"
+[[file]]
+to = "~/.config/hypr/rice.lua"
+content = "-- pibble (hyprsetup profile) — the setup from the author's README.\nhl.on(\"hyprland.start\", function()\n    hl.exec_cmd(\"~/.config/quickshell/pibble/pibble start\")\n    hl.exec_cmd(\"wl-paste --watch cliphist store\")\nend)\nhl.bind(\"SUPER + D\", hl.dsp.exec_cmd(\"~/.config/quickshell/pibble/pibble toggle\"))\n"
+
+[[fix]]
+file = "~/.config/quickshell/pibble/config/Defaults.qml"
+replace = [
+  "mpvpaper -s -a MAX -o \"no-audio --loop-file=inf\" HDMI-A-1 \"$WALL\"",
+  "mpvpaper -s -a MAX -o \"no-audio --loop-file=inf\" ALL \"$WALL\"",
+  "awww img \"$WALL\" --transition-type fade --transition-duration 1",
+  "{ ~/.config/hypr/scripts/wallpaper.sh set \"$WALL\" || awww img \"$WALL\" --transition-type fade --transition-duration 1; }",
+]
+why = "the animated wallpaper was pinned to the author's display (HDMI-A-1); images are set with this project's wallpaper.sh so it works with whichever wallpaper program you use (awww otherwise)"
+
+[packages]
+repo = ["quickshell", "qt6-multimedia", "matugen", "imagemagick", "ffmpeg", "awww",
+        "cliphist", "wl-clipboard"]
+aur = ["mpvpaper"]
+
+
+[variants.pibble]
+title = "pibble — launcher, text scramble effect"
+credit = "Wallpaper unchanged (the source of the posted one wasn't found)"

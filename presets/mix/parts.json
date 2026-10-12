@@ -1,0 +1,1581 @@
+{
+ "profiles": {
+  "ad1822": {
+   "title": "ad1822 — Peace (Catppuccin Mantle)",
+   "repo": "https://github.com/ad1822/hyprdots",
+   "variants": {
+    "sis": {
+     "title": "Misty pier (gray)",
+     "credit": "Look-alike (the author's source was removed): JustinH, misty pier on the Huon River — Wikimedia Commons, CC0",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "theme": "catppuccin-mocha"
+     }
+    },
+    "bulut": {
+     "title": "Sea of clouds",
+     "credit": "Look-alike (the author's source was removed): Basile Morin, sea of clouds from Nam Xay — Wikimedia Commons, CC BY-SA 4.0",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "theme": "catppuccin-mocha"
+     }
+    }
+   },
+   "look": {
+    "values": {
+     "GAPS_IN": "3",
+     "GAPS_OUT": "6",
+     "GAPS_WORKSPACES": "0",
+     "BORDER_SIZE": "0",
+     "ROUNDING": "6",
+     "ROUNDING_POWER": "2",
+     "ACTIVE_OPACITY": "1.0",
+     "INACTIVE_OPACITY": "1.0",
+     "DIM_INACTIVE": "false",
+     "DIM_STRENGTH": "0.5",
+     "BLUR": "true",
+     "BLUR_SIZE": "4",
+     "BLUR_PASSES": "4",
+     "BLUR_NOISE": "0.0117",
+     "BLUR_CONTRAST": "0.8916",
+     "BLUR_BRIGHTNESS": "0.8172",
+     "BLUR_VIBRANCY": "0.3",
+     "BLUR_XRAY": "false",
+     "BLUR_POPUPS": "true",
+     "BLUR_SPECIAL": "true",
+     "SHADOW": "false",
+     "SHADOW_RANGE": "300",
+     "SHADOW_RENDER_POWER": "3",
+     "SHADOW_OFFSET": "10 10",
+     "ANIMATIONS": "false",
+     "ANIMATION_PRESET": "custom",
+     "ANIMATION_CUSTOM": "bezier = easeOutBack, 0.34, 1.56, 0.64, 1;;bezier = sideDown, 0.3, 1, 0.7, 1;;bezier = ease, 0.25, 0.1, 0.25, 1.0;;animation = windowsIn, 1, 2.5, easeOutBack, popin 90%;;bezier = easeOutQuint, 0.23, 1, 0.32, 1;;bezier = easeInOutCubic, 0.65, 0.05, 0.36, 1;;bezier = linear, 0, 0, 1, 1;;bezier = almostLinear, 0.5, 0.5, 0.75, 1.0;;bezier = quick, 0.15, 0, 0.1, 1;;animation = windowsIn, 1, 2.5, easeOutQuint, slide;;animation = windowsOut, 1, 2.5,sideDown, slide;;animation = windows, 1, 5.0, easeOutQuint;;animation = fadeIn, 1, 2.0, almostLinear;;animation = fadeOut, 1, 1.8, almostLinear;;animation = fade, 1, 2.8, quick;;animation = layers,        1, 4, ease, slidefade;;animation = layersOut,     1, 4, ease, slidefade;;animation = workspaces, 1, 2.0, easeInOutCubic, slide;;animation = workspacesIn, 1, 3.0, easeInOutCubic, slide;;animation = workspacesOut, 1, 3.0, easeInOutCubic, slide;;animation = fade, 1, 8, ease"
+    },
+    "source": "hyprland.conf"
+   }
+  },
+  "athena": {
+   "title": "Athena — rebuilt with eww",
+   "repo": "https://github.com/haikal-hakim/athena-eww",
+   "variants": {
+    "mocha": {
+     "title": "Catppuccin Mocha (dark)",
+     "credit": "Official Arch Linux wallpaper 'conference' (archlinux-wallpaper, CC0)",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "theme": "catppuccin-mocha"
+     }
+    },
+    "latte": {
+     "title": "Catppuccin Latte (light)",
+     "credit": "Official Arch Linux wallpaper 'conference' (archlinux-wallpaper, CC0)",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "theme": "catppuccin-latte"
+     }
+    },
+    "tokyo-night": {
+     "title": "Tokyo Night (dark)",
+     "credit": "Official Arch Linux wallpaper 'conference' (archlinux-wallpaper, CC0)",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "theme": "tokyo-night"
+     }
+    },
+    "tokyo-night-light": {
+     "title": "Tokyo Night Light (light)",
+     "credit": "Official Arch Linux wallpaper 'conference' (archlinux-wallpaper, CC0)",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "theme": "tokyo-night-light"
+     }
+    }
+   },
+   "look": {
+    "values": {
+     "GAPS_IN": "5",
+     "GAPS_OUT": "10",
+     "GAPS_WORKSPACES": "0",
+     "BORDER_SIZE": "0",
+     "ROUNDING": "8",
+     "ROUNDING_POWER": "2",
+     "ACTIVE_OPACITY": "1.0",
+     "INACTIVE_OPACITY": "0.95",
+     "DIM_INACTIVE": "false",
+     "DIM_STRENGTH": "0.05",
+     "BLUR": "true",
+     "BLUR_SIZE": "6",
+     "BLUR_PASSES": "3",
+     "BLUR_NOISE": "0.0117",
+     "BLUR_CONTRAST": "0.9",
+     "BLUR_BRIGHTNESS": "1.0",
+     "BLUR_VIBRANCY": "0.17",
+     "BLUR_XRAY": "false",
+     "BLUR_POPUPS": "true",
+     "BLUR_SPECIAL": "false",
+     "SHADOW": "true",
+     "SHADOW_RANGE": "20",
+     "SHADOW_RENDER_POWER": "3",
+     "SHADOW_OFFSET": "0 4",
+     "ANIMATIONS": "true",
+     "ANIMATION_PRESET": "fluid",
+     "ANIMATION_CUSTOM": ""
+    },
+    "source": "rice.conf"
+   }
+  },
+  "brainshell": {
+   "title": "Brain Shell — Quickshell (Material You)",
+   "repo": "https://github.com/Brainitech/Brain_Shell",
+   "variants": {
+    "brain": {
+     "title": "BRAIN SHELL — cream (as posted)",
+     "credit": "src/assets/wallpapers/brain-shell-default-0.png from the author's repo",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "181713",
+       "BG_DARK": "0e0e0b",
+       "SURFACE": "34322a",
+       "FG": "e6e6e5",
+       "SUBTEXT": "b1afaa",
+       "ACCENT": "ddcc88",
+       "ACCENT2": "aedb94",
+       "RED": "d29593",
+       "GREEN": "a2cda2",
+       "YELLOW": "d9ceaa",
+       "CYAN": "a9d1d1"
+      }
+     }
+    },
+    "portre": {
+     "title": "Blue-haired portrait",
+     "credit": "src/assets/wallpapers/brain-shell-default-1.png from the author's repo",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "141518",
+       "BG_DARK": "0c0c0e",
+       "SURFACE": "2b2e33",
+       "FG": "e5e5e6",
+       "SUBTEXT": "abadb0",
+       "ACCENT": "88b7dd",
+       "ACCENT2": "a894db",
+       "RED": "d29593",
+       "GREEN": "a2cda2",
+       "YELLOW": "d9ceaa",
+       "CYAN": "a9d1d1"
+      }
+     }
+    },
+    "orman": {
+     "title": "Green mountain forest",
+     "credit": "src/assets/wallpapers/brain-shell-default-2.jpg from the author's repo",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "121a12",
+       "BG_DARK": "0b0f0b",
+       "SURFACE": "273728",
+       "FG": "e4e7e4",
+       "SUBTEXT": "a8b3a9",
+       "ACCENT": "7ce1e9",
+       "ACCENT2": "8a92e6",
+       "RED": "db8c8a",
+       "GREEN": "9cd49c",
+       "YELLOW": "e0d1a3",
+       "CYAN": "a3d7d7"
+      }
+     }
+    },
+    "cicekler": {
+     "title": "Anime among blue flowers",
+     "credit": "src/assets/wallpapers/brain-shell-default-3.jpg from the author's repo",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "131418",
+       "BG_DARK": "0b0c0e",
+       "SURFACE": "2a2d34",
+       "FG": "e5e5e6",
+       "SUBTEXT": "aaacb1",
+       "ACCENT": "71b6f4",
+       "ACCENT2": "a280ef",
+       "RED": "e48481",
+       "GREEN": "96d996",
+       "YELLOW": "e7d49d",
+       "CYAN": "9ddcdc"
+      }
+     }
+    },
+    "porsche": {
+     "title": "Red Porsche, parking lot",
+     "credit": "src/assets/wallpapers/brain-shell-default-4.jpg from the author's repo",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "121819",
+       "BG_DARK": "0b0e0e",
+       "SURFACE": "293336",
+       "FG": "e4e6e7",
+       "SUBTEXT": "a9b0b2",
+       "ACCENT": "f37274",
+       "ACCENT2": "eeda81",
+       "RED": "e38582",
+       "GREEN": "96d996",
+       "YELLOW": "e6d49e",
+       "CYAN": "9edcdc"
+      }
+     }
+    },
+    "siborg": {
+     "title": "Cyborg portrait (dark)",
+     "credit": "src/assets/wallpapers/brain-shell-default-5.jpg from the author's repo",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "12121a",
+       "BG_DARK": "0b0b0f",
+       "SURFACE": "282937",
+       "FG": "e4e4e7",
+       "SUBTEXT": "a8a9b3",
+       "ACCENT": "7a8beb",
+       "ACCENT2": "c988e7",
+       "RED": "dd8b88",
+       "GREEN": "9ad59a",
+       "YELLOW": "e2d2a2",
+       "CYAN": "a2d8d8"
+      }
+     }
+    }
+   },
+   "look": {
+    "values": {
+     "GAPS_IN": "5",
+     "GAPS_OUT": "12",
+     "GAPS_WORKSPACES": "0",
+     "BORDER_SIZE": "2",
+     "ROUNDING": "10",
+     "ROUNDING_POWER": "2",
+     "ACTIVE_OPACITY": "1.0",
+     "INACTIVE_OPACITY": "0.96",
+     "DIM_INACTIVE": "false",
+     "DIM_STRENGTH": "0.05",
+     "BLUR": "true",
+     "BLUR_SIZE": "6",
+     "BLUR_PASSES": "3",
+     "BLUR_NOISE": "0.0117",
+     "BLUR_CONTRAST": "0.9",
+     "BLUR_BRIGHTNESS": "1.0",
+     "BLUR_VIBRANCY": "0.17",
+     "BLUR_XRAY": "false",
+     "BLUR_POPUPS": "true",
+     "BLUR_SPECIAL": "false",
+     "SHADOW": "true",
+     "SHADOW_RANGE": "20",
+     "SHADOW_RENDER_POWER": "3",
+     "SHADOW_OFFSET": "0 4",
+     "ANIMATIONS": "true",
+     "ANIMATION_PRESET": "default",
+     "ANIMATION_CUSTOM": ""
+    },
+    "source": "rice.conf"
+   }
+  },
+  "caelestia": {
+   "title": "Caelestia — Quickshell (Material You)",
+   "repo": "https://github.com/caelestia-dots/shell",
+   "variants": {
+    "violet": {
+     "title": "Violet — light ink drawing (pink-cream)",
+     "credit": "Sora's demo wallpapers: violet (post 14)",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "181713",
+       "BG_DARK": "0e0d0b",
+       "SURFACE": "34322a",
+       "FG": "e6e6e5",
+       "SUBTEXT": "b1afaa",
+       "ACCENT": "e9ce7c",
+       "ACCENT2": "b0e58a",
+       "RED": "db8d8a",
+       "GREEN": "9cd39c",
+       "YELLOW": "e0d1a4",
+       "CYAN": "a3d6d6"
+      }
+     }
+    },
+    "raiden": {
+     "title": "Raiden — purple swordmaster (dark)",
+     "credit": "Sora's demo wallpapers: raiden (post 14)",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "151319",
+       "BG_DARK": "0d0b0e",
+       "SURFACE": "2e2a35",
+       "FG": "e5e5e6",
+       "SUBTEXT": "adaab1",
+       "ACCENT": "f66f91",
+       "ACCENT2": "f1c07f",
+       "RED": "e58380",
+       "GREEN": "95da95",
+       "YELLOW": "e8d59c",
+       "CYAN": "9cdddd"
+      }
+     }
+    },
+    "room": {
+     "title": "Room — neon cyber room (dark)",
+     "credit": "Sora's demo wallpapers: room (post 14)",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "10121b",
+       "BG_DARK": "0a0b10",
+       "SURFACE": "252839",
+       "FG": "e4e4e7",
+       "SUBTEXT": "a6a9b5",
+       "ACCENT": "6ebef7",
+       "ACCENT2": "9b7ef2",
+       "RED": "e6827f",
+       "GREEN": "94db94",
+       "YELLOW": "e8d59b",
+       "CYAN": "9cdede"
+      }
+     }
+    }
+   },
+   "look": {
+    "values": {
+     "GAPS_IN": "10",
+     "GAPS_OUT": "40",
+     "GAPS_WORKSPACES": "20",
+     "BORDER_SIZE": "3",
+     "ROUNDING": "10",
+     "ROUNDING_POWER": "2",
+     "ACTIVE_OPACITY": "1.0",
+     "INACTIVE_OPACITY": "1.0",
+     "DIM_INACTIVE": "false",
+     "DIM_STRENGTH": "0.5",
+     "BLUR": "true",
+     "BLUR_SIZE": "8",
+     "BLUR_PASSES": "2",
+     "BLUR_NOISE": "0.0117",
+     "BLUR_CONTRAST": "0.8916",
+     "BLUR_BRIGHTNESS": "0.8172",
+     "BLUR_VIBRANCY": "0.1696",
+     "BLUR_XRAY": "false",
+     "BLUR_POPUPS": "true",
+     "BLUR_SPECIAL": "false",
+     "SHADOW": "true",
+     "SHADOW_RANGE": "20",
+     "SHADOW_RENDER_POWER": "3",
+     "SHADOW_OFFSET": "0 0",
+     "ANIMATIONS": "true",
+     "ANIMATION_PRESET": "custom",
+     "ANIMATION_CUSTOM": "bezier = specialWorkSwitch, 0.05, 0.7, 0.1, 1;;bezier = emphasizedAccel, 0.3, 0, 0.8, 0.15;;bezier = emphasizedDecel, 0.05, 0.7, 0.1, 1;;bezier = standard, 0.2, 0, 0, 1;;animation = layersIn, 1, 5, emphasizedDecel, slide;;animation = layersOut, 1, 4, emphasizedAccel, slide;;animation = fadeLayers, 1, 5, standard;;animation = windowsIn, 1, 5, emphasizedDecel;;animation = windowsOut, 1, 3, emphasizedAccel;;animation = windowsMove, 1, 6, standard;;animation = workspaces, 1, 5, standard;;animation = specialWorkspace, 1, 4, specialWorkSwitch, slidefadevert 15%;;animation = fade, 1, 6, standard;;animation = fadeDim, 1, 6, standard;;animation = border, 1, 6, standard"
+    },
+    "source": "hyprland.conf"
+   }
+  },
+  "dhruvsharma": {
+   "title": "dhruvsharma — %100 Quickshell",
+   "repo": "https://github.com/dhrruvsharma/shell",
+   "variants": {
+    "portre": {
+     "title": "Red-gray portrait",
+     "credit": "dhrruvsharma/wallpapers — 3qwx1v (Wallhaven), added to the repo the day after the post",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "171415",
+       "BG_DARK": "0d0c0d",
+       "SURFACE": "322d2e",
+       "FG": "e6e5e5",
+       "SUBTEXT": "afacad",
+       "ACCENT": "ff668d",
+       "ACCENT2": "f8c177",
+       "RED": "ec7d79",
+       "GREEN": "90df90",
+       "YELLOW": "edd797",
+       "CYAN": "98e1e1"
+      }
+     }
+    },
+    "wlop-dans": {
+     "title": "WLOP — Dance (mor-turuncu)",
+     "credit": "dhrruvsharma/wallpapers — WLOP \"Dance\"",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "141318",
+       "BG_DARK": "0c0b0e",
+       "SURFACE": "2d2a34",
+       "FG": "e5e5e6",
+       "SUBTEXT": "acaab1",
+       "ACCENT": "e3ae82",
+       "ACCENT2": "c9e08f",
+       "RED": "d7918e",
+       "GREEN": "9fd19f",
+       "YELLOW": "ddcfa7",
+       "CYAN": "a6d4d4"
+      }
+     }
+    }
+   },
+   "look": {
+    "values": {
+     "GAPS_IN": "5",
+     "GAPS_OUT": "20",
+     "GAPS_WORKSPACES": "0",
+     "BORDER_SIZE": "2",
+     "ROUNDING": "35",
+     "ROUNDING_POWER": "2",
+     "ACTIVE_OPACITY": "0.65",
+     "INACTIVE_OPACITY": "0.55",
+     "DIM_INACTIVE": "false",
+     "DIM_STRENGTH": "0.5",
+     "BLUR": "true",
+     "BLUR_SIZE": "12",
+     "BLUR_PASSES": "4",
+     "BLUR_NOISE": "0.0117",
+     "BLUR_CONTRAST": "0.8916",
+     "BLUR_BRIGHTNESS": "0.8172",
+     "BLUR_VIBRANCY": "0.1696",
+     "BLUR_XRAY": "false",
+     "BLUR_POPUPS": "false",
+     "BLUR_SPECIAL": "false",
+     "SHADOW": "true",
+     "SHADOW_RANGE": "18",
+     "SHADOW_RENDER_POWER": "5",
+     "SHADOW_OFFSET": "0 0",
+     "ANIMATIONS": "true",
+     "ANIMATION_PRESET": "custom",
+     "ANIMATION_CUSTOM": "bezier = easeOutQuint,0.23,1,0.32,1;;bezier = easeInOutCubic,0.65,0.05,0.36,1;;bezier = linear,0,0,1,1;;bezier = almostLinear,0.5,0.5,0.75,1.0;;bezier = quick,0.15,0,0.1,1;;bezier = bounceCurve,0.6, 1.5, 0.8,1;;animation = global, 1, 10, default;;animation = border, 1, 5.39, easeOutQuint;;animation = windows, 1, 4.79, bounceCurve;;animation = windowsIn, 1, 4.5, bounceCurve, slide 10%;;animation = windowsOut, 1, 4.5, linear, popin 87%;;animation = fadeIn, 1, 1.73, almostLinear;;animation = fadeOut, 1, 1.46, almostLinear;;animation = fade, 1, 3.03, quick;;animation = layers, 1, 3.81, easeOutQuint;;animation = layersIn, 1, 4, easeOutQuint, fade;;animation = layersOut, 1, 1.5, linear, fade;;animation = fadeLayersIn, 1, 1.79, almostLinear;;animation = fadeLayersOut, 1, 1.39, almostLinear;;animation = workspaces, 0.5, 0.5, bounceCurve, slidefadevert;;animation = workspacesIn, 1, 4.5, bounceCurve, slidefadevert;;animation = workspacesOut, 1, 4.5, bounceCurve, slidefadevert"
+    },
+    "source": "hyprland.conf"
+   }
+  },
+  "end4": {
+   "title": "end-4 — illogical-impulse (Material You, Quickshell)",
+   "repo": "https://github.com/end-4/dots-hyprland",
+   "variants": {
+    "varsayilan": {
+     "title": "Default — dark purple shapes (Tonal Spot)",
+     "credit": "quickshell/ii/assets/images/default_wallpaper.png from the author's repo (the shell's first-run wallpaper)",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "161516",
+       "BG_DARK": "0d0c0d",
+       "SURFACE": "302e31",
+       "FG": "e6e5e6",
+       "SUBTEXT": "aeacae",
+       "ACCENT": "ca88dd",
+       "ACCENT2": "db94b0",
+       "RED": "d29593",
+       "GREEN": "a2cda2",
+       "YELLOW": "d9ceaa",
+       "CYAN": "a9d1d1"
+      }
+     }
+    },
+    "acik": {
+     "title": "Light — same shapes, light theme",
+     "credit": "default_wallpaper.png from the author's repo, light mode",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "161516",
+       "BG_DARK": "0d0c0d",
+       "SURFACE": "302e31",
+       "FG": "e6e5e6",
+       "SUBTEXT": "aeacae",
+       "ACCENT": "ca88dd",
+       "ACCENT2": "db94b0",
+       "RED": "d29593",
+       "GREEN": "a2cda2",
+       "YELLOW": "d9ceaa",
+       "CYAN": "a9d1d1"
+      }
+     }
+    },
+    "turuncu": {
+     "title": "Orange roses — warm Material (dark)",
+     "credit": "Look-alike (the source of the wallpaper in the author's \"wow look its orange\" screenshot is not given): Orange rose bouquet (Unsplash) — Wikimedia Commons, CC0",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "181513",
+       "BG_DARK": "0e0d0b",
+       "SURFACE": "342e2a",
+       "FG": "e6e5e5",
+       "SUBTEXT": "b1adaa",
+       "ACCENT": "f6ab6f",
+       "ACCENT2": "d1f07f",
+       "RED": "e58380",
+       "GREEN": "95da95",
+       "YELLOW": "e8d59c",
+       "CYAN": "9ddddd"
+      }
+     }
+    }
+   },
+   "look": {
+    "values": {
+     "GAPS_IN": "4",
+     "GAPS_OUT": "5",
+     "GAPS_WORKSPACES": "50",
+     "BORDER_SIZE": "1",
+     "ROUNDING": "18",
+     "ROUNDING_POWER": "2",
+     "ACTIVE_OPACITY": "1.0",
+     "INACTIVE_OPACITY": "1.0",
+     "DIM_INACTIVE": "true",
+     "DIM_STRENGTH": "0.05",
+     "BLUR": "true",
+     "BLUR_SIZE": "10",
+     "BLUR_PASSES": "3",
+     "BLUR_NOISE": "0.05",
+     "BLUR_CONTRAST": "0.89",
+     "BLUR_BRIGHTNESS": "1.0",
+     "BLUR_VIBRANCY": "0.5",
+     "BLUR_XRAY": "true",
+     "BLUR_POPUPS": "false",
+     "BLUR_SPECIAL": "false",
+     "SHADOW": "true",
+     "SHADOW_RANGE": "20",
+     "SHADOW_RENDER_POWER": "10",
+     "SHADOW_OFFSET": "0 0",
+     "ANIMATIONS": "true",
+     "ANIMATION_PRESET": "custom",
+     "ANIMATION_CUSTOM": "bezier = expressiveFastSpatial, 0.42, 1.67, 0.21, 0.90;;bezier = expressiveSlowSpatial, 0.39, 1.29, 0.35, 0.98;;bezier = expressiveDefaultSpatial, 0.38, 1.21, 0.22, 1.00;;bezier = emphasizedDecel, 0.05, 0.7, 0.1, 1;;bezier = emphasizedAccel, 0.3, 0, 0.8, 0.15;;bezier = standardDecel, 0, 0, 0, 1;;bezier = menu_decel, 0.1, 1, 0, 1;;bezier = menu_accel, 0.52, 0.03, 0.72, 0.08;;bezier = stall, 1, -0.1, 0.7, 0.85;;animation = windowsIn, 1, 3, emphasizedDecel, popin 80%;;animation = fadeIn, 1, 3, emphasizedDecel;;animation = windowsOut, 1, 2, emphasizedDecel, popin 90%;;animation = fadeOut, 1, 2, emphasizedDecel;;animation = windowsMove, 1, 3, emphasizedDecel, slide;;animation = border, 1, 10, emphasizedDecel;;animation = layersIn, 1, 2.7, emphasizedDecel, popin 93%;;animation = layersOut, 1, 2.4, menu_accel, popin 94%;;animation = fadeLayersIn, 1, 0.5, menu_decel;;animation = fadeLayersOut, 1, 2.7, stall;;animation = workspaces, 1, 7, menu_decel, slide;;animation = specialWorkspaceIn, 1, 2.8, emphasizedDecel, slidevert;;animation = specialWorkspaceOut, 1, 1.2, emphasizedAccel, slidevert;;animation = zoomFactor, 1, 3, standardDecel"
+    },
+    "source": "hyprland.lua"
+   }
+  },
+  "hyprclouds": {
+   "title": "hyprclouds — eww, Material You",
+   "repo": "https://github.com/arfan-on-clouds/hyprclouds",
+   "variants": {
+    "sakura": {
+     "title": "Sakura — light, pink",
+     "credit": "This project's st-sakura wallpaper (the author's isn't in the repo)",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "191216",
+       "BG_DARK": "0e0b0d",
+       "SURFACE": "352930",
+       "FG": "e7e4e6",
+       "SUBTEXT": "b2a9ae",
+       "ACCENT": "eb7aa5",
+       "ACCENT2": "e7b388",
+       "RED": "dd8b88",
+       "GREEN": "9bd59b",
+       "YELLOW": "e1d2a2",
+       "CYAN": "a2d8d8"
+      }
+     }
+    },
+    "alacakaranlik": {
+     "title": "Twilight — dark, purple",
+     "credit": "This project's st-alacakaranlik wallpaper (the author's isn't in the repo)",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "141417",
+       "BG_DARK": "0c0c0e",
+       "SURFACE": "2c2c33",
+       "FG": "e5e5e6",
+       "SUBTEXT": "ababb0",
+       "ACCENT": "e39082",
+       "ACCENT2": "e0df8f",
+       "RED": "d7908e",
+       "GREEN": "9fd19f",
+       "YELLOW": "ddcfa7",
+       "CYAN": "a6d4d4"
+      }
+     }
+    },
+    "orman": {
+     "title": "Forest — dark, orange",
+     "credit": "This project's st-orman wallpaper (the author's isn't in the repo)",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "1b1511",
+       "BG_DARK": "0f0c0a",
+       "SURFACE": "392e26",
+       "FG": "e7e5e4",
+       "SUBTEXT": "b4aca7",
+       "ACCENT": "f6b36f",
+       "ACCENT2": "caf07f",
+       "RED": "e58380",
+       "GREEN": "95da95",
+       "YELLOW": "e8d59c",
+       "CYAN": "9cdddd"
+      }
+     }
+    }
+   },
+   "look": {
+    "values": {
+     "GAPS_IN": "2",
+     "GAPS_OUT": "5",
+     "GAPS_WORKSPACES": "0",
+     "BORDER_SIZE": "2",
+     "ROUNDING": "20",
+     "ROUNDING_POWER": "2",
+     "ACTIVE_OPACITY": "1.0",
+     "INACTIVE_OPACITY": "0.95",
+     "DIM_INACTIVE": "false",
+     "DIM_STRENGTH": "0.05",
+     "BLUR": "true",
+     "BLUR_SIZE": "10",
+     "BLUR_PASSES": "3",
+     "BLUR_NOISE": "0.0117",
+     "BLUR_CONTRAST": "0.9",
+     "BLUR_BRIGHTNESS": "1.0",
+     "BLUR_VIBRANCY": "0.17",
+     "BLUR_XRAY": "true",
+     "BLUR_POPUPS": "false",
+     "BLUR_SPECIAL": "false",
+     "SHADOW": "false",
+     "SHADOW_RANGE": "20",
+     "SHADOW_RENDER_POWER": "3",
+     "SHADOW_OFFSET": "0 4",
+     "ANIMATIONS": "true",
+     "ANIMATION_PRESET": "custom",
+     "ANIMATION_CUSTOM": "bezier = overshot, 0.13, 0.99, 0.5, 1;;animation = layersIn, 1, 7, overshot, slide 80%;;animation = windows, 1, 7, overshot, slide;;animation = windowsIn, 1, 7, overshot, popin;;animation = windowsOut, 1, 7, overshot, slide;;animation = windowsMove, 1, 7, overshot, slide;;animation = border, 1, 8, default;;animation = fade, 1, 8, overshot"
+    },
+    "source": "rice.conf"
+   }
+  },
+  "hyprcraft": {
+   "title": "HyprCraft — Coffee at sunset",
+   "repo": "https://github.com/zephardev/hyprcraft",
+   "variants": {
+    "merdiven": {
+     "title": "Snowy stairs",
+     "credit": "Look-alike (the author's source was removed): Jason Knauer, Snowy Steps — Wikimedia Commons, CC BY 3.0",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "theme": "catppuccin-mocha"
+     }
+    }
+   },
+   "look": {
+    "values": {
+     "GAPS_IN": "3",
+     "GAPS_OUT": "7",
+     "GAPS_WORKSPACES": "0",
+     "BORDER_SIZE": "2",
+     "ROUNDING": "0",
+     "ROUNDING_POWER": "2",
+     "ACTIVE_OPACITY": "1.0",
+     "INACTIVE_OPACITY": "1.0",
+     "DIM_INACTIVE": "false",
+     "DIM_STRENGTH": "0.5",
+     "BLUR": "true",
+     "BLUR_SIZE": "8",
+     "BLUR_PASSES": "1",
+     "BLUR_NOISE": "0.0117",
+     "BLUR_CONTRAST": "0.8916",
+     "BLUR_BRIGHTNESS": "0.8172",
+     "BLUR_VIBRANCY": "0.1696",
+     "BLUR_XRAY": "false",
+     "BLUR_POPUPS": "false",
+     "BLUR_SPECIAL": "false",
+     "SHADOW": "true",
+     "SHADOW_RANGE": "4",
+     "SHADOW_RENDER_POWER": "3",
+     "SHADOW_OFFSET": "0 0",
+     "ANIMATIONS": "true",
+     "ANIMATION_PRESET": "custom",
+     "ANIMATION_CUSTOM": ""
+    },
+    "source": "hypr.conf"
+   }
+  },
+  "ilyamiro": {
+   "title": "ilyamiro — Fluid (Quickshell + matugen)",
+   "repo": "https://github.com/ilyamiro/imperative-dots",
+   "variants": {
+    "gunbatimi": {
+     "title": "Mountain lake at sunset (lemon)",
+     "credit": "ilyamiro/shell-wallpapers (post 15)",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "181415",
+       "BG_DARK": "0e0c0c",
+       "SURFACE": "332b2d",
+       "FG": "e6e5e5",
+       "SUBTEXT": "b0abac",
+       "ACCENT": "72a4f3",
+       "ACCENT2": "b282ed",
+       "RED": "e38682",
+       "GREEN": "97d997",
+       "YELLOW": "e6d49e",
+       "CYAN": "9edbdb"
+      }
+     }
+    },
+    "pembe-dag": {
+     "title": "Snowy pink mountain",
+     "credit": "ilyamiro/shell-wallpapers (post 15)",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "141718",
+       "BG_DARK": "0c0d0e",
+       "SURFACE": "2b3133",
+       "FG": "e5e6e6",
+       "SUBTEXT": "abafb0",
+       "ACCENT": "e19f84",
+       "ACCENT2": "d5df90",
+       "RED": "d59290",
+       "GREEN": "a0d0a0",
+       "YELLOW": "dccfa8",
+       "CYAN": "a7d3d3"
+      }
+     }
+    },
+    "col": {
+     "title": "Desert dunes (sand)",
+     "credit": "ilyamiro/shell-wallpapers (post 15)",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "181613",
+       "BG_DARK": "0e0d0c",
+       "SURFACE": "33302b",
+       "FG": "e6e6e5",
+       "SUBTEXT": "b0aeab",
+       "ACCENT": "fcc469",
+       "ACCENT2": "bdf57a",
+       "RED": "e97f7c",
+       "GREEN": "92dd92",
+       "YELLOW": "ebd699",
+       "CYAN": "9ae0e0"
+      }
+     }
+    },
+    "orman": {
+     "title": "Misty forest — animated (teal)",
+     "credit": "ilyamiro/shell-wallpapers (post 7)",
+     "wallpaper": true,
+     "video": true,
+     "colors": {
+      "palette": {
+       "BG": "141717",
+       "BG_DARK": "0c0e0e",
+       "SURFACE": "2c3232",
+       "FG": "e5e6e6",
+       "SUBTEXT": "abb0af",
+       "ACCENT": "de8788",
+       "ACCENT2": "dccf93",
+       "RED": "d39492",
+       "GREEN": "a1cea1",
+       "YELLOW": "dacea9",
+       "CYAN": "a8d2d2"
+      }
+     }
+    },
+    "kirmizi": {
+     "title": "Red anime (ULTRAKILL)",
+     "credit": "ilyamiro/shell-wallpapers (post 7)",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "1d0e0e",
+       "BG_DARK": "110909",
+       "SURFACE": "3d2121",
+       "FG": "e8e3e3",
+       "SUBTEXT": "b7a4a4",
+       "ACCENT": "ff6666",
+       "ACCENT2": "f8e277",
+       "RED": "ec7d79",
+       "GREEN": "90df90",
+       "YELLOW": "edd797",
+       "CYAN": "98e1e1"
+      }
+     }
+    },
+    "gol": {
+     "title": "Mountain lake (amber)",
+     "credit": "ilyamiro/shell-wallpapers (post 7)",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "171614",
+       "BG_DARK": "0e0d0c",
+       "SURFACE": "32302c",
+       "FG": "e6e6e5",
+       "SUBTEXT": "afaeab",
+       "ACCENT": "e9a57c",
+       "ACCENT2": "d2e58a",
+       "RED": "db8d8a",
+       "GREEN": "9cd39c",
+       "YELLOW": "e0d1a4",
+       "CYAN": "a3d6d6"
+      }
+     }
+    },
+    "bulutlar": {
+     "title": "Peaks above a sea of clouds (pink)",
+     "credit": "ilyamiro/shell-wallpapers (post 7)",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "131418",
+       "BG_DARK": "0c0c0e",
+       "SURFACE": "2b2c34",
+       "FG": "e5e5e6",
+       "SUBTEXT": "aaabb1",
+       "ACCENT": "f4d171",
+       "ACCENT2": "b0ee81",
+       "RED": "e38582",
+       "GREEN": "96d996",
+       "YELLOW": "e6d49d",
+       "CYAN": "9edcdc"
+      }
+     }
+    },
+    "yosemite": {
+     "title": "Yosemite valley (teal-peach)",
+     "credit": "ilyamiro/shell-wallpapers (post 8)",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "131818",
+       "BG_DARK": "0c0e0e",
+       "SURFACE": "2b3334",
+       "FG": "e5e6e6",
+       "SUBTEXT": "aab0b0",
+       "ACCENT": "6dddf8",
+       "ACCENT2": "817df2",
+       "RED": "e7827e",
+       "GREEN": "94db94",
+       "YELLOW": "e9d59b",
+       "CYAN": "9cdede"
+      }
+     }
+    },
+    "samanyolu": {
+     "title": "Snowy mountain under the Milky Way",
+     "credit": "ilyamiro/shell-wallpapers (post 8)",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "12151a",
+       "BG_DARK": "0b0d0f",
+       "SURFACE": "282e36",
+       "FG": "e4e5e7",
+       "SUBTEXT": "a8adb2",
+       "ACCENT": "7faae6",
+       "ACCENT2": "b18de3",
+       "RED": "d98f8c",
+       "GREEN": "9dd29d",
+       "YELLOW": "dfd0a5",
+       "CYAN": "a4d5d5"
+      }
+     }
+    }
+   },
+   "look": {
+    "values": {
+     "GAPS_IN": "4",
+     "GAPS_OUT": "4",
+     "GAPS_WORKSPACES": "0",
+     "BORDER_SIZE": "0",
+     "ROUNDING": "4",
+     "ROUNDING_POWER": "2",
+     "ACTIVE_OPACITY": "1.0",
+     "INACTIVE_OPACITY": "1.0",
+     "DIM_INACTIVE": "false",
+     "DIM_STRENGTH": "0.5",
+     "BLUR": "false",
+     "BLUR_SIZE": "8",
+     "BLUR_PASSES": "1",
+     "BLUR_NOISE": "0.0117",
+     "BLUR_CONTRAST": "0.8916",
+     "BLUR_BRIGHTNESS": "0.8172",
+     "BLUR_VIBRANCY": "0.1696",
+     "BLUR_XRAY": "false",
+     "BLUR_POPUPS": "false",
+     "BLUR_SPECIAL": "false",
+     "SHADOW": "false",
+     "SHADOW_RANGE": "4",
+     "SHADOW_RENDER_POWER": "3",
+     "SHADOW_OFFSET": "0 0",
+     "ANIMATIONS": "true",
+     "ANIMATION_PRESET": "custom",
+     "ANIMATION_CUSTOM": "bezier = myBezier, 0.05, 0.9, 0.1, 1.05;;animation = windows, 1, 5, myBezier, popin 80%;;animation = windowsOut, 1, 5, myBezier, popin 80%;;animation = layers, 1, 5, myBezier, fade;;animation = layersIn, 1, 5, myBezier, fade;;animation = layersOut, 1, 5, myBezier, fade;;animation = fade, 1, 5, myBezier;;animation = workspaces, 1, 5, myBezier, slide;;animation = specialWorkspaceIn, 1, 5, myBezier, fade;;animation = specialWorkspaceOut, 1, 5, myBezier, fade"
+    },
+    "source": "hyprland.conf"
+   }
+  },
+  "ilyamiro-ay": {
+   "title": "ilyamiro — Moon launcher (Quickshell + matugen)",
+   "repo": "https://github.com/ilyamiro/imperative-dots",
+   "variants": {
+    "ay": {
+     "title": "Crescent moon and contrail — moon launcher",
+     "credit": "Look-alike (the source of the one in the video wasn't found): Rickard Olsson, Flyby — Wikimedia Commons, CC BY-SA 3.0",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "0e141d",
+       "BG_DARK": "090c10",
+       "SURFACE": "212b3d",
+       "FG": "e3e5e8",
+       "SUBTEXT": "a4abb7",
+       "ACCENT": "67a6fe",
+       "ACCENT2": "ad79f7",
+       "RED": "eb7e7a",
+       "GREEN": "91de91",
+       "YELLOW": "ecd798",
+       "CYAN": "99e0e0"
+      }
+     }
+    }
+   },
+   "look": {
+    "values": {
+     "GAPS_IN": "4",
+     "GAPS_OUT": "4",
+     "GAPS_WORKSPACES": "0",
+     "BORDER_SIZE": "2",
+     "ROUNDING": "4",
+     "ROUNDING_POWER": "2",
+     "ACTIVE_OPACITY": "1.0",
+     "INACTIVE_OPACITY": "1.0",
+     "DIM_INACTIVE": "false",
+     "DIM_STRENGTH": "0.5",
+     "BLUR": "true",
+     "BLUR_SIZE": "8",
+     "BLUR_PASSES": "2",
+     "BLUR_NOISE": "0.0117",
+     "BLUR_CONTRAST": "0.8916",
+     "BLUR_BRIGHTNESS": "0.8172",
+     "BLUR_VIBRANCY": "0.1696",
+     "BLUR_XRAY": "false",
+     "BLUR_POPUPS": "false",
+     "BLUR_SPECIAL": "false",
+     "SHADOW": "false",
+     "SHADOW_RANGE": "4",
+     "SHADOW_RENDER_POWER": "3",
+     "SHADOW_OFFSET": "0 0",
+     "ANIMATIONS": "true",
+     "ANIMATION_PRESET": "custom",
+     "ANIMATION_CUSTOM": "bezier = myBezier, 0.05, 0.9, 0.1, 1.05;;animation = windows, 1, 5, myBezier, popin 80%;;animation = windowsOut, 1, 5, myBezier, popin 80%;;animation = layers, 1, 5, myBezier, fade;;animation = layersIn, 1, 5, myBezier, fade;;animation = layersOut, 1, 5, myBezier, fade;;animation = fade, 1, 5, myBezier;;animation = workspaces, 1, 5, myBezier, slide;;animation = specialWorkspaceIn, 1, 5, myBezier, fade;;animation = specialWorkspaceOut, 1, 5, myBezier, fade"
+    },
+    "source": "hyprland.conf"
+   }
+  },
+  "k4": {
+   "title": "k4 — Dynamic Island (Quickshell)",
+   "repo": "https://github.com/k4ditano/k4",
+   "variants": {
+    "island": {
+     "title": "Island — bar that shrinks at the edge, dock mode",
+     "credit": "Wallpaper unchanged (the author's repo has no wallpaper)",
+     "wallpaper": false,
+     "video": false,
+     "colors": null
+    }
+   },
+   "look": {
+    "values": {
+     "GAPS_IN": "5",
+     "GAPS_OUT": "12",
+     "GAPS_WORKSPACES": "0",
+     "BORDER_SIZE": "2",
+     "ROUNDING": "10",
+     "ROUNDING_POWER": "2",
+     "ACTIVE_OPACITY": "1.0",
+     "INACTIVE_OPACITY": "0.96",
+     "DIM_INACTIVE": "false",
+     "DIM_STRENGTH": "0.05",
+     "BLUR": "true",
+     "BLUR_SIZE": "6",
+     "BLUR_PASSES": "3",
+     "BLUR_NOISE": "0.0117",
+     "BLUR_CONTRAST": "0.9",
+     "BLUR_BRIGHTNESS": "1.0",
+     "BLUR_VIBRANCY": "0.17",
+     "BLUR_XRAY": "false",
+     "BLUR_POPUPS": "true",
+     "BLUR_SPECIAL": "false",
+     "SHADOW": "true",
+     "SHADOW_RANGE": "20",
+     "SHADOW_RENDER_POWER": "3",
+     "SHADOW_OFFSET": "0 4",
+     "ANIMATIONS": "true",
+     "ANIMATION_PRESET": "default",
+     "ANIMATION_CUSTOM": ""
+    },
+    "source": "rice.conf"
+   }
+  },
+  "nothingos": {
+   "title": "NothingOS — Quickshell (inspired by Nothing OS)",
+   "repo": "https://github.com/0xbbuddha/dotfiles_nothing_os",
+   "variants": {
+    "nothing": {
+     "title": "Nothing — matte black, concrete gray, red",
+     "credit": "hypr/wallpaper.png from the author's repo (as posted)",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "151616",
+       "BG_DARK": "0d0d0d",
+       "SURFACE": "2e3030",
+       "FG": "e5e6e6",
+       "SUBTEXT": "adaeae",
+       "ACCENT": "e19c84",
+       "ACCENT2": "d7df90",
+       "RED": "d59290",
+       "GREEN": "a0d0a0",
+       "YELLOW": "dccfa8",
+       "CYAN": "a7d3d3"
+      }
+     }
+    }
+   },
+   "look": {
+    "values": {
+     "GAPS_IN": "4",
+     "GAPS_OUT": "5",
+     "GAPS_WORKSPACES": "50",
+     "BORDER_SIZE": "1",
+     "ROUNDING": "18",
+     "ROUNDING_POWER": "3",
+     "ACTIVE_OPACITY": "1.0",
+     "INACTIVE_OPACITY": "0.94",
+     "DIM_INACTIVE": "false",
+     "DIM_STRENGTH": "0.5",
+     "BLUR": "true",
+     "BLUR_SIZE": "4",
+     "BLUR_PASSES": "2",
+     "BLUR_NOISE": "0.035",
+     "BLUR_CONTRAST": "0.9",
+     "BLUR_BRIGHTNESS": "0.75",
+     "BLUR_VIBRANCY": "0.0",
+     "BLUR_XRAY": "false",
+     "BLUR_POPUPS": "true",
+     "BLUR_SPECIAL": "false",
+     "SHADOW": "true",
+     "SHADOW_RANGE": "28",
+     "SHADOW_RENDER_POWER": "3",
+     "SHADOW_OFFSET": "0 6",
+     "ANIMATIONS": "true",
+     "ANIMATION_PRESET": "custom",
+     "ANIMATION_CUSTOM": "bezier = nothing, 0.16, 1.0, 0.30, 1.0;;bezier = nothingSnap, 0.22, 1.0, 0.36, 1.0;;bezier = nothingIn, 0.55, 0.0, 0.30, 1.0;;bezier = linear, 0.0, 0.0, 1.00, 1.0;;animation = global, 1, 3.5, nothing;;animation = windowsIn, 1, 3.5, nothing, popin 96%;;animation = windowsOut, 1, 2.6, nothingIn, popin 94%;;animation = windowsMove, 1, 3.5, nothing;;animation = border, 1, 6.0, linear;;animation = fade, 1, 2.8, nothing;;animation = layersIn, 1, 3.0, nothing, popin 92%;;animation = layersOut, 1, 2.2, nothingIn, fade;;animation = workspaces, 1, 4.0, nothingSnap, slidefade 12%;;animation = specialWorkspace, 1, 4.0, nothingSnap, slidevert"
+    },
+    "source": "hyprland.lua"
+   }
+  },
+  "pibble": {
+   "title": "pibble — launcher (Quickshell, text scramble)",
+   "repo": "https://github.com/kianblakley/pibble",
+   "variants": {
+    "pibble": {
+     "title": "pibble — launcher, text scramble effect",
+     "credit": "Wallpaper unchanged (the source of the posted one wasn't found)",
+     "wallpaper": false,
+     "video": false,
+     "colors": null
+    }
+   },
+   "look": {
+    "values": {
+     "GAPS_IN": "5",
+     "GAPS_OUT": "12",
+     "GAPS_WORKSPACES": "0",
+     "BORDER_SIZE": "2",
+     "ROUNDING": "10",
+     "ROUNDING_POWER": "2",
+     "ACTIVE_OPACITY": "1.0",
+     "INACTIVE_OPACITY": "0.96",
+     "DIM_INACTIVE": "false",
+     "DIM_STRENGTH": "0.05",
+     "BLUR": "true",
+     "BLUR_SIZE": "6",
+     "BLUR_PASSES": "3",
+     "BLUR_NOISE": "0.0117",
+     "BLUR_CONTRAST": "0.9",
+     "BLUR_BRIGHTNESS": "1.0",
+     "BLUR_VIBRANCY": "0.17",
+     "BLUR_XRAY": "false",
+     "BLUR_POPUPS": "true",
+     "BLUR_SPECIAL": "false",
+     "SHADOW": "true",
+     "SHADOW_RANGE": "20",
+     "SHADOW_RENDER_POWER": "3",
+     "SHADOW_OFFSET": "0 4",
+     "ANIMATIONS": "true",
+     "ANIMATION_PRESET": "default",
+     "ANIMATION_CUSTOM": ""
+    },
+    "source": "rice.conf"
+   }
+  },
+  "r4ppz19": {
+   "title": "r4ppz19 — No going back to Windows (Gruvbox Material)",
+   "repo": "https://github.com/r4ppz19/Arch-dotfiles",
+   "variants": {
+    "kiz": {
+     "title": "Cream background, girl illustration (hyprpaper default)",
+     "credit": "",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "theme": "gruvbox-dark"
+     }
+    },
+    "iblis-avcisi": {
+     "title": "Demon Slayer (white)",
+     "credit": "",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "theme": "gruvbox-dark"
+     }
+    }
+   },
+   "look": {
+    "values": {
+     "GAPS_IN": "8",
+     "GAPS_OUT": "15",
+     "GAPS_WORKSPACES": "0",
+     "BORDER_SIZE": "2",
+     "ROUNDING": "1",
+     "ROUNDING_POWER": "5",
+     "ACTIVE_OPACITY": "1.0",
+     "INACTIVE_OPACITY": "1.0",
+     "DIM_INACTIVE": "true",
+     "DIM_STRENGTH": "0.2",
+     "BLUR": "false",
+     "BLUR_SIZE": "6",
+     "BLUR_PASSES": "1",
+     "BLUR_NOISE": "0.01",
+     "BLUR_CONTRAST": "0.8916",
+     "BLUR_BRIGHTNESS": "0.8172",
+     "BLUR_VIBRANCY": "0.1696",
+     "BLUR_XRAY": "false",
+     "BLUR_POPUPS": "false",
+     "BLUR_SPECIAL": "true",
+     "SHADOW": "false",
+     "SHADOW_RANGE": "1",
+     "SHADOW_RENDER_POWER": "1",
+     "SHADOW_OFFSET": "0 0",
+     "ANIMATIONS": "true",
+     "ANIMATION_PRESET": "custom",
+     "ANIMATION_CUSTOM": "bezier = easeInOutCubic, 0.65, 0, 0.25, 1;;bezier = easeOutQuint, 0.22, 1, 0.36, 1;;bezier = bouncy, 0.05, 0.9, 0.1, 1.05;;bezier = linear,0,0,1,1;;bezier = almostLinear,0.5,0.5,0.75,1.0;;bezier = quick,0.15,0,0.1,1;;bezier = easeOutQuint,0.23,1,0.32,1;;bezier = easeInOutCubic,0.65,0.05,0.36,1;;animation = global, 1, 10, default;;animation = border, 1, 5.39, easeOutQuint;;animation = fadeIn, 1, 1.73, almostLinear;;animation = fadeOut, 1, 1.46, almostLinear;;animation = fade, 1, 3.03, quick;;animation = layers, 1, 3.81, easeOutQuint;;animation = layersIn, 1, 4, easeOutQuint, slide;;animation = layersOut, 1, 1.5, linear, slide;;animation = fadeLayersIn, 1, 1.79, almostLinear;;animation = fadeLayersOut, 1, 1.39, almostLinear;;animation = windows, 1, 4, bouncy, slide;;animation = windowsMove, 1, 4, easeOutQuint;;animation = workspaces, 1, 4, easeOutQuint, slide;;animation = specialWorkspace, 1, 2, easeInOutCubic, slidevert"
+    },
+    "source": "hyprland.conf"
+   }
+  },
+  "saatvik333": {
+   "title": "saatvik333 — Rice dungeon (wallust)",
+   "repo": "https://github.com/saatvik333/hyprland-dotfiles",
+   "variants": {
+    "bataklik": {
+     "title": "Cat in the swamp (green)",
+     "credit": "MoeWalls — Cat In The Swamp (animated; the installer downloads the site's 720p preview and converts it to a gif, as the author does): https://moewalls.com/animal/cat-in-the-swamp-live-wallpaper/",
+     "wallpaper": true,
+     "video": true,
+     "colors": {
+      "palette": {
+       "BG": "111b18",
+       "BG_DARK": "0a0f0e",
+       "SURFACE": "263833",
+       "FG": "e4e7e6",
+       "SUBTEXT": "a7b4b0",
+       "ACCENT": "e6f570",
+       "ACCENT2": "85f07f",
+       "RED": "e58480",
+       "GREEN": "95da95",
+       "YELLOW": "e7d59c",
+       "CYAN": "9ddddd"
+      }
+     }
+    },
+    "olum-yildizi": {
+     "title": "Death Star (blue)",
+     "credit": "RockLou — Star Wars: Death Star Wallpaper (DeviantArt, r/StarWars 5gbi6q): https://www.deviantart.com/rocklou/art/Star-Wars-Death-Star-Wallpaper-649222725",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "11151a",
+       "BG_DARK": "0a0d0f",
+       "SURFACE": "272e38",
+       "FG": "e4e5e7",
+       "SUBTEXT": "a8adb3",
+       "ACCENT": "6da9f8",
+       "ACCENT2": "ac7df2",
+       "RED": "e7827e",
+       "GREEN": "94db94",
+       "YELLOW": "e9d59b",
+       "CYAN": "9bdede"
+      }
+     }
+    },
+    "localhost": {
+     "title": "There's no place like 127.0.0.1 (black-green)",
+     "credit": "dovah — There's no place like 127.0.0.1 (Wallpaper Abyss 426359): https://wall.alphacoders.com/big.php?i=426359",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "161616",
+       "BG_DARK": "0d0d0d",
+       "SURFACE": "2f2f2f",
+       "FG": "e5e6e5",
+       "SUBTEXT": "adadad",
+       "ACCENT": "66ff66",
+       "ACCENT2": "77f8e2",
+       "RED": "ec7d79",
+       "GREEN": "90df90",
+       "YELLOW": "edd797",
+       "CYAN": "98e1e1"
+      }
+     }
+    }
+   },
+   "look": {
+    "values": {
+     "GAPS_IN": "5",
+     "GAPS_OUT": "10",
+     "GAPS_WORKSPACES": "0",
+     "BORDER_SIZE": "3",
+     "ROUNDING": "10",
+     "ROUNDING_POWER": "2",
+     "ACTIVE_OPACITY": "1.0",
+     "INACTIVE_OPACITY": "0.8",
+     "DIM_INACTIVE": "false",
+     "DIM_STRENGTH": "0.5",
+     "BLUR": "true",
+     "BLUR_SIZE": "6",
+     "BLUR_PASSES": "2",
+     "BLUR_NOISE": "0.03",
+     "BLUR_CONTRAST": "0.8916",
+     "BLUR_BRIGHTNESS": "0.8172",
+     "BLUR_VIBRANCY": "0.0",
+     "BLUR_XRAY": "true",
+     "BLUR_POPUPS": "true",
+     "BLUR_SPECIAL": "false",
+     "SHADOW": "false",
+     "SHADOW_RANGE": "0",
+     "SHADOW_RENDER_POWER": "3",
+     "SHADOW_OFFSET": "0 0",
+     "ANIMATIONS": "true",
+     "ANIMATION_PRESET": "custom",
+     "ANIMATION_CUSTOM": "bezier = linear, 0, 0, 1, 1;;bezier = easeIn, 0.42, 0.0, 1, 1;;bezier = easeOut, 0.0, 0.0, 0.58, 1;;bezier = balanced, 0.2, 0, 0.3, 1;;bezier = smooth, 0.25, 0.1, 0.25, 1;;bezier = crisp, 0.3, 0, 0.4, 1;;bezier = flow, 0.15, 0, 0.35, 1;;animation = windows, 1, 4, smooth;;animation = windowsIn, 1, 3, balanced, slide;;animation = windowsOut, 1, 2, crisp, slide;;animation = windowsMove, 1, 3, flow;;animation = fadeLayers, 1, 2, smooth;;animation = layers, 1, 2, balanced;;animation = layersIn, 1, 2, smooth, slide;;animation = layersOut, 1, 1, crisp, slide;;animation = border, 1, 4, balanced;;animation = workspaces, 1, 4, flow, slide;;animation = specialWorkspaceIn, 1, 2, easeIn, fade;;animation = specialWorkspaceOut, 1, 2, easeOut, fade"
+    },
+    "source": "hyprland.conf"
+   }
+  },
+  "serpantinum": {
+   "title": "Serpantinum — Quickshell desktop shell",
+   "repo": "https://github.com/ilyamiro/serpantinum",
+   "variants": {
+    "pembe": {
+     "title": "Pink flat mountains",
+     "credit": "ilyamiro/shell-wallpapers (post 3)",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "1a1218",
+       "BG_DARK": "0f0b0e",
+       "SURFACE": "372733",
+       "FG": "e7e4e6",
+       "SUBTEXT": "b3a8b0",
+       "ACCENT": "e580e2",
+       "ACCENT2": "e28e99",
+       "RED": "d88f8d",
+       "GREEN": "9ed19e",
+       "YELLOW": "ded0a6",
+       "CYAN": "a5d5d5"
+      }
+     }
+    }
+   },
+   "look": {
+    "values": {
+     "GAPS_IN": "4",
+     "GAPS_OUT": "6",
+     "GAPS_WORKSPACES": "0",
+     "BORDER_SIZE": "0",
+     "ROUNDING": "12",
+     "ROUNDING_POWER": "2",
+     "ACTIVE_OPACITY": "1.0",
+     "INACTIVE_OPACITY": "1.0",
+     "DIM_INACTIVE": "false",
+     "DIM_STRENGTH": "0.5",
+     "BLUR": "true",
+     "BLUR_SIZE": "8",
+     "BLUR_PASSES": "2",
+     "BLUR_NOISE": "0.0117",
+     "BLUR_CONTRAST": "0.8916",
+     "BLUR_BRIGHTNESS": "0.8172",
+     "BLUR_VIBRANCY": "0.1696",
+     "BLUR_XRAY": "false",
+     "BLUR_POPUPS": "false",
+     "BLUR_SPECIAL": "false",
+     "SHADOW": "false",
+     "SHADOW_RANGE": "4",
+     "SHADOW_RENDER_POWER": "3",
+     "SHADOW_OFFSET": "0 0",
+     "ANIMATIONS": "true",
+     "ANIMATION_PRESET": "custom",
+     "ANIMATION_CUSTOM": "bezier = myBezier, 0.05, 0.9, 0.1, 1.05;;animation = windows, 1, 5, myBezier, popin 80%;;animation = windowsOut, 1, 5, myBezier, popin 80%;;animation = layers, 1, 5, myBezier, fade;;animation = layersIn, 1, 5, myBezier, fade;;animation = layersOut, 1, 5, myBezier, fade;;animation = fade, 1, 5, myBezier;;animation = workspaces, 1, 5, myBezier, slide;;animation = specialWorkspaceIn, 1, 5, myBezier, fade;;animation = specialWorkspaceOut, 1, 5, myBezier, fade"
+    },
+    "source": "hyprland.lua"
+   }
+  },
+  "unit3": {
+   "title": "Unit-3 — NieR:Automata (Quickshell)",
+   "repo": "https://github.com/samyns/Unit-3",
+   "variants": {
+    "orman": {
+     "title": "Forest — 2B and a mossy machine (as posted)",
+     "credit": "assets/wallpapers from the author's repo (NieR:Automata art); the one in the post's preview",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "151714",
+       "BG_DARK": "0c0d0c",
+       "SURFACE": "2d312d",
+       "FG": "e5e6e5",
+       "SUBTEXT": "acafac",
+       "ACCENT": "ddcc88",
+       "ACCENT2": "aedb94",
+       "RED": "d29593",
+       "GREEN": "a2cda2",
+       "YELLOW": "d9ceaa",
+       "CYAN": "a9d1d1"
+      }
+     }
+    },
+    "yorha": {
+     "title": "YoRHa — dark emblem",
+     "credit": "assets/wallpapers/UDqXyQq.jpeg from the author's repo",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "161615",
+       "BG_DARK": "0d0d0d",
+       "SURFACE": "302f2e",
+       "FG": "e6e5e5",
+       "SUBTEXT": "aeadad",
+       "ACCENT": "ddb588",
+       "ACCENT2": "c2db94",
+       "RED": "d29593",
+       "GREEN": "a2cda2",
+       "YELLOW": "d9ceaa",
+       "CYAN": "a9d1d1"
+      }
+     }
+    },
+    "hollow-knight": {
+     "title": "Hollow Knight — Vincent Bisschop",
+     "credit": "assets/wallpapers from the author's repo (Vincent Bisschop, Hollow Knight fan art)",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "171414",
+       "BG_DARK": "0d0c0c",
+       "SURFACE": "312d2d",
+       "FG": "e6e5e5",
+       "SUBTEXT": "afacac",
+       "ACCENT": "dd88b0",
+       "ACCENT2": "dbae94",
+       "RED": "d29593",
+       "GREEN": "a2cda2",
+       "YELLOW": "d9ceaa",
+       "CYAN": "a9d1d1"
+      }
+     }
+    },
+    "savas": {
+     "title": "2B — red battle scene",
+     "credit": "assets/wallpapers/wallpaperflare.com_wallpaper.jpg from the author's repo",
+     "wallpaper": true,
+     "video": false,
+     "colors": {
+      "palette": {
+       "BG": "171414",
+       "BG_DARK": "0e0c0c",
+       "SURFACE": "322c2d",
+       "FG": "e6e5e5",
+       "SUBTEXT": "afabac",
+       "ACCENT": "e87d8c",
+       "ACCENT2": "e5c98b",
+       "RED": "db8d8a",
+       "GREEN": "9cd39c",
+       "YELLOW": "e0d1a4",
+       "CYAN": "a3d6d6"
+      }
+     }
+    }
+   },
+   "look": {
+    "values": {
+     "GAPS_IN": "4",
+     "GAPS_OUT": "8",
+     "GAPS_WORKSPACES": "0",
+     "BORDER_SIZE": "1",
+     "ROUNDING": "0",
+     "ROUNDING_POWER": "2",
+     "ACTIVE_OPACITY": "1.0",
+     "INACTIVE_OPACITY": "1.0",
+     "DIM_INACTIVE": "false",
+     "DIM_STRENGTH": "0.5",
+     "BLUR": "false",
+     "BLUR_SIZE": "8",
+     "BLUR_PASSES": "1",
+     "BLUR_NOISE": "0.0117",
+     "BLUR_CONTRAST": "0.8916",
+     "BLUR_BRIGHTNESS": "0.8172",
+     "BLUR_VIBRANCY": "0.1696",
+     "BLUR_XRAY": "false",
+     "BLUR_POPUPS": "false",
+     "BLUR_SPECIAL": "false",
+     "SHADOW": "false",
+     "SHADOW_RANGE": "4",
+     "SHADOW_RENDER_POWER": "3",
+     "SHADOW_OFFSET": "0 0",
+     "ANIMATIONS": "true",
+     "ANIMATION_PRESET": "custom",
+     "ANIMATION_CUSTOM": "bezier = niercurve, 0.4, 0, 0.2, 1;;animation = windows,      1, 4, niercurve, slide;;animation = windowsOut,   1, 3, niercurve, slide;;animation = fade,         1, 4, niercurve;;animation = workspaces,   1, 5, niercurve, slidevert"
+    },
+    "source": "hyprland.conf"
+   }
+  },
+  "vantage": {
+   "title": "Vantage — Quickshell (pywal)",
+   "repo": "https://github.com/simeulinuxkaliaiwr/vantage",
+   "variants": {
+    "fuuka": {
+     "title": "Fuuka Yamagishi — mint (animated)",
+     "credit": "MoeWalls — Fuuka Yamagishi Persona 3 Reload Live Wallpaper: https://moewalls.com/anime/fuuka-yamagishi-persona-3-reload-live-wallpaper/",
+     "wallpaper": true,
+     "video": true,
+     "colors": {
+      "palette": {
+       "BG": "101b17",
+       "BG_DARK": "0a100d",
+       "SURFACE": "253a31",
+       "FG": "e4e7e6",
+       "SUBTEXT": "a6b5af",
+       "ACCENT": "67fec7",
+       "ACCENT2": "78bcf7",
+       "RED": "eb7d7a",
+       "GREEN": "91de91",
+       "YELLOW": "ecd797",
+       "CYAN": "99e1e1"
+      }
+     }
+    },
+    "ken": {
+     "title": "Ken Amada — orange (animated)",
+     "credit": "MoeWalls — Ken Amada Persona 3 Reload Live Wallpaper: https://moewalls.com/anime/ken-amada-persona-3-reload-live-wallpaper/",
+     "wallpaper": true,
+     "video": true,
+     "colors": {
+      "palette": {
+       "BG": "1c1410",
+       "BG_DARK": "100c0a",
+       "SURFACE": "3a2d24",
+       "FG": "e8e5e3",
+       "SUBTEXT": "b5aca6",
+       "ACCENT": "fbaf6a",
+       "ACCENT2": "cff57b",
+       "RED": "e9807c",
+       "GREEN": "92dd92",
+       "YELLOW": "ebd699",
+       "CYAN": "9adfdf"
+      }
+     }
+    }
+   },
+   "look": {
+    "values": {
+     "GAPS_IN": "5",
+     "GAPS_OUT": "12",
+     "GAPS_WORKSPACES": "0",
+     "BORDER_SIZE": "1",
+     "ROUNDING": "12",
+     "ROUNDING_POWER": "2",
+     "ACTIVE_OPACITY": "1.0",
+     "INACTIVE_OPACITY": "0.96",
+     "DIM_INACTIVE": "false",
+     "DIM_STRENGTH": "0.05",
+     "BLUR": "true",
+     "BLUR_SIZE": "8",
+     "BLUR_PASSES": "4",
+     "BLUR_NOISE": "0.0117",
+     "BLUR_CONTRAST": "0.9",
+     "BLUR_BRIGHTNESS": "1.0",
+     "BLUR_VIBRANCY": "0.17",
+     "BLUR_XRAY": "false",
+     "BLUR_POPUPS": "true",
+     "BLUR_SPECIAL": "false",
+     "SHADOW": "true",
+     "SHADOW_RANGE": "20",
+     "SHADOW_RENDER_POWER": "3",
+     "SHADOW_OFFSET": "0 4",
+     "ANIMATIONS": "true",
+     "ANIMATION_PRESET": "custom",
+     "ANIMATION_CUSTOM": "bezier = riceGlide, 0.22, 1.0, 0.36, 1.0;;bezier = riceSoft, 0.25, 0.1, 0.25, 1.0;;animation = global, 1, 4, riceGlide;;animation = windows, 1, 4, riceGlide, popin 85%;;animation = windowsOut, 1, 4.5, riceSoft, popin 85%;;animation = fade, 1, 4, riceSoft;;animation = workspaces, 1, 5, riceGlide, slidefade 12%;;animation = layersIn, 1, 4, riceGlide, slide;;animation = layersOut, 1, 4, riceSoft"
+    },
+    "source": "rice.conf"
+   }
+  }
+ }
+}

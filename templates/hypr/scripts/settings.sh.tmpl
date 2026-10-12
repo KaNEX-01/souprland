@@ -1,0 +1,58 @@
+{{! require: MANAGE_HYPR_CONFIGS }}
+{{! mode: 755 }}
+#!/usr/bin/env bash
+# Settings app — opened with {{MOD_KEY}} + I.
+#
+# Tries, in order:
+#   1. ~/.local/bin/hyprsetup — the settings app that install.sh INSTALLED ON
+#      THE SYSTEM (see install.sh:install_app_step). The Python code, templates
+#      and catalog are copied under ~/.local/share/hyprsetup, so it works even
+#      if the repo folder is deleted/moved. THIS IS THE MAIN PATH; this script
+#      used to call hyprsetup-gui in the repo directly, and MOD+I died for
+#      everyone who deleted the repo.
+#   2. hyprsetup on PATH — if the app was installed to another prefix or
+#      ~/.local/bin gets onto PATH some other way.
+#   3. hyprmod — a repo-independent GTK4 Hyprland settings app (successor to
+#      the archived ML4W Hyprland Settings), if installed.
+#   4. better-control — a quick-settings panel from the Hyprland ecosystem
+#      (Wi-Fi/Bluetooth/audio/brightness), also used by end-4/dots-hyprland as
+#      its settingsApp fallback.
+#   5. nwg-displays — display layout only (with MANAGE_MONITORS=0 the script
+#      does not touch monitors.conf anyway, so this tool takes over there).
+#   6. If none exist, warn with a notification.
+#
+#   1 and 2 get "--quick": it opens the app in PANEL mode
+#   (python/hyprsetup/gui/quick.py → gui/app.py). Same app, same fifteen
+#   tabs and all pages; the only difference is the window class
+#   dev.hyprsetup.Quick: window rules make it a floating panel sized
+#   relative to the screen that slides in from the top, and Esc closes it.
+#   Drop the flag and MOD+I opens the full app (dev.hyprsetup.Gui); it also
+#   floats and slides but opens on the Home page, and Esc does not close it.
+set -uo pipefail
+
+if [[ -x "$HOME/.local/bin/hyprsetup" ]]; then
+    exec "$HOME/.local/bin/hyprsetup" --quick
+fi
+
+if command -v hyprsetup >/dev/null 2>&1; then
+    exec hyprsetup --quick
+fi
+
+if command -v hyprmod >/dev/null 2>&1; then
+    exec hyprmod
+fi
+
+if command -v better-control >/dev/null 2>&1; then
+    exec better-control
+fi
+
+if command -v nwg-displays >/dev/null 2>&1; then
+    exec nwg-displays
+fi
+
+if command -v notify-send >/dev/null 2>&1; then
+    notify-send "Settings app not found" \
+        "Rerun the installer (./install.sh) or run it by hand: souprland" \
+        -a "Hyprland"
+fi
+exit 1

@@ -1,0 +1,12 @@
+{{! require: WALLPAPER_DAEMON==waypaper && HAS_WAYPAPER }}
+{{! target: waypaper/config.ini }}
+[Settings]
+folder = {{WALLPAPER_DIR}}
+wallpaper = {{WALLPAPER_PATH}}
+backend = hyprpaper
+monitors = All
+fill = fill
+sort = name
+color = {{HEX_BG}}
+number_of_columns = 3
+subfolders = False

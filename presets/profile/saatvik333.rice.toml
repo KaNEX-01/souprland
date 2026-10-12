@@ -1,0 +1,186 @@
+# saatvik333/hyprland-dotfiles — r/hyprland "I've fallen down in the rice dungeon"
+# https://www.reddit.com/r/hyprland/comments/1mi964w/
+# Posted 2025-08-05. The repo's history is squashed into a single commit
+# (2025-09-25); the state at post time is gone, this is the closest version.
+
+default_variant = "bataklik"
+# The author's scripts call swww (swww init / query / img); on current Arch it's awww.
+# The update module calls the author's personal "checkupdates-with-aur" script.
+shims = ["swww", "checkupdates-with-aur"]
+
+post_install = [
+  "chmod +x ~/.config/scripts -R 2>/dev/null || true",
+  "hyprctl reload >/dev/null 2>&1 || true",
+]
+
+notes = [
+  "The repo's history is squashed into a single commit; the state from 7 weeks after the post is installed.",
+  "Fonts are Apple's (SF Pro, SF Mono): AUR otf-apple-sf-pro, nerd-fonts-sf-mono-ligatures.",
+  "Colors are generated from the wallpaper with wallust (~/.config/scripts/theme/theme-sync.sh).",
+]
+
+[source]
+repo = "https://github.com/saatvik333/hyprland-dotfiles"
+commit = "3085c4a745fd619a40398661a7da6e34d860ebad"
+post = "https://www.reddit.com/r/hyprland/comments/1mi964w/ive_fallen_down_in_the_dungen_help/"
+license = ""
+
+[[install]]
+from = "hypr"
+to = "~/.config/hypr"
+[[install]]
+from = "waybar"
+to = "~/.config/waybar"
+[[install]]
+from = "wofi"
+to = "~/.config/wofi"
+[[install]]
+from = "wlogout"
+to = "~/.config/wlogout"
+[[install]]
+from = "swaync"
+to = "~/.config/swaync"
+[[install]]
+from = "dunst"
+to = "~/.config/dunst"
+[[install]]
+from = "wallust"
+to = "~/.config/wallust"
+[[install]]
+from = "scripts"
+to = "~/.config/scripts"
+[[install]]
+from = "kitty"
+to = "~/.config/kitty"
+[[install]]
+from = "alacritty"
+to = "~/.config/alacritty"
+[[install]]
+from = "fastfetch"
+to = "~/.config/fastfetch"
+[[install]]
+from = "bongocat"
+to = "~/.config/bongocat"
+[[install]]
+from = "kew"
+to = "~/.config/kew"
+[[install]]
+from = "yazi"
+to = "~/.config/yazi"
+[[install]]
+from = "starship"
+to = "~/.config/starship"
+group = "shell"
+[[install]]
+from = "fish"
+to = "~/.config/fish"
+group = "shell"
+[[install]]
+from = "nvim"
+to = "~/.config/nvim"
+group = "editor"
+
+[[fix]]
+file = "~/.config/hypr/config/autostart.conf"
+replace = ["exec-once = waytrogen -r", "# hyprsetup: awww-daemon restores the last wallpaper by itself\n# exec-once = waytrogen -r"]
+why = "waytrogen -r kills awww-daemon while trying to load the last saved wallpaper; with no saved entry or a deleted file the wallpaper never came up"
+
+[packages]
+repo = ["pacman-contrib", "ffmpeg", "waybar", "wofi", "swaync", "dunst", "hypridle", "hyprlock",
+        "hyprpolkitagent", "udiskie", "gnome-keyring", "awww", "kitty", "alacritty",
+        "fastfetch", "kew", "yazi", "imagemagick", "jq", "playerctl", "brightnessctl",
+        "pamixer", "grim", "slurp", "wl-clipboard", "cliphist", "libnotify", "thunar"]
+aur = ["wlogout", "wallust", "waytrogen", "hyprswitch", "bongocat", "otf-apple-sf-pro",
+       "nerd-fonts-sf-mono-ligatures"]
+
+# Looks: the three wallpapers from the video. The author gave their sources in the comments.
+[variants.bataklik]
+title = "Cat in the swamp (green)"
+wallpaper = "https://moewalls.com/wp-content/uploads/preview/2024/cat-in-the-swamp-preview.webm"
+wallpaper_dest = "~/Pictures/Wallpapers/saatvik-bataklik.webm"
+apply = [
+  "g=~/Pictures/Wallpapers/saatvik-bataklik.gif; [ -s \"$g\" ] || ffmpeg -loglevel error -y -i {wallpaper} -vf 'fps=20,scale=1920:-1:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse' \"$g\"; swww img \"$g\" --transition-type grow",
+  "sleep 1; ~/.config/scripts/theme/theme-sync.sh",
+]
+credit = "MoeWalls — Cat In The Swamp (animated; the installer downloads the site's 720p preview and converts it to a gif, as the author does): https://moewalls.com/animal/cat-in-the-swamp-live-wallpaper/"
+
+[variants.olum-yildizi]
+title = "Death Star (blue)"
+wallpaper = "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/7ce55e30-e602-4e3d-b05a-d2a7a0fa49d8/daqj3gl-9a94472a-1945-4acd-ac69-b8eba9806db9.png/v1/fill/w_2560,h_1440,q_100,strp/star_wars_death_star_wallpaper_by_rocklou_daqj3gl-pre.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9MTQ0MCIsInBhdGgiOiIvZi83Y2U1NWUzMC1lNjAyLTRlM2QtYjA1YS1kMmE3YTBmYTQ5ZDgvZGFxajNnbC05YTk0NDcyYS0xOTQ1LTRhY2QtYWM2OS1iOGViYTk4MDZkYjkucG5nIiwid2lkdGgiOiI8PTI1NjAifV1dLCJhdWQiOlsidXJuOnNlcnZpY2U6aW1hZ2Uub3BlcmF0aW9ucyJdfQ.lL7m63rLlbdyElDwLGdaJj6befBkLzU32maT_jrVhm8"
+wallpaper_dest = "~/Pictures/Wallpapers/saatvik-olum-yildizi.jpg"
+apply = ["swww img {wallpaper} --transition-type grow", "sleep 1; ~/.config/scripts/theme/theme-sync.sh"]
+credit = "RockLou — Star Wars: Death Star Wallpaper (DeviantArt, r/StarWars 5gbi6q): https://www.deviantart.com/rocklou/art/Star-Wars-Death-Star-Wallpaper-649222725"
+
+[variants.localhost]
+title = "There's no place like 127.0.0.1 (black-green)"
+wallpaper = "https://images5.alphacoders.com/426/426359.png"
+wallpaper_dest = "~/Pictures/Wallpapers/saatvik-localhost.png"
+apply = ["swww img {wallpaper} --transition-type grow", "sleep 1; ~/.config/scripts/theme/theme-sync.sh"]
+credit = "dovah — There's no place like 127.0.0.1 (Wallpaper Abyss 426359): https://wall.alphacoders.com/big.php?i=426359"
+
+# The settings app's Bar page recognizes and configures this bar (ricebar.py).
+[bar]
+kind = "waybar"
+label = "Waybar (saatvik333)"
+config = "~/.config/waybar/config.jsonc"
+style = "~/.config/waybar/style.css"
+
+# --- Mix parts (python -m hyprsetup mix; see python/hyprsetup/mix.py) ---
+[[part]]
+slot = "bar"
+title = "Waybar (wallust colors)"
+paths = ["~/.config/waybar"]
+needs = ["~/.config/scripts"]
+start = "waybar"
+provides = ["bar"]
+packages = ["waybar"]
+
+[[part]]
+slot = "launcher"
+title = "Wofi"
+paths = ["~/.config/wofi"]
+commands = { CMD_LAUNCHER = "pgrep wofi || wofi --show drun --matching --insensitive" }
+packages = ["wofi"]
+
+[[part]]
+slot = "notify"
+id = "swaync"
+title = "SwayNC bildirim merkezi"
+paths = ["~/.config/swaync"]
+start = "swaync"
+provides = ["notify"]
+packages = ["swaync"]
+
+[[part]]
+slot = "notify"
+id = "dunst"
+title = "Dunst notifications"
+paths = ["~/.config/dunst"]
+start = "dunst"
+provides = ["notify"]
+packages = ["dunst"]
+
+[[part]]
+slot = "terminal"
+id = "alacritty"
+title = "Alacritty"
+paths = ["~/.config/alacritty"]
+commands = { CMD_TERMINAL = "alacritty" }
+packages = ["alacritty"]
+
+[[part]]
+slot = "terminal"
+id = "kitty"
+title = "Kitty"
+paths = ["~/.config/kitty"]
+commands = { CMD_TERMINAL = "kitty" }
+packages = ["kitty"]
+
+[[part]]
+slot = "lock"
+title = "Hyprlock lock screen"
+paths = ["~/.config/hypr/hyprlock.conf"]
+needs = ["~/.config/hypr/config/variables.conf", "~/.config/scripts"]
+wallpaper_lines = true
+commands = { LOCK_CMD = "hyprlock" }
+packages = ["hyprlock"]

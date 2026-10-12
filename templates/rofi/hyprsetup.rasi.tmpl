@@ -1,0 +1,102 @@
+{{! require: LAUNCHER==rofi && HAS_ROFI }}
+/* hyprsetup.rasi — rofi theme: {{THEME}}
+ * Colors, rounding and opacity come from settings.conf. */
+
+* {
+    bg:          {{HEX_BG}};
+    bg-alt:      {{HEX_SURFACE}};
+    bg-dark:     {{HEX_BG_DARK}};
+    fg:          {{HEX_FG}};
+    fg-alt:      {{HEX_SUBTEXT}};
+    accent:      {{HEX_ACCENT}};
+    accent-alt:  {{HEX_ACCENT2}};
+    urgent:      {{HEX_RED}};
+
+    background-color: transparent;
+    text-color:       @fg;
+    font:             "{{FONT_FAMILY}} {{FONT_SIZE}}";
+}
+
+window {
+    transparency:     "real";
+    location:         {{LAUNCHER_POS_ROFI}};
+    anchor:           center;
+    width:            {{LAUNCHER_WIDTH_PCT}}%;
+    border-radius:    {{LAUNCHER_RADIUS_VALUE}}px;
+    border:           {{LAUNCHER_BORDER_VALUE}}px;
+    border-color:     @accent;
+    background-color: {{HEX_BG}}{{LAUNCHER_ALPHA_HEX}};
+    padding:          0;
+}
+
+mainbox {
+    children: [ inputbar, listview ];
+    padding:  14px;
+    spacing:  12px;
+}
+
+inputbar {
+    children:         [ prompt, entry ];
+    background-color: @bg-dark;
+    border-radius:    {{LAUNCHER_INNER_RADIUS}}px;
+    padding:          10px 14px;
+    spacing:          10px;
+}
+
+prompt {
+    text-color: @accent;
+}
+
+entry {
+    placeholder:            "Search…";
+    placeholder-color:      @fg-alt;
+    cursor:                 text;
+    vertical-align:         0.5;
+}
+
+listview {
+    lines:         {{LAUNCHER_LINES_VALUE}};
+    columns:       1;
+    fixed-height:  false;
+    scrollbar:     false;
+    spacing:       4px;
+}
+
+element {
+    padding:       9px 12px;
+    border-radius: {{LAUNCHER_INNER_RADIUS}}px;
+    spacing:       10px;
+}
+
+element normal.normal   { text-color: @fg; }
+element alternate.normal{ text-color: @fg; }
+element selected.normal {
+    background-color: @accent;
+    text-color:       @bg-dark;
+}
+element normal.urgent, element selected.urgent {
+    text-color: @urgent;
+}
+element normal.active, element selected.active {
+    text-color: @accent-alt;
+}
+
+element-icon {
+    size:           {{LAUNCHER_ICON_SIZE_VALUE}}px;
+    vertical-align: 0.5;
+}
+
+element-text {
+    vertical-align: 0.5;
+    text-color:     inherit;
+}
+
+message {
+    padding:          10px;
+    border-radius:    {{LAUNCHER_INNER_RADIUS}}px;
+    background-color: @bg-alt;
+}
+
+textbox {
+    text-color: @fg;
+}

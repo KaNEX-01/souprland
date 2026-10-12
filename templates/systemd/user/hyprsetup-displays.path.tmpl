@@ -1,0 +1,16 @@
+{{! require: MANAGE_HYPR_CONFIGS && HAS_WAYBAR }}
+[Unit]
+Description=hyprsetup — refresh the bar when the display/workspace layout changes
+
+# nwg-displays writes workspaces.conf (and monitors.conf) itself. Waybar's
+# "persistent-workspaces" list is generated from the display → workspace
+# mapping in that file (render.py:_persistent_workspaces_json), but nothing
+# regenerated it when the file changed: with 1-5 assigned to DP-1 the bar
+# still showed 1-10 on every display. Settings are reapplied on change.
+[Path]
+PathChanged=%h/.config/hypr/workspaces.conf
+PathChanged=%h/.config/hypr/monitors.conf
+Unit=hyprsetup-displays.service
+
+[Install]
+WantedBy=default.target

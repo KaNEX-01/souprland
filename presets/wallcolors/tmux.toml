@@ -1,0 +1,26 @@
+# tmux — not in this project's own templates.
+#
+# Colors are written to a separate file, a "source-file" line is added to tmux.conf
+# and open tmux sessions are reloaded.
+title = "tmux"
+desc = "Status bar, active window, pane border and message colors. If ~/.config/tmux/tmux.conf is used (not ~/.tmux.conf)."
+reload = "command -v tmux >/dev/null && tmux source-file ~/.config/tmux/hyprsetup-colors.conf 2>/dev/null; true"
+
+[[file]]
+path = "~/.config/tmux/hyprsetup-colors.conf"
+template = """
+# hyprsetup: wallpaper colors (don't edit by hand; rewritten on every apply)
+set -g status-style "bg=^r@SURFACE^,fg=^r@FG^"
+set -g status-left-style "bg=^r@ACCENT^,fg=^r@BG^,bold"
+set -g window-status-style "bg=^r@SURFACE^,fg=^r@SUBTEXT^"
+set -g window-status-current-style "bg=^r@ACCENT^,fg=^r@BG^,bold"
+set -g pane-border-style "fg=^r@SURFACE^"
+set -g pane-active-border-style "fg=^r@ACCENT^"
+set -g message-style "bg=^r@SURFACE^,fg=^r@FG^"
+set -g mode-style "bg=^r@ACCENT^,fg=^r@BG^"
+set -g clock-mode-colour "^r@ACCENT^"
+"""
+
+[[ensure]]
+file = "~/.config/tmux/tmux.conf"
+line = "source-file -q ~/.config/tmux/hyprsetup-colors.conf"

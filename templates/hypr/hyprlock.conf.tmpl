@@ -1,0 +1,91 @@
+{{! require: MANAGE_HYPR_CONFIGS && HAS_HYPRLOCK }}
+####################################################################
+#  hyprlock.conf — lock screen
+#
+#  Values come from the settings app (MOD+I → Session → Lock screen);
+#  manual edits here are lost on the next apply.
+#  The grace period when locking on idle (--grace) lives in hypridle.conf.
+####################################################################
+
+general {
+    hide_cursor = true
+    ignore_empty_input = true
+}
+
+background {
+    monitor =
+    path = {{LOCK_BG_PATH}}
+    color = {{RGBA_BG}}
+    blur_passes = {{LOCK_BLUR_PASSES_VALUE}}
+    blur_size = {{LOCK_BLUR_SIZE_VALUE}}
+    noise = 0.0117
+    contrast = 0.9
+    brightness = {{LOCK_BRIGHTNESS_VALUE}}
+    vibrancy = 0.17
+}
+
+# ------------------------------------------------------------ clock -------
+label {
+    monitor =
+    text = cmd[update:1000] echo "$(date +'{{LOCK_CLOCK_FMT}}')"
+    color = {{RGBA_FG}}
+    font_size = {{LOCK_CLOCK_SIZE_VALUE}}
+    font_family = {{FONT_FAMILY}}
+    position = 0, {{LOCK_CLOCK_Y}}
+    halign = center
+    valign = center
+    shadow_passes = 2
+    shadow_size = 4
+}
+{{#if LOCK_SHOW_DATE}}
+
+label {
+    monitor =
+    text = cmd[update:60000] echo "$(date +'{{LOCK_DATE_FMT}}')"
+    color = {{RGBA_SUBTEXT}}
+    font_size = {{LOCK_DATE_SIZE}}
+    font_family = {{FONT_FAMILY}}
+    position = 0, 130
+    halign = center
+    valign = center
+}
+{{/if}}
+{{#if LOCK_SHOW_USER}}
+
+# ------------------------------------------------------------ user info ---
+label {
+    monitor =
+    text = $DESC
+    color = {{RGBA_SUBTEXT}}
+    font_size = 14
+    font_family = {{FONT_FAMILY}}
+    position = 0, -35
+    halign = center
+    valign = center
+}
+{{/if}}
+
+# ------------------------------------------------------- password field ---
+input-field {
+    monitor =
+    size = {{LOCK_INPUT_WIDTH_VALUE}}, 52
+    outline_thickness = 2
+    dots_size = 0.25
+    dots_spacing = 0.3
+    dots_center = true
+
+    outer_color = {{RGBA_ACCENT}}
+    inner_color = {{RGBA_SURFACE}}
+    font_color = {{RGBA_FG}}
+    check_color = {{RGBA_YELLOW}}
+    fail_color = {{RGBA_RED}}
+
+    fade_on_empty = false
+    placeholder_text = <span foreground="##{{COL_SUBTEXT}}">{{LOCK_PLACEHOLDER_TEXT}}</span>
+    fail_text = <span foreground="##{{COL_RED}}">Wrong password ($ATTEMPTS)</span>
+
+    rounding = {{ROUNDING}}
+    position = 0, -70
+    halign = center
+    valign = center
+}

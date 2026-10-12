@@ -1,0 +1,17 @@
+{{! require: MANAGE_HYPR_CONFIGS && WORKSPACE_MONITOR_MAP && HYPR_LANG==conf }}
+####################################################################
+#  workspaces.conf — workspace → display mapping
+#
+#  Built from WORKSPACE_MONITOR_MAP in settings.conf:
+#      WORKSPACE_MONITOR_MAP="1:DP-1:default;2:DP-1;6:HDMI-A-1:default"
+#
+#  hyprsetup:managed — this line marks who owns the file.
+#  If nwg-displays rewrites the file the line disappears and the script
+#  leaves the file alone from then on (see lib/core.sh:foreign_config_owner).
+#
+#  If you use nwg-displays, set MANAGE_MONITORS=0 and drop this file too
+#  (leave WORKSPACE_MONITOR_MAP empty) — otherwise two tools try to manage
+#  the same file.
+####################################################################
+
+{{WORKSPACE_MONITOR_LINES}}

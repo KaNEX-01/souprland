@@ -1,0 +1,34 @@
+{{! require: MANAGE_HYPR_CONFIGS && BAR==waybar }}
+{{! mode: 755 }}
+#!/usr/bin/env bash
+# Show/hide the bar — {{MOD_KEY}} + J.
+#
+# There are two modes; which one is generated depends on BAR_AUTOHIDE:
+#
+#   Auto-hide OFF  → Waybar's own toggle (SIGUSR1).
+#   Auto-hide ON   → PINS the bar. While pinned, hypr/scripts/
+#                    bar-autohide.py stays out of it and the bar stays shown;
+#                    pressing again returns to auto mode.
+#
+# The pin is kept as the existence of a file: two processes (this script and
+# the helper) share the state, and neither has to guess the other's count.
+set -euo pipefail
+
+{{#if BAR_AUTOHIDE_ON}}
+PIN="${XDG_CACHE_HOME:-$HOME/.cache}/hyprsetup/bar-pinned"
+mkdir -p "$(dirname "$PIN")"
+
+if [[ -e "$PIN" ]]; then
+    rm -f "$PIN"
+    # Back to auto: if the pointer is not at the edge the helper hides it soon.
+    # Still, give immediate feedback.
+    pidof waybar >/dev/null 2>&1 && pkill -SIGUSR2 waybar || true
+else
+    : >"$PIN"
+    pidof waybar >/dev/null 2>&1 && pkill -SIGUSR1 waybar || true
+fi
+{{/if}}
+{{#unless BAR_AUTOHIDE_ON}}
+# Waybar's default: SIGUSR1 toggles visibility.
+pkill -SIGUSR1 waybar || true
+{{/unless}}

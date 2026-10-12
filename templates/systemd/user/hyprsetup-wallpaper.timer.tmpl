@@ -1,0 +1,14 @@
+{{! require: MANAGE_HYPR_CONFIGS && WALLPAPER_ROTATE && HAS_SWWW || MANAGE_HYPR_CONFIGS && WALLPAPER_ROTATE && HAS_HYPRPAPER }}
+[Unit]
+Description=hyprsetup — wallpaper rotation (every {{WALLPAPER_ROTATE}} minutes)
+
+[Timer]
+# First change shortly after login; then at regular intervals.
+OnActiveSec={{WALLPAPER_ROTATE}}min
+OnUnitActiveSec={{WALLPAPER_ROTATE}}min
+# Do not skip time spent asleep/off: a missed trigger fires as soon as the
+# machine is back (otherwise it would wait another full period).
+Persistent=true
+
+[Install]
+WantedBy=timers.target

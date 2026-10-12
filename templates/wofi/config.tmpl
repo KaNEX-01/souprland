@@ -1,0 +1,25 @@
+{{! require: LAUNCHER==wofi && HAS_WOFI }}
+# wofi — app launcher
+
+show=drun
+mode=drun
+prompt={{LAUNCHER_PROMPT_TEXT}}
+width={{LAUNCHER_WIDTH_PCT}}%
+height=45%
+lines={{LAUNCHER_LINES_VALUE}}
+columns=1
+location={{LAUNCHER_POS}}
+orientation=vertical
+halign=fill
+line_wrap=word
+term={{CMD_TERMINAL}}
+
+allow_markup=true
+allow_images={{LAUNCHER_ICONS_BOOL}}
+image_size={{LAUNCHER_ICON_SIZE_VALUE}}
+insensitive=true
+matching=fuzzy
+no_actions=true
+hide_scroll=true
+gtk_dark=true
+print_command=true

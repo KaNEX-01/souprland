@@ -1,0 +1,164 @@
+# r4ppz19/Arch-dotfiles — r/hyprland "I am never going back to Windows"
+# https://www.reddit.com/r/hyprland/comments/1l1i79c/
+# Posted 2025-06-02. The repo's history was squashed into a single commit on 2025-08-02;
+# that commit also contains the five screenshots taken on the post date (2025-06-02).
+#
+# The author keeps the repo under ~/Arch-dotfiles and symlinks it into ~/.config
+# (scripts/symlink-dotfiles.sh); the Hyprland scripts call it from that path. The same
+# is done here. For the author, Waybar/swaync/hyprpaper start via uwsm + systemd user
+# services; fallback lines are added so they also come up in non-uwsm
+# sessions.
+
+default_variant = "kiz"
+
+post_install = [
+  "chmod +x ~/Arch-dotfiles/scripts/*.sh ~/Arch-dotfiles/rofi/*/*.sh 2>/dev/null || true",
+  "systemctl --user daemon-reload",
+  "systemctl --user enable waybar.service swaync.service hyprpaper.service hyprpolkitagent.service hyprsunset.service battery-monitor.service 2>/dev/null || true",
+  "hyprctl reload >/dev/null 2>&1 || true",
+]
+
+notes = [
+  "The history was squashed; the commit from 2 months after the post is installed (it contains the post-day screenshots).",
+  "The nvim and zsh configs aren't linked; link them by hand from ~/Arch-dotfiles if you want them.",
+]
+
+[source]
+repo = "https://github.com/r4ppz19/Arch-dotfiles"
+commit = "6abfebcb6123b86a0428ff63f7d4e01b83131505"
+post = "https://www.reddit.com/r/hyprland/comments/1l1i79c/i_am_never_going_back_to_windows/"
+license = "MIT"
+
+[[install]]
+from = "."
+to = "~/Arch-dotfiles"
+[[install]]
+from = "systemd/user/battery-monitor.service"
+to = "~/.config/systemd/user/battery-monitor.service"
+
+# What scripts/symlink-dotfiles.sh links (except nvim and zsh: doesn't overwrite the user's
+# editor/shell config).
+[[link]]
+to = "~/.config/hypr"
+target = "~/Arch-dotfiles/hypr"
+[[link]]
+to = "~/.config/waybar"
+target = "~/Arch-dotfiles/waybar"
+[[link]]
+to = "~/.config/rofi"
+target = "~/Arch-dotfiles/rofi"
+[[link]]
+to = "~/.config/swaync"
+target = "~/Arch-dotfiles/swaync"
+[[link]]
+to = "~/.config/kitty"
+target = "~/Arch-dotfiles/kitty"
+[[link]]
+to = "~/.config/btop"
+target = "~/Arch-dotfiles/btop"
+[[link]]
+to = "~/.config/lazygit"
+target = "~/Arch-dotfiles/lazygit"
+[[link]]
+to = "~/.config/neofetch"
+target = "~/Arch-dotfiles/neofetch"
+[[link]]
+to = "~/.config/swaylock"
+target = "~/Arch-dotfiles/swaylock"
+[[link]]
+to = "~/.config/yazi"
+target = "~/Arch-dotfiles/yazi"
+[[link]]
+to = "~/.tmux.conf"
+target = "~/Arch-dotfiles/tmux/.tmux.conf"
+
+[[fix]]
+file = "~/Arch-dotfiles/hypr/hyprpaper.conf"
+replace = ["/home/r4ppz/", "~/"]
+why = "path hard-coded with the author's username"
+[[fix]]
+file = "~/Arch-dotfiles/btop/btop.conf"
+replace = ['color_theme = "/home/r4ppz/.config/btop/themes/modified_gruvbox.theme"', 'color_theme = "modified_gruvbox"']
+why = "path hard-coded with the author's username; btop finds the theme by name"
+[[fix]]
+file = "~/Arch-dotfiles/hypr/core/autostart.conf"
+append = """
+# hyprsetup: the author starts these with uwsm + systemd user services.
+# In a non-uwsm session, if the service isn't running, start it directly (same look).
+exec-once = systemctl --user is-active -q waybar.service || waybar
+exec-once = systemctl --user is-active -q swaync.service || swaync
+exec-once = systemctl --user is-active -q hyprpaper.service || hyprpaper
+exec-once = systemctl --user is-active -q hyprpolkitagent.service || /usr/lib/hyprpolkitagent/hyprpolkitagent
+"""
+why = "in non-uwsm sessions the bar/notifications/wallpaper didn't come up"
+
+[packages]
+repo = ["waybar", "rofi", "swaync", "hyprpaper", "hypridle", "hyprpolkitagent",
+        "hyprsunset", "hyprshot", "kitty", "tmux", "btop", "lazygit", "yazi",
+        "swaylock", "uwsm", "wl-clip-persist", "wl-clipboard", "brightnessctl",
+        "cava", "kew", "grim", "slurp", "jq", "imagemagick", "gnome-keyring",
+        "libnotify", "acpi", "playerctl", "ttf-jetbrains-mono-nerd"]
+aur = ["neofetch"]
+
+[variants.kiz]
+title = "Cream background, girl illustration (hyprpaper default)"
+wallpaper = "~/Arch-dotfiles/wallpaper/wallpaper1.png"
+apply = [
+  "printf 'wallpaper {\\n    monitor =\\n    path = %s\\n    fit_mode = cover\\n}\\nsplash = false\\nipc = on\\n' {wallpaper} > ~/Arch-dotfiles/hypr/hyprpaper.conf",
+  "systemctl --user restart hyprpaper.service 2>/dev/null || { pkill -x hyprpaper; hyprpaper >/dev/null 2>&1 & }",
+]
+
+[variants.iblis-avcisi]
+title = "Demon Slayer (white)"
+wallpaper = "~/Arch-dotfiles/wallpaper/wallpaper2.png"
+apply = [
+  "printf 'wallpaper {\\n    monitor =\\n    path = %s\\n    fit_mode = cover\\n}\\nsplash = false\\nipc = on\\n' {wallpaper} > ~/Arch-dotfiles/hypr/hyprpaper.conf",
+  "systemctl --user restart hyprpaper.service 2>/dev/null || { pkill -x hyprpaper; hyprpaper >/dev/null 2>&1 & }",
+]
+
+# The settings app's Bar page recognizes and configures this bar (ricebar.py).
+[bar]
+kind = "waybar"
+label = "Waybar (Gruvbox Material)"
+config = "~/.config/waybar/config.jsonc"
+style = "~/.config/waybar/style.css"
+
+# --- Mix parts (python -m hyprsetup mix; see python/hyprsetup/mix.py) ---
+[[part]]
+slot = "bar"
+title = "Waybar (Gruvbox Material)"
+paths = ["~/.config/waybar"]
+needs = ["~/.config/rofi"]
+start = "waybar"
+provides = ["bar"]
+packages = ["waybar"]
+
+[[part]]
+slot = "launcher"
+title = "Rofi launcher (+ power menu, web search)"
+paths = ["~/.config/rofi"]
+commands = { CMD_LAUNCHER = "~/.config/rofi/launcher/launcher.sh" }
+packages = ["rofi"]
+
+[[part]]
+slot = "notify"
+title = "SwayNC bildirim merkezi"
+paths = ["~/.config/swaync"]
+start = "swaync"
+provides = ["notify"]
+packages = ["swaync"]
+
+[[part]]
+slot = "terminal"
+title = "Kitty (Gruvbox)"
+paths = ["~/.config/kitty"]
+commands = { CMD_TERMINAL = "kitty" }
+packages = ["kitty"]
+
+[[part]]
+slot = "lock"
+title = "Swaylock"
+paths = ["~/.config/swaylock"]
+commands = { LOCK_CMD = "swaylock" }
+packages = ["swaylock"]
+note = "Locking when idle (hypridle) keeps using hyprlock; the keybinding opens swaylock."

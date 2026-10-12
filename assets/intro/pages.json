@@ -1,0 +1,59 @@
+{
+  "_not": "The intro tour and the README intro section are generated from THIS file (python/hyprsetup/intro.py). To add, reorder or reword pages, edit only this file, then run: python3 tools/intro-readme.py. 'media' is a path relative to this folder (.gif, .png, .webm, .mp4); if the file is missing, the app shows a placeholder box. A line starting with '- ' is a bullet, a line starting with '### ' is a subheading; [text](url) is a link. A page with 'credits': true gets the list of credits for the bundled themes appended, generated from the manifests. A page with 'draft': true still has draft text.",
+  "pages": [
+    {
+      "id": "genel",
+      "draft": true,
+      "media": "genel.gif",
+      "title": "What is Souprland?",
+      "body": [
+        "An installer that sets up a Hyprland desktop from scratch, and a settings app that takes over after installation.",
+        "- Theme, bar, terminal, launcher, keybinds: all from this window, applied instantly.",
+        "- Ready-made desktops install in one click and can be rolled back.",
+        "- Your keybinds and ALT+Tab stay the same on every theme."
+      ]
+    },
+    {
+      "id": "merhaba",
+      "media": "merhaba.gif",
+      "title": "This Project Is Made With AI And Can Be Buggy As Hell",
+      "body": [
+        "Souprland is basically a script that controls Hyprland with a GUI.",
+        "- You can use ready-made dotfiles,",
+        "- make your own with the setup wizard,",
+        "- or mix dotfiles together with Soup Maker.",
+        "If you see any bug, please open an issue on GitHub. I'll do my best to fix it."
+      ]
+    },
+    {
+      "id": "sisman",
+      "media": "sisman.gif",
+      "title": "No bloat",
+      "body": [
+        "By default you only get what a desktop needs. No AUR, no extras.",
+        "Want more? You choose it, nothing gets installed behind your back.",
+        "The repo is a bit big (~100 MB) because of the themes and wallpapers inside, but they just sit there until you use them."
+      ]
+    },
+    {
+      "id": "guvenlik",
+      "media": "guvenlik.gif",
+      "title": "Security",
+      "body": [
+        "There are dotfiles using AUR packages, and some features also need AUR. It is up to you to choose whether to use them or not. All settings and dotfiles that use AUR can be seen in the GUI.",
+        "### AUR packages",
+        "As always with AUR, review PKGBUILDs before installing.",
+        "### Third-party dotfiles",
+        "Some dotfiles include configs and scripts from other authors. So review them before use."
+      ]
+    },
+    {
+      "id": "tesekkur",
+      "credits": true,
+      "title": "Credits",
+      "body": [
+        "Thanks to the authors whose dotfiles and scripts are used in this project:"
+      ]
+    }
+  ]
+}

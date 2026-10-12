@@ -1,0 +1,59 @@
+{{! require: LAUNCHER==wofi && HAS_WOFI }}
+/* wofi theme: {{THEME}} */
+
+window {
+    background-color: alpha({{HEX_BG}}, {{LAUNCHER_OPACITY_VALUE}});
+    border: {{LAUNCHER_BORDER_VALUE}}px solid {{HEX_ACCENT}};
+    border-radius: {{LAUNCHER_RADIUS_VALUE}}px;
+    font-family: "{{FONT_FAMILY}}", sans-serif;
+    font-size: {{FONT_SIZE}}pt;
+}
+
+#outer-box {
+    padding: 16px;
+}
+
+#input {
+    background-color: {{HEX_SURFACE}};
+    color: {{HEX_FG}};
+    border: none;
+    border-radius: {{LAUNCHER_INNER_RADIUS}}px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+}
+
+#input:focus {
+    border: 1px solid {{HEX_ACCENT}};
+}
+
+#scroll {
+    margin-top: 4px;
+}
+
+#inner-box {
+    background-color: transparent;
+}
+
+#entry {
+    padding: 8px 12px;
+    border-radius: {{LAUNCHER_INNER_RADIUS}}px;
+    color: {{HEX_FG}};
+}
+
+#entry:selected {
+    background-color: {{HEX_ACCENT}};
+    color: {{HEX_BG}};
+    font-weight: bold;
+}
+
+#entry image {
+    margin-right: 10px;
+}
+
+#text {
+    color: inherit;
+}
+
+#text:selected {
+    color: {{HEX_BG}};
+}

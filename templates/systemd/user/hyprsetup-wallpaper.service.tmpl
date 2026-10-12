@@ -1,0 +1,11 @@
+{{! require: MANAGE_HYPR_CONFIGS && WALLPAPER_ROTATE && HAS_SWWW || MANAGE_HYPR_CONFIGS && WALLPAPER_ROTATE && HAS_HYPRPAPER }}
+[Unit]
+Description=hyprsetup — change the wallpaper
+# Pointless without a graphical session: swww/hyprpaper cannot connect
+# to the Wayland socket and the unit fails.
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.config/hypr/scripts/wallpaper.sh random

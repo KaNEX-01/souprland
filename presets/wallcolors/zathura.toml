@@ -1,0 +1,40 @@
+# Zathura (PDF viewer) — not in this project's own templates.
+#
+# Colors are written to a separate file and an "include" line is added to zathurarc;
+# the user's own zathurarc settings are left alone.
+title = "Zathura"
+desc = "The PDF viewer's background, status bar, highlight and night mode (recolor) colors."
+
+[[file]]
+path = "~/.config/zathura/hyprsetup-colors"
+template = """
+# hyprsetup: wallpaper colors (don't edit by hand; rewritten on every apply)
+set default-bg              "^r@BG^"
+set default-fg              "^r@FG^"
+set statusbar-bg            "^r@SURFACE^"
+set statusbar-fg            "^r@FG^"
+set inputbar-bg             "^r@BG_DARK^"
+set inputbar-fg             "^r@FG^"
+set notification-bg         "^r@SURFACE^"
+set notification-fg         "^r@FG^"
+set notification-error-bg   "^r@RED^"
+set notification-error-fg   "^r@BG^"
+set notification-warning-bg "^r@YELLOW^"
+set notification-warning-fg "^r@BG^"
+set highlight-color         "rgba(^r@ACCENT#rgb(, )^, 0.5)"
+set highlight-active-color  "rgba(^r@ACCENT2#rgb(, )^, 0.5)"
+set completion-bg           "^r@SURFACE^"
+set completion-fg           "^r@FG^"
+set completion-highlight-bg "^r@ACCENT^"
+set completion-highlight-fg "^r@BG^"
+set index-bg                "^r@BG^"
+set index-fg                "^r@FG^"
+set index-active-bg         "^r@ACCENT^"
+set index-active-fg         "^r@BG^"
+set recolor-lightcolor      "^r@BG^"
+set recolor-darkcolor       "^r@FG^"
+"""
+
+[[ensure]]
+file = "~/.config/zathura/zathurarc"
+line = "include hyprsetup-colors"

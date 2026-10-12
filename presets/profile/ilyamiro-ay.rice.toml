@@ -1,0 +1,154 @@
+# ilyamiro — r/hyprland "Are we winning the ricing competition with this one?" (5)
+# https://www.reddit.com/r/hyprland/comments/1thgddl/
+# Posted 2026-05-20 (date in the video: Tuesday, May 19). The shell is the author's
+# imperative-dots as of that day (last commit 2026-05-13); the MOON LAUNCHER in the video
+# lives in ilyamiro/hypr-comp, which the author published separately for the contest
+# (first commit 2026-05-21, one day after the post). That file uses the author's
+# local directory names at the time (paths.serpantinumDir/qsDir) and the moon
+# texture on their own machine (/home/ilyamiro/Downloads/moon.jpg);
+# its README also says it "relies on components from the main dotfiles". The fixes
+# below only point those paths at their imperative-dots counterparts; the moon
+# texture is the moon.jpg the author later added to the same repo.
+#
+# The author's install.sh: copies the .config folders, puts the fonts and the cava
+# wrapper in ~/.local/bin, generates settings.json from default_settings.json
+# (adding wallpaperDir), adds --source-color-index 0 to matugen in
+# WallpaperPicker, swww→awww in the scripts. The same is done below.
+# NOT TAKEN: SDDM, drivers, removing other display managers,
+# telemetry, chsh, overwriting GTK/Qt settings files, system services.
+
+default_variant = "ay"
+shims = ["swww"]
+
+post_install = [
+  "fc-cache -f ~/.local/share/fonts/imperative-dots >/dev/null 2>&1 || true",
+  "chmod +x -R ~/.config/hypr/scripts ~/.local/bin/cava 2>/dev/null || true",
+  "HYPRLAND_INSTANCE_SIGNATURE= bash ~/.config/hypr/scripts/settings_watcher.sh --compile >/dev/null 2>&1 || true",
+  "hyprctl reload >/dev/null 2>&1 || true",
+]
+
+notes = [
+  "Moon launcher: SUPER+D. Downloaded at a pinned commit from the author's contest repo (ilyamiro/hypr-comp, unlicensed); only path fixes are made to hook it up to imperative-dots.",
+  "The wallpaper in the video (a crescent in an olive-gray sky with a plane passing in front) isn't in the author's wallpaper repo; an openly licensed photo on the same subject (Wikimedia Commons) is installed instead. Pick your own image in the wallpaper picker (SUPER+W) and matugen derives the colors from it.",
+  "pipewire-jack (conflicts with jack2) is left out of the package list; repo versions (quickshell, swayosd, matugen) are used instead of the author's -git packages.",
+  "OpenWeather key for the weather: ~/.config/hypr/scripts/quickshell/calendar/.env.",
+]
+
+[source]
+repo = "https://github.com/ilyamiro/imperative-dots"
+commit = "eefff2fadceb28b52198175914576fbb55f57695"
+post = "https://www.reddit.com/r/hyprland/comments/1thgddl/are_we_winning_the_ricing_competition_with_this_one/"
+license = ""
+
+[[install]]
+from = ".config/hypr"
+to = "~/.config/hypr"
+[[install]]
+from = ".config/hypr/default_settings.json"
+to = "~/.config/hypr/settings.json"
+[[install]]
+from = ".config/kitty"
+to = "~/.config/kitty"
+[[install]]
+from = ".config/matugen"
+to = "~/.config/matugen"
+[[install]]
+from = ".config/cava"
+to = "~/.config/cava"
+[[install]]
+from = ".local/share/fonts"
+to = "~/.local/share/fonts/imperative-dots"
+[[install]]
+from = "utils/bin/cava"
+to = "~/.local/bin/cava"
+[[install]]
+from = ".config/zsh"
+to = "~/.config/zsh"
+group = "shell"
+[[install]]
+from = ".config/nvim"
+to = "~/.config/nvim"
+group = "editor"
+
+# Moon launcher (contest entry) — separate repo.
+[[install]]
+from = "applauncher.qml"
+to = "~/.config/hypr/scripts/quickshell/applauncher/appLauncher.qml"
+repo = "https://github.com/ilyamiro/hypr-comp"
+commit = "a3c2a6833ac0f4a3cc9ffcc637017512d1b300c0"
+[[install]]
+from = "moon.jpg"
+to = "~/.config/hypr/scripts/quickshell/applauncher/moon.jpg"
+repo = "https://github.com/ilyamiro/hypr-comp"
+commit = "fa5b0bb8d7937d2576faef83bc00b672a5c89ad1"
+
+[[fix]]
+file = "~/.config/hypr/settings.json"
+replace = ["\"wallpaperDir\": \"\"", "\"wallpaperDir\": \"{home}/Pictures/Wallpapers\""]
+why = "the author's install.sh generates settings.json with jq, adding wallpaperDir"
+[[fix]]
+file = "~/.config/hypr/scripts/quickshell/wallpaper/WallpaperPicker.qml"
+replace = ["matugen image \"$FINAL_THUMB\"", "matugen image \"$FINAL_THUMB\" --source-color-index 0",
+           "matugen image \"${escThumb}\"", "matugen image \"${escThumb}\" --source-color-index 0"]
+why = "the author's install.sh adds it with sed (matugen 4)"
+[[fix]]
+file = "~/.config/hypr/scripts/quickshell/Caching.qml"
+replace = ["readonly property string home: Quickshell.env(\"HOME\")", "readonly property string home: Quickshell.env(\"HOME\")\n    // hyprsetup: the moon launcher (hypr-comp) uses the author's later directory names\n    readonly property string serpantinumDir: home + \"/.config/hypr\"\n    readonly property string qsDir: home + \"/.config/hypr/scripts/quickshell\""]
+why = "the hypr-comp launcher expects paths.serpantinumDir/paths.qsDir; these are their imperative-dots counterparts"
+[[fix]]
+file = "~/.config/hypr/scripts/quickshell/applauncher/appLauncher.qml"
+replace = ["file:///home/ilyamiro/Downloads/moon.jpg", "file://{home}/.config/hypr/scripts/quickshell/applauncher/moon.jpg"]
+why = "path to the moon texture on the author's own machine"
+[[fix]]
+file = "~/.config/hypr/scripts/quickshell/WindowRegistry.js"
+replace = ["\"applauncher\": { w: s(800, scale), h: s(700, scale), rx: Math.floor((mw/2)-(s(800, scale)/2)), ry: Math.floor((mh/2)-(s(700, scale)/2)), comp: \"applauncher/appLauncher.qml\" },", "\"applauncher\": { w: mw, h: mh - s(60, scale), rx: 0, ry: s(60, scale), comp: \"applauncher/appLauncher.qml\" },"]
+why = "the moon launcher is a full-screen item (Screen.width/height); it doesn't fit in an 800x700 window"
+
+[packages]
+repo = ["hypridle", "kitty", "cava", "zbar", "pavucontrol", "alsa-utils", "awww",
+        "wl-clipboard", "fd", "qt6-multimedia", "qt6-5compat", "ripgrep", "cliphist", "jq",
+        "socat", "inotify-tools", "pamixer", "brightnessctl", "acpi", "iw", "bluez",
+        "bluez-utils", "libnotify", "networkmanager", "lm_sensors", "bc", "pipewire",
+        "wireplumber", "pipewire-pulse", "pipewire-alsa", "libpulse", "python",
+        "imagemagick", "wget", "file", "git", "psmisc", "matugen", "ffmpeg", "fastfetch",
+        "quickshell", "unzip", "python-websockets", "qt6-websockets", "grim", "playerctl",
+        "satty", "yq", "xdg-desktop-portal-gtk", "slurp", "wmctrl", "power-profiles-daemon",
+        "easyeffects", "swayosd", "nautilus", "lsp-plugins", "hyprpolkitagent", "qt5-wayland",
+        "qt5-quickcontrols", "qt5-quickcontrols2", "qt5-graphicaleffects", "qt6-wayland",
+        "qt5ct", "qt6ct", "gpu-screen-recorder", "adw-gtk-theme", "xdg-desktop-portal-wlr"]
+aur = ["networkmanager-dmenu-git", "mpvpaper"]
+
+[variants.ay]
+title = "Crescent moon and contrail — moon launcher"
+wallpaper = "https://upload.wikimedia.org/wikipedia/commons/3/39/Flyby_%2864758689%29.jpeg"
+wallpaper_dest = "~/Pictures/Wallpapers/ilyamiro-ay-hilal.jpg"
+apply = [
+  "cp {wallpaper} /tmp/lock_bg.png",
+  "awww img {wallpaper} --transition-type grow --transition-pos 0.5,0.5 --transition-fps 144 --transition-duration 1 &",
+  "matugen image {wallpaper} --source-color-index 0 && bash ~/.config/hypr/scripts/quickshell/wallpaper/matugen_reload.sh",
+]
+credit = "Look-alike (the source of the one in the video wasn't found): Rickard Olsson, Flyby — Wikimedia Commons, CC BY-SA 3.0"
+
+# The settings app's Bar page recognizes and configures this bar (ricebar.py).
+# The author's settings_watcher.sh watches the file and applies it to the shell.
+[bar]
+kind = "quickshell"
+label = "ilyamiro (Quickshell)"
+config = "~/.config/hypr/settings.json"
+[[bar.field]]
+key = "workspaceCount"
+title = "Number of workspaces"
+type = "int"
+path = "workspaceCount"
+min = 1
+max = 10
+[[bar.field]]
+key = "topbarHelpIcon"
+title = "Help icon on the bar"
+type = "bool"
+path = "topbarHelpIcon"
+[[bar.field]]
+key = "openGuideAtStartup"
+title = "Show the guide at startup"
+type = "bool"
+path = "openGuideAtStartup"

@@ -1,0 +1,176 @@
+# caelestia (soramane) — r/unixporn "[Hyprland] I <3 Quickshell" (14)
+# https://www.reddit.com/r/unixporn/comments/1l5ll27/
+# Posted 2025-06-07 14:40 UTC (u/Rexcrazy804 shared it on behalf of the author
+# u/_soramane). Three parts, each at the last commit before the post:
+#   shell  caelestia-dots/shell   11f0ff76 (2025-06-07 23:26 +1000) — Quickshell, GPL-3.0
+#   hypr   caelestia-dots/caelestia 492b100 (2025-06-04; then named "hypr")
+#   cli    caelestia-dots/cli     6eb615d (2025-06-02; then named "scripts")
+# The author's install: "caelestia install hypr|shell|scripts" — puts hypr in
+# ~/.config/hypr, the scripts in ~/.local/share/caelestia/scripts (+
+# ~/.local/bin/caelestia), the shell in ~/.config/quickshell/caelestia.
+# The shell draws the wallpaper itself; colors from the wallpaper
+# (caelestia wallpaper → scheme/gen-scheme, materialyoucolor).
+#
+# Adaptations: the author starts the shell under uwsm as a systemd service;
+# here it is started from Hyprland so it also comes up in non-uwsm sessions. The color scripts
+# are written against the materialyoucolor 2.x API (3.x has no DynamicScheme);
+# 2.0.10 is installed into a separate virtualenv. Without uwsm, the session menu's
+# "exit" quits via hyprctl.
+
+default_variant = "violet"
+
+post_install = [
+  "python -m venv ~/.local/share/caelestia/venv && ~/.local/share/caelestia/venv/bin/pip install -q materialyoucolor==2.0.10",
+  "chmod +x ~/.local/share/caelestia/scripts/*.fish ~/.local/share/caelestia/scripts/*/*.fish ~/.local/share/caelestia/scripts/*.sh ~/.local/share/caelestia/scripts/scheme/*.py ~/.config/hypr/scripts/*.fish ~/.config/quickshell/caelestia/run.fish ~/.config/quickshell/caelestia/assets/*.py 2>/dev/null || true",
+  "hyprctl reload >/dev/null 2>&1 || true",
+]
+
+notes = [
+  "Wallpapers are downloaded from the caelestia team's 'Sora's original demo wallpapers' archive (caelestia-dots/website, pinned commit); the archive is cached once.",
+  "To change the look: open the launcher with SUPER and type '>wallpaper', or run 'caelestia wallpaper -f <file>'. Colors are generated from the wallpaper (light/dark automatically).",
+  "The Spotify/Discord/Firefox themes are the author's separate 'caelestia install spicetify|discord|firefox' modules; they aren't installed.",
+  "The shell is written for the 2025-06 Quickshell release ('root:/' imports); current Quickshell may print warnings.",
+]
+
+[source]
+repo = "https://github.com/caelestia-dots/shell"
+commit = "11f0ff76ad5e7eb5bd7f2570aafa984c842df1d5"
+post = "https://www.reddit.com/r/unixporn/comments/1l5ll27/hyprland_i_3_quickshell/"
+license = "GPL-3.0"
+
+[[install]]
+from = "."
+to = "~/.config/quickshell/caelestia"
+
+[[install]]
+from = "."
+to = "~/.config/hypr"
+repo = "https://github.com/caelestia-dots/caelestia"
+commit = "492b100abe4a6410fa2a99b82ca1b71dcaa847eb"
+# File the author's scripts generate during the session (get-overrides.fish); make
+# sure it exists on first load too.
+[[install]]
+from = "scripts/templates/hyprland/aesthetic.conf"
+to = "~/.config/hypr/hyprland/overrides.conf"
+repo = "https://github.com/caelestia-dots/caelestia"
+commit = "492b100abe4a6410fa2a99b82ca1b71dcaa847eb"
+
+[[install]]
+from = "."
+to = "~/.local/share/caelestia/scripts"
+repo = "https://github.com/caelestia-dots/cli"
+# No LICENSE at this commit (GPL-3.0 was added upstream later), so the
+# archive is not redistributed; it is fetched from GitHub on install.
+license = ""
+commit = "6eb615db693ba0b330586a5878f390e437d7b03e"
+
+# First-start state = default look (violet): the scheme the author's own color
+# algorithm (scheme/score.py + autoadjust.py, materialyoucolor 2.0.10,
+# tonalspot, light) generates for violet.jpg. The static schemes in the author's repo
+# lack the Material names the shell and Hyprland expect (onPrimary,
+# surfaceVariant…); the desktop in the post ran on the dynamic scheme.
+# The chosen look overwrites these during the session via "caelestia wallpaper".
+[[file]]
+to = "~/.local/state/caelestia/scheme/current.txt"
+content = "primary_paletteKeyColor AD6350\nsecondary_paletteKeyColor 926F66\ntertiary_paletteKeyColor 877645\nneutral_paletteKeyColor 827471\nneutral_variant_paletteKeyColor 85736F\nbackground FFF8F6\nonBackground 231917\nsurface FFF8F6\nsurfaceDim E8D6D2\nsurfaceBright FFF8F6\nsurfaceContainerLowest FFFFFF\nsurfaceContainerLow FFF1ED\nsurfaceContainer FCEAE6\nsurfaceContainerHigh F7E4E0\nsurfaceContainerHighest F1DFDA\nonSurface 231917\nsurfaceVariant F5DDD8\nonSurfaceVariant 534340\ninverseSurface 392E2B\ninverseOnSurface FFEDE9\noutline 83716C\noutlineVariant D8C2BD\nshadow 000000\nscrim 000000\nsurfaceTint 8F4B3A\nprimary 8F4B3A\nonPrimary FFFFFF\nprimaryContainer FFDAD2\nonPrimaryContainer 723425\ninversePrimary FFB4A2\nsecondary 77574F\nonSecondary FFFFFF\nsecondaryContainer FFD3C9\nonSecondaryContainer 5D4038\ntertiary 847342\nonTertiary FFFFFF\ntertiaryContainer 847342\nonTertiaryContainer FFFFFF\nerror BA1A1A\nonError FFFFFF\nerrorContainer FFDAD6\nonErrorContainer 93000A\nprimaryFixed FFDAD2\nprimaryFixedDim FFB4A2\nonPrimaryFixed 3A0A02\nonPrimaryFixedVariant 723425\nsecondaryFixed FFDAD2\nsecondaryFixedDim E7BDB3\nonSecondaryFixed 2C1510\nonSecondaryFixedVariant 5D4038\ntertiaryFixed F7E1A6\ntertiaryFixedDim DAC58D\nonTertiaryFixed 231A00\nonTertiaryFixedVariant 544519\ntext 231917\nsubtext1 534340\nsubtext0 83716C\noverlay2 94847F\noverlay1 A79894\noverlay0 B8ABA7\nsurface2 CABEBB\nsurface1 DBD1CE\nsurface0 EEE5E3\nbase FFF8F6\nmantle FFECE7\ncrust FFE4DC\nsuccess 739900\nrosewater 8F4D30\nflamingo 8F4B3A\npink 805610\nmauve 66558F\nred 904B3F\nmaroon 904947\npeach 8A5021\nyellow 8D4E2A\ngreen 266B4A\nteal 4E6529\nsky 725C0B\nsapphire 855318\nblue 79590C\nlavender 695F11"
+[[file]]
+to = "~/.local/state/caelestia/scheme/current-name.txt"
+content = "dynamic-default"
+[[file]]
+to = "~/.local/state/caelestia/scheme/current-mode.txt"
+content = "light"
+[[file]]
+to = "~/.local/share/caelestia/scripts/data/schemes/dynamic/default/light.txt"
+content = "primary_paletteKeyColor AD6350\nsecondary_paletteKeyColor 926F66\ntertiary_paletteKeyColor 877645\nneutral_paletteKeyColor 827471\nneutral_variant_paletteKeyColor 85736F\nbackground FFF8F6\nonBackground 231917\nsurface FFF8F6\nsurfaceDim E8D6D2\nsurfaceBright FFF8F6\nsurfaceContainerLowest FFFFFF\nsurfaceContainerLow FFF1ED\nsurfaceContainer FCEAE6\nsurfaceContainerHigh F7E4E0\nsurfaceContainerHighest F1DFDA\nonSurface 231917\nsurfaceVariant F5DDD8\nonSurfaceVariant 534340\ninverseSurface 392E2B\ninverseOnSurface FFEDE9\noutline 83716C\noutlineVariant D8C2BD\nshadow 000000\nscrim 000000\nsurfaceTint 8F4B3A\nprimary 8F4B3A\nonPrimary FFFFFF\nprimaryContainer FFDAD2\nonPrimaryContainer 723425\ninversePrimary FFB4A2\nsecondary 77574F\nonSecondary FFFFFF\nsecondaryContainer FFD3C9\nonSecondaryContainer 5D4038\ntertiary 847342\nonTertiary FFFFFF\ntertiaryContainer 847342\nonTertiaryContainer FFFFFF\nerror BA1A1A\nonError FFFFFF\nerrorContainer FFDAD6\nonErrorContainer 93000A\nprimaryFixed FFDAD2\nprimaryFixedDim FFB4A2\nonPrimaryFixed 3A0A02\nonPrimaryFixedVariant 723425\nsecondaryFixed FFDAD2\nsecondaryFixedDim E7BDB3\nonSecondaryFixed 2C1510\nonSecondaryFixedVariant 5D4038\ntertiaryFixed F7E1A6\ntertiaryFixedDim DAC58D\nonTertiaryFixed 231A00\nonTertiaryFixedVariant 544519\ntext 231917\nsubtext1 534340\nsubtext0 83716C\noverlay2 94847F\noverlay1 A79894\noverlay0 B8ABA7\nsurface2 CABEBB\nsurface1 DBD1CE\nsurface0 EEE5E3\nbase FFF8F6\nmantle FFECE7\ncrust FFE4DC\nsuccess 739900\nrosewater 8F4D30\nflamingo 8F4B3A\npink 805610\nmauve 66558F\nred 904B3F\nmaroon 904947\npeach 8A5021\nyellow 8D4E2A\ngreen 266B4A\nteal 4E6529\nsky 725C0B\nsapphire 855318\nblue 79590C\nlavender 695F11"
+[[file]]
+to = "~/.local/share/caelestia/scripts/data/schemes/dynamic/default/dark.txt"
+content = "primary_paletteKeyColor AD6350\nsecondary_paletteKeyColor 926F66\ntertiary_paletteKeyColor 877645\nneutral_paletteKeyColor 827471\nneutral_variant_paletteKeyColor 85736F\nbackground 1A110F\nonBackground F1DFDA\nsurface 1A110F\nsurfaceDim 1A110F\nsurfaceBright 423734\nsurfaceContainerLowest 140C0A\nsurfaceContainerLow 231917\nsurfaceContainer 271D1B\nsurfaceContainerHigh 322825\nsurfaceContainerHighest 3D3230\nonSurface F1DFDA\nsurfaceVariant 534340\nonSurfaceVariant D8C2BD\ninverseSurface F1DFDA\ninverseOnSurface 392E2B\noutline A08C88\noutlineVariant 534340\nshadow 000000\nscrim 000000\nsurfaceTint FFB4A2\nprimary FFB4A2\nonPrimary 561F11\nprimaryContainer 723425\nonPrimaryContainer FFDAD2\ninversePrimary 8F4B3A\nsecondary E7BDB3\nonSecondary 442A23\nsecondaryContainer 60423A\nonSecondaryContainer FFDAD2\ntertiary DAC58D\nonTertiary 3C2F04\ntertiaryContainer A28F5C\nonTertiaryContainer 000000\nerror FFB4AB\nonError 690005\nerrorContainer 93000A\nonErrorContainer FFDAD6\nprimaryFixed FFDAD2\nprimaryFixedDim FFB4A2\nonPrimaryFixed 3A0A02\nonPrimaryFixedVariant 723425\nsecondaryFixed FFDAD2\nsecondaryFixedDim E7BDB3\nonSecondaryFixed 2C1510\nonSecondaryFixedVariant 5D4038\ntertiaryFixed F7E1A6\ntertiaryFixedDim DAC58D\nonTertiaryFixed 231A00\nonTertiaryFixedVariant 544519\ntext F1DFDA\nsubtext1 D8C2BD\nsubtext0 A08C88\noverlay2 8D7B77\noverlay1 796865\noverlay0 665754\nsurface2 544643\nsurface1 413532\nsurface0 2D2220\nbase 1A110F\nmantle 100B09\ncrust 0A0606\nsuccess BBE08D\nrosewater D5C871\nflamingo E1C46D\npink FFB4A7\nmauve D1BDFB\nred B5D087\nmaroon FFB3AF\npeach FFB597\nyellow F5BC6F\ngreen ECC06D\nteal 90D6AD\nsky FFB783\nsapphire FFB4A2\nblue FFB690\nlavender FDB975"
+[[file]]
+to = "~/.config/hypr/scheme/current.conf"
+content = "$primary_paletteKeyColor = AD6350\n$secondary_paletteKeyColor = 926F66\n$tertiary_paletteKeyColor = 877645\n$neutral_paletteKeyColor = 827471\n$neutral_variant_paletteKeyColor = 85736F\n$background = FFF8F6\n$onBackground = 231917\n$surface = FFF8F6\n$surfaceDim = E8D6D2\n$surfaceBright = FFF8F6\n$surfaceContainerLowest = FFFFFF\n$surfaceContainerLow = FFF1ED\n$surfaceContainer = FCEAE6\n$surfaceContainerHigh = F7E4E0\n$surfaceContainerHighest = F1DFDA\n$onSurface = 231917\n$surfaceVariant = F5DDD8\n$onSurfaceVariant = 534340\n$inverseSurface = 392E2B\n$inverseOnSurface = FFEDE9\n$outline = 83716C\n$outlineVariant = D8C2BD\n$shadow = 000000\n$scrim = 000000\n$surfaceTint = 8F4B3A\n$primary = 8F4B3A\n$onPrimary = FFFFFF\n$primaryContainer = FFDAD2\n$onPrimaryContainer = 723425\n$inversePrimary = FFB4A2\n$secondary = 77574F\n$onSecondary = FFFFFF\n$secondaryContainer = FFD3C9\n$onSecondaryContainer = 5D4038\n$tertiary = 847342\n$onTertiary = FFFFFF\n$tertiaryContainer = 847342\n$onTertiaryContainer = FFFFFF\n$error = BA1A1A\n$onError = FFFFFF\n$errorContainer = FFDAD6\n$onErrorContainer = 93000A\n$primaryFixed = FFDAD2\n$primaryFixedDim = FFB4A2\n$onPrimaryFixed = 3A0A02\n$onPrimaryFixedVariant = 723425\n$secondaryFixed = FFDAD2\n$secondaryFixedDim = E7BDB3\n$onSecondaryFixed = 2C1510\n$onSecondaryFixedVariant = 5D4038\n$tertiaryFixed = F7E1A6\n$tertiaryFixedDim = DAC58D\n$onTertiaryFixed = 231A00\n$onTertiaryFixedVariant = 544519\n$text = 231917\n$subtext1 = 534340\n$subtext0 = 83716C\n$overlay2 = 94847F\n$overlay1 = A79894\n$overlay0 = B8ABA7\n$surface2 = CABEBB\n$surface1 = DBD1CE\n$surface0 = EEE5E3\n$base = FFF8F6\n$mantle = FFECE7\n$crust = FFE4DC\n$success = 739900\n$rosewater = 8F4D30\n$flamingo = 8F4B3A\n$pink = 805610\n$mauve = 66558F\n$red = 904B3F\n$maroon = 904947\n$peach = 8A5021\n$yellow = 8D4E2A\n$green = 266B4A\n$teal = 4E6529\n$sky = 725C0B\n$sapphire = 855318\n$blue = 79590C\n$lavender = 695F11\n"
+[[file]]
+to = "~/.local/state/caelestia/wallpaper/last.txt"
+content = "{home}/Pictures/Wallpapers/violet.jpg"
+[[link]]
+to = "~/.local/state/caelestia/wallpaper/current"
+target = "~/Pictures/Wallpapers/violet.jpg"
+
+[[link]]
+to = "~/.local/bin/caelestia"
+target = "~/.local/share/caelestia/scripts/main.fish"
+[[link]]
+to = "~/.config/uwsm"
+target = "~/.config/hypr/uwsm"
+
+[[fix]]
+file = "~/.config/hypr/hyprland/ignore.conf"
+create = ""
+why = "the exec line in hyprland.conf creates it during the session"
+[[fix]]
+file = "~/.config/hypr/hyprland/execs.conf"
+replace = ["exec-once = caelestia pip -d", "exec-once = ~/.local/bin/caelestia pip -d"]
+append = "\n# hyprsetup: the author starts the shell with uwsm + a systemd service; for non-uwsm sessions\nexec-once = sleep 1 && systemctl --user -q is-active caelestia-shell.service || PATH=\"$HOME/.local/bin:$PATH\" ~/.config/quickshell/caelestia/run.fish\n"
+why = "~/.local/bin may not be on the session's PATH; there is no service starting the shell"
+[[fix]]
+file = "~/.config/hypr/hyprland/keybinds.conf"
+replace = ["exec, caelestia ", "exec, ~/.local/bin/caelestia "]
+why = "~/.local/bin may not be on the session's PATH"
+[[fix]]
+file = "~/.local/share/caelestia/scripts/scheme/score.py"
+replace = ["#!/bin/python", "#!{home}/.local/share/caelestia/venv/bin/python"]
+why = "materialyoucolor 2.x (doesn't work with the 3.x in the repos)"
+[[fix]]
+file = "~/.local/share/caelestia/scripts/scheme/autoadjust.py"
+replace = ["#!/bin/python3", "#!{home}/.local/share/caelestia/venv/bin/python"]
+why = "materialyoucolor 2.x (doesn't work with the 3.x in the repos)"
+[[fix]]
+file = "~/.config/quickshell/caelestia/modules/session/Content.qml"
+replace = ['command: ["uwsm", "stop"]', 'command: ["sh", "-c", "uwsm stop || hyprctl dispatch exit"]']
+why = "exit in non-uwsm sessions"
+
+[packages]
+repo = ["quickshell", "fish", "foot", "fuzzel", "ddcutil", "brightnessctl", "cava",
+        "bluez-utils", "networkmanager", "lm_sensors", "fd", "imagemagick", "jq", "curl",
+        "socat", "inotify-tools", "python", "python-pyaudio", "python-aubio", "python-numpy",
+        "ttf-jetbrains-mono-nerd", "ttf-ibm-plex", "ttf-material-symbols-variable",
+        "hyprlock", "hypridle", "polkit-gnome", "gnome-keyring", "wireplumber", "cliphist",
+        "trash-cli", "gammastep", "geoclue", "wl-clipboard", "grim", "slurp",
+        "xdg-user-dirs", "libnotify", "uwsm"]
+aur = ["app2unit", "sway-audio-idle-inhibit-git", "sweet-cursors-hyprcursor-git",
+       "wayfreeze", "wl-screenrec"]
+
+[variants.violet]
+title = "Violet — light ink drawing (pink-cream)"
+wallpaper = "https://raw.githubusercontent.com/caelestia-dots/website/64308848f48d9f80244c3477fb49b4c69927e579/public/wallpapers.zip#violet.jpg"
+wallpaper_dest = "~/Pictures/Wallpapers/violet.jpg"
+apply = [
+  "mkdir -p ~/.local/state/caelestia/wallpaper ~/.local/state/caelestia/scheme && printf dynamic-default > ~/.local/state/caelestia/scheme/current-name.txt",
+  "PATH=$HOME/.local/bin:$PATH caelestia wallpaper -f {wallpaper} -T light",
+]
+credit = "Sora's demo wallpapers: violet (post 14)"
+
+[variants.raiden]
+title = "Raiden — purple swordmaster (dark)"
+wallpaper = "https://raw.githubusercontent.com/caelestia-dots/website/64308848f48d9f80244c3477fb49b4c69927e579/public/wallpapers.zip#raiden.png"
+wallpaper_dest = "~/Pictures/Wallpapers/raiden.png"
+apply = [
+  "mkdir -p ~/.local/state/caelestia/wallpaper ~/.local/state/caelestia/scheme && printf dynamic-default > ~/.local/state/caelestia/scheme/current-name.txt",
+  "PATH=$HOME/.local/bin:$PATH caelestia wallpaper -f {wallpaper} -T dark",
+]
+credit = "Sora's demo wallpapers: raiden (post 14)"
+
+[variants.room]
+title = "Room — neon cyber room (dark)"
+wallpaper = "https://raw.githubusercontent.com/caelestia-dots/website/64308848f48d9f80244c3477fb49b4c69927e579/public/wallpapers.zip#room.png"
+wallpaper_dest = "~/Pictures/Wallpapers/room.png"
+apply = [
+  "mkdir -p ~/.local/state/caelestia/wallpaper ~/.local/state/caelestia/scheme && printf dynamic-default > ~/.local/state/caelestia/scheme/current-name.txt",
+  "PATH=$HOME/.local/bin:$PATH caelestia wallpaper -f {wallpaper} -T dark",
+]
+credit = "Sora's demo wallpapers: room (post 14)"
+
+# The settings app's Bar page recognizes this bar (ricebar.py).
+[bar]
+kind = "quickshell"
+label = "caelestia (Quickshell)"
+note = "The Caelestia shell's settings live in its own code; there is no settings file. Its look takes colors from the wallpaper (Looks)."

@@ -1,0 +1,1155 @@
+# ---------------------------------------------------------------------------
+#  hyprsetup settings file — ~/.config/hyprsetup/settings.conf
+#
+#  This file defines how the desktop LOOKS and BEHAVES. The settings app
+#  (MOD + I or `hyprsetup`) reads and writes the same file: every slider you
+#  move there is saved here, and every line you write here by hand shows up
+#  in the app. This is the single source of truth.
+#
+#  To edit by hand:
+#      cp config/settings.conf.example ~/.config/hyprsetup/settings.conf
+#      $EDITOR ~/.config/hyprsetup/settings.conf
+#      hyprsetup          # (or MOD + I) — reads the file on startup
+#
+#  If you want to script the installation, it can also be passed to install.sh:
+#      ./install.sh --config ~/.config/hyprsetup/settings.conf
+#
+#  Every value you do not define here takes its default from lib/config.sh.
+#
+#  WHAT IS NOT HERE: install-time decisions. Which components get installed
+#  lives in the DEFAULT_COMPONENTS array at the top of install.sh; the AUR
+#  helper, build policy and package exclusion are ./install.sh options
+#  (--compile, --skip-pkg). The login screen and boot animation are also
+#  install steps. The settings app does NOT install packages — moving a
+#  slider should never ask for the root password.
+#
+#  Note: every Hyprland setting has been verified against a live 0.56 with
+#  `hyprctl getoption`.
+# ---------------------------------------------------------------------------
+
+# ======================================================== appearance ======
+# Available themes:  python3 -m hyprsetup themes
+#
+# Special value "auto": the palette is extracted from the WALLPAPER instead of
+# a fixed theme. Put your own image at WALLPAPER_PATH and set THEME="auto", and
+# Hyprland borders, the bar, terminal, launcher and GTK/Qt colors are generated
+# from that image. Only hue and saturation are taken from the image; text/
+# background contrast is always guaranteed for readability (see palette.py).
+THEME="catppuccin-mocha"
+
+# Which extraction tool to use when THEME="auto":
+#   auto     try them in order (recommended)
+#   matugen  Material You — best result, AUR package 'matugen-bin'
+#   magick   ImageMagick histogram — reads every format, JPEG/WebP included
+#   python   built-in PNG decoder — no dependencies, reads PNG only
+PALETTE_BACKEND="auto"
+
+# To override individual theme colors (entries separated by ';;').
+# Keys: BG BG_DARK SURFACE FG SUBTEXT ACCENT ACCENT2 RED GREEN YELLOW CYAN
+# These colors are applied to Hyprland borders, the bar, terminal, launcher and
+# notifications at once. Editable with color pickers in the GUI.
+CUSTOM_COLORS=""
+# Example:
+# CUSTOM_COLORS="ACCENT=ff7a18;;ACCENT2=ffd166;;BG=0d0d12"
+
+# Manual tone adjustment for the whole palette — applied to preset themes and
+# to THEME="auto" alike (colors in CUSTOM_COLORS are not affected). 0 = leave as is.
+#   PALETTE_HUE         -180..180  rotation on the color wheel (degrees); warning
+#                                  colors (RED/GREEN/YELLOW/CYAN) do not rotate
+#   PALETTE_SATURATION  -100..100  minus = muted, plus = vivid (%)
+#   PALETTE_LIGHTNESS    -20..20   background/surface lightness (%)
+PALETTE_HUE="0"
+PALETTE_SATURATION="0"
+PALETTE_LIGHTNESS="0"
+
+# System-wide dark/light mode — independent of THEME's accent colors.
+# Decides whether GTK4/libadwaita apps (and GTK3 apps via
+# gtk-application-prefer-dark-theme) open in dark mode.
+# "light" can be forced even with a dark theme selected, or vice versa.
+COLOR_SCHEME="dark"         # dark | light
+
+CURSOR_THEME="Bibata-Modern-Ice"
+CURSOR_SIZE=24
+
+# GTK and icon theme — if left empty, derived from the selected components
+# (Catppuccin if gtk-theme is selected, Papirus-Dark if icon-theme is). The
+# name you write here is applied both to ~/.config/gtk-3.0/settings.ini and
+# to gsettings; use the name you see in nwg-look.
+GTK_THEME_NAME=""           # e.g. "Adwaita-dark", "Nordic", "Gruvbox-Dark-BL"
+ICON_THEME_NAME=""          # e.g. "Papirus-Dark", "Tela-circle-dark"
+# Fontconfig family name — you can write anything. The ones this setup
+# installs and that work out of the box:
+#   "Noto Sans"                 UI default                (base fonts)
+#   "JetBrainsMono Nerd Font"   monospace + icons         (base fonts)
+#   "Noto Serif"                serif                     (base fonts)
+#   "CaskaydiaCove Nerd Font"   Cascadia Code             (extra fonts)
+#   "Noto Sans CJK JP"          CJK                       (extra fonts)
+# If you write a family that is not installed, fontconfig silently swaps in
+# another font; a Nerd Font is recommended for status bar icons.
+FONT_FAMILY="Noto Sans"
+# MONOSPACE family for the terminal and audio visualizer. Separate from
+# FONT_FAMILY, and it has to be: the default above ("Noto Sans") is
+# proportional, and alignment breaks if it is given to kitty/foot/alacritty.
+FONT_MONO="JetBrainsMono Nerd Font"
+FONT_SIZE=11
+
+# Switch theme by time of day
+# When on, the theme you picked by hand is replaced by the day/night theme
+# at the next switch.
+THEME_SCHEDULE=false
+
+# Day theme
+#   available themes: python3 -m hyprsetup themes
+THEME_DAY="catppuccin-latte"
+
+# Night theme
+#   available themes: python3 -m hyprsetup themes
+THEME_NIGHT="catppuccin-mocha"
+
+# Day starts at
+# HH:MM
+THEME_DAY_START="07:00"
+
+# Night starts at
+# HH:MM
+THEME_NIGHT_START="19:00"
+
+# ======================================================== status bar ======
+#
+#   ┌─────────────────────── screen ────────────────────────────┐
+#   │   ↕ BAR_MARGIN (gap from the edge the bar sits on)        │
+#   │  ┌─────────┐  ┌──────────────┐        ┌────┐ ┌─────────┐  │ ↕ BAR_HEIGHT
+#   │  │ 1  2  3 │  │ kitty — ~/p… │        │Vol │ │  12:34  │  │
+#   │  └─────────┘  └──────────────┘        └────┘ └─────────┘  │
+#   │   MODULES_LEFT    MODULES_CENTER        MODULES_RIGHT     │
+#   │            ↔ BAR_SPACING      ⌐ BAR_RADIUS                │
+#   │           (between boxes)    (box corner)                 │
+#   │  ┌───────────────┐                                        │
+#   │  │←→ BAR_PADDING │  horizontal padding inside the box     │
+#   │  └───────────────┘                                        │
+#   │  BAR_OPACITY: opacity of the box background (0–1)         │
+#   └───────────────────────────────────────────────────────────┘
+#
+#   The settings app (MOD + I → Status Bar) draws a live, scaled version
+#   of this; you see the numbers take effect as you change them.
+#
+BAR_POSITION="top"          # top | bottom
+BAR_HEIGHT=38
+BAR_MARGIN=6                # gap from the edge the bar sits on (0 = flush)
+BAR_SPACING=6               # gap between modules
+BAR_PADDING=12              # inner padding of module boxes
+BAR_RADIUS=10               # module box corner rounding
+BAR_OPACITY=0.85            # module box background opacity
+BAR_WORKSPACE_STYLE="numbers"   # numbers | dots | roman
+BAR_ICON_STYLE="material"      # material | fontawesome | octicons | emoji | text
+BAR_CLOCK_FORMAT="%H:%M"
+BAR_CLOCK_FORMAT_ALT="%d.%m.%Y %H:%M"
+BAR_WINDOW_MAX_LENGTH=60
+BAR_AUTOHIDE="false"        # slide the bar off the edge, bring it back on mouse touch?
+                            # (Waybar + Quickshell; MOD+B toggles it by hand)
+
+# Query for the weather module (custom/weather). If the location is empty,
+# wttr.in guesses it from the IP address.
+WEATHER_LOCATION=""         # e.g. "Istanbul", "Berlin", a postal code
+WEATHER_UNIT="metric"       # metric (°C) | imperial (°F)
+
+# Three slots that put your own command on the bar. A slot with a command
+# becomes usable in the module list as "custom/user1..3"; an empty slot is
+# not written to the generated config at all. Waybar only.
+#
+#   BAR_CUSTOM1_CMD="df -h / | awk 'NR==2{print \$4}'"
+#   BAR_CUSTOM1_FORMAT="󰋊 {}"
+#   BAR_CUSTOM1_INTERVAL=300
+#   BAR_CUSTOM1_CLICK="kitty -e btop"
+#
+BAR_CUSTOM1_CMD=""
+BAR_CUSTOM1_FORMAT=""        # empty = "{}" (the output itself)
+BAR_CUSTOM1_INTERVAL=60     # seconds
+BAR_CUSTOM1_CLICK=""
+BAR_CUSTOM2_CMD=""
+BAR_CUSTOM2_FORMAT=""        # empty = "{}" (the output itself)
+BAR_CUSTOM2_INTERVAL=60
+BAR_CUSTOM2_CLICK=""
+BAR_CUSTOM3_CMD=""
+BAR_CUSTOM3_FORMAT=""        # empty = "{}" (the output itself)
+BAR_CUSTOM3_INTERVAL=60
+BAR_CUSTOM3_CLICK=""
+
+# Modules — comma-separated. If the component a module needs is not selected
+# (e.g. bluetooth), the module is dropped from the generated config automatically.
+# Available: hyprland/workspaces hyprland/submap hyprland/window
+#            cpu memory temperature disk backlight pulseaudio bluetooth
+#            network battery idle_inhibitor tray clock custom/power
+#            custom/cava (audio visualizer — needs the cava component)
+#            custom/weather custom/powerprofile custom/privacy
+#            custom/record (recording indicator — needs instant-replay)
+#            custom/mic (microphone in use/muted — click: mute)
+#            custom/user1 custom/user2 custom/user3 (the slots above)
+BAR_MODULES_LEFT="hyprland/workspaces,hyprland/submap"
+BAR_MODULES_CENTER="hyprland/window"
+BAR_MODULES_RIGHT="cpu,memory,backlight,pulseaudio,bluetooth,network,battery,tray,clock,custom/mic,custom/power"
+
+# Bar preset
+# Name of a preset under presets/bar/. Picked on the Bar Presets page; the
+# individual values here override the preset. Writing this field by hand
+# does NOT affect the preview — it is only a label showing which preset was
+# applied last; actual applying is done through the cards on the Bar
+# Presets page.
+BAR_PRESET=""
+
+# Width (px)
+# Applies to vertical bars (left/right).
+#   range: 24..120
+BAR_WIDTH=44
+
+# Hidden bar reveal distance (px)
+# The bar appears when the mouse gets this close to the screen edge.
+#   range: 1..30
+BAR_AUTOHIDE_TRIGGER=2
+
+# Hide margin (px)
+# The bar hides again once the mouse moves this far outside it. Too small
+# and the bar flickers.
+#   range: 0..80
+BAR_AUTOHIDE_RELEASE=8
+
+# Weather refresh (min)
+# wttr.in is not queried more often than this; a very short interval can
+# get you temporarily blocked.
+#   range: 5..180
+WEATHER_REFRESH=15
+
+# ============================================ desktop widgets ===========
+#
+# The widget engine is chosen under Components (eww | quickshell); both
+# draw all 15 widgets below.
+#
+#   clock sysinfo battery calendar music network volume brightness
+#   uptime disk temperature worldclock kblayout fetch-mini workspace
+#
+# WIDGETS says which ones are ON, WIDGET_ZONE_* says in which position (four
+# corners + top center / bottom center) and in what order. If a corner list is empty, its widgets
+# go to their default corners from the catalog; all of them start at the edge,
+# stack under one another, and the edge taken by the bar is subtracted up front.
+WIDGETS=""                  # e.g. "clock,calendar,disk"
+# Widget layout preset (presets/widget-set/): which widgets are on and in
+# which corner — together with their sizes. In the settings app:
+#   Widgets → Layout presets
+# minimal | dashboard | media | laptop | monitor | material | traveler | showcase
+WIDGET_SET=""
+# Which layer are widgets drawn on? On a tiling desktop the screen is almost
+# always covered by windows, so widgets on the "bottom" layer are in practice
+# only visible on an EMPTY workspace. To see them at any time: "top" + MOD+SHIFT+W.
+WIDGET_LAYER="bottom"       # bottom | top
+WIDGET_AUTOSTART=true       # show at session start?
+# Which display: index (0, 1…). A name is accepted too, but it is the MODEL
+# name eww sees ("MSI G2412F"), NOT Hyprland's connector name (DP-1).
+WIDGET_MONITOR=""
+WIDGET_ZONE_TL=""           # top left     — e.g. "calendar,workspace"
+WIDGET_ZONE_TC=""           # top center   — centered horizontally
+WIDGET_ZONE_TR=""           # top right    — e.g. "clock,sysinfo,battery"
+WIDGET_ZONE_BL=""           # bottom left
+WIDGET_ZONE_BC=""           # bottom center
+WIDGET_ZONE_BR=""           # bottom right
+# Per-widget fine tuning: name:x:y (px). x is extra distance from the horizontal
+# edge, y from the vertical edge; negative moves it closer to the edge. A vertical
+# offset also pushes the following widgets in the same corner; x is not applied
+# in the center positions.
+WIDGET_OFFSETS=""           # e.g. "clock:0:24,calendar:40:0"
+WIDGET_MARGIN=16            # gap from the screen edge (px)
+WIDGET_GAP=10               # gap between widgets (px)
+WIDGET_SCALE=1.0            # box + text scale (0.5–2.0)
+WIDGET_RADIUS=12            # corner rounding (px)
+WIDGET_OPACITY=0.85         # opacity of the box background (text stays opaque)
+
+# Widget engine — chosen on the Components page. Empty = no widgets.
+#   eww | quickshell
+WIDGET_ENGINE=""
+
+# Show the visualizer
+# Starts right away when turned on and launches by itself at every login.
+# Bass in the middle, treble at the edges.
+VIS_ENABLE=false
+
+# Placement
+# In the bottom strip, windows shrink by the height of the bars and clicks
+# are not blocked. On the desktop, the bars are only visible on an empty workspace.
+#   desktop  Desktop — behind windows
+#   strip    Bottom strip — always visible
+VIS_MODE="desktop"
+
+# Color
+# #rrggbb. Empty: the theme's accent color.
+VIS_COLOR=""
+
+# Brightness (%)
+# The color is dimmed toward the background; lower is fainter.
+#   range: 20..100
+VIS_BRIGHTNESS=60
+
+# Height (px)
+#   range: 40..400
+VIS_HEIGHT=130
+
+# Width (%)
+# Percentage of the screen width, centered.
+#   range: 20..100
+VIS_WIDTH=60
+
+# Display
+# Output name (e.g. DP-1; hyprctl monitors). Empty: every display.
+VIS_MONITOR=""
+
+# ========================================= terminal and launcher ========
+#
+#   These two blocks are independent of the PROGRAM: the same values are
+#   translated separately for kitty/foot/Alacritty/Ghostty and for
+#   wofi/rofi/fuzzel/walker (see render.py:_terminal_vars and
+#   _launcher_vars). A setting with no equivalent is silently skipped —
+#   e.g. only walker's theme is generated, so width/line settings do not
+#   apply there.
+#
+#   Presets: presets/terminal/*.conf and presets/launcher/*.conf
+#   (picked on the Terminal / Launcher pages of the settings app)
+#   If TERM_PRESET / LAUNCHER_PRESET is "auto" (the default), the preset that
+#   matches the active bar preset is chosen: sharp bar → classic/sharp, frosted
+#   glass → glass/glass, round capsules → soft/rounded (see
+#   lib/preset.sh:preset_match_axis). The individual values below override the preset.
+#
+TERM_PRESET="auto"          # auto = preset matching the bar preset; or presets/terminal/*.conf (e.g. glass)
+TERM_OPACITY=0.95           # window background opacity (0–1)
+TERM_PADDING=8              # between text and window edge (px)
+TERM_FONT_SIZE=""           # empty = same as FONT_SIZE
+TERM_CURSOR_STYLE="block"   # block | beam | underline
+TERM_CURSOR_BLINK="false"   # true | false
+TERM_SCROLLBACK=10000       # lines kept (converted to bytes for Ghostty)
+
+LAUNCHER_PRESET="auto"      # auto = preset matching the bar preset; or presets/launcher/*.conf (e.g. spotlight)
+LAUNCHER_WIDTH=45           # percentage of screen width
+LAUNCHER_LINES=10           # visible result lines
+LAUNCHER_POSITION="center"  # center | top
+LAUNCHER_OPACITY=0.93       # window background opacity (0–1)
+LAUNCHER_ICONS="true"       # show app icons?
+LAUNCHER_ICON_SIZE=32       # icon edge length (px)
+LAUNCHER_PROMPT="Search…"   # prompt text in the search box
+LAUNCHER_RADIUS=""          # corner radius; empty = same as windows (ROUNDING)
+LAUNCHER_BORDER=""          # border; empty = same as the window border (BORDER_SIZE)
+
+# walker ONLY: extra query sources besides the app list. Each one is invoked
+# with its own prefix (= calculator, : clipboard, . symbols, / files, $ windows,
+# > commands, @ web, ! todo, % bookmarks); providers without a prefix are
+# reached with ";". The sources are elephant plugins and their packages are
+# installed with the walker component. Valid names: calc websearch clipboard
+# symbols files windows runner providerlist todo bookmarks unicode bluetooth
+# wireplumber playerctl archlinuxpkgs snippets
+LAUNCHER_PROVIDERS="calc,websearch,clipboard,symbols,files,windows,runner,providerlist"
+
+# Logo and system info on startup
+# fastfetch runs in every new terminal window (bash, zsh, fish).
+# On distros that already run fastfetch in the fish greeting, like CachyOS,
+# "Leave as is" leaves it untouched; "Show" prevents it from appearing twice.
+#   default  Leave as is — distro default
+#   on       Show
+#   off      Don't show
+TERM_FETCH="default"
+
+# Logo
+# Images are drawn as real images in kitty, Ghostty and WezTerm; foot and
+# Alacritty cannot show images, so there they are drawn from characters with
+# chafa (needs the chafa package).
+#   distro     Distro logo
+#   small      Small distro logo
+#   souprland  Souprland logo
+#   image      My own image
+#   none       No logo
+TERM_LOGO="distro"
+
+# Logo image
+# Used when Logo is "My own image".
+TERM_LOGO_IMAGE=""
+
+# Drawing style
+# For the Souprland logo and your own image. The dots, block and letter styles
+# draw the image from characters (chafa); it looks the same in every terminal.
+# Real image falls back to blocks in foot and Alacritty.
+#   image    Real image
+#   braille  Dots — ⣿⣷⣄
+#   block    Blocks — ▟█▙
+#   ascii    Letters — @#*:
+TERM_LOGO_STYLE="image"
+
+# Single-color logo
+# In the character styles, draws the logo in the terminal's text color
+# instead of the image's colors.
+TERM_LOGO_MONO=false
+
+# Logo width (columns)
+# Width of image logos in character cells; the height follows from the
+# aspect ratio.
+#   range: 8..60
+TERM_LOGO_WIDTH=24
+
+# Amount of info
+#   short  Short — system, kernel, uptime, memory
+#   full   Full — hardware, theme, packages…
+TERM_FETCH_INFO="short"
+
+# Background image
+# Shown behind the text. Supported by kitty, Ghostty and WezTerm; no effect
+# in foot and Alacritty.
+TERM_BG_IMAGE=""
+
+# Dim the image
+# The image is darkened with the theme's background color so it does not
+# make the text hard to read. 0 is the image itself.
+#   range: 0.0..0.95
+TERM_BG_DIM=0.75
+
+# Placement
+#   cover   Fill the window
+#   center  Center
+#   tile    Tile
+TERM_BG_FIT="cover"
+
+# ======================================================== layout ==========
+#
+#   ┌─────────────────────── screen ────────────────────────────┐
+#   │  ↕ GAPS_OUT (between window and screen edge)              │
+#   │   ┌────────────────────┐ ↔ GAPS_IN ┌──────────────────┐   │
+#   │   │                    │           │                  │   │
+#   │   │   focused window   │           │    background    │   │
+#   │   │  ACTIVE_OPACITY    │           │ INACTIVE_OPACITY │   │
+#   │   │                    │           │                  │   │
+#   │   └────────────────────┘           └──────────────────┘   │
+#   │    ╰ BORDER_SIZE: frame thickness                         │
+#   │      (gradient between two accent colors on the focused   │
+#   │       one, direction set by BORDER_ANGLE in degrees)      │
+#   │    ⌐ ROUNDING: corner radius (px)                         │
+#   │      ROUNDING_POWER: 2 circle · 4 squircle                │
+#   └───────────────────────────────────────────────────────────┘
+#
+#   The settings app (MOD + I → Appearance) has both a live preview and
+#   a diagram marking these measurements with arrows.
+#
+MOD_KEY="SUPER"             # SUPER | ALT | CTRL
+LAYOUT="dwindle"            # dwindle | master
+GAPS_IN=5                   # gap between windows
+GAPS_OUT=12                 # gap at the screen edge
+GAPS_WORKSPACES=0           # gap in the workspace switch animation
+BORDER_SIZE=2
+BORDER_ANGLE=45             # active border gradient angle (degrees)
+ROUNDING=10                 # corner rounding (px)
+ROUNDING_POWER=2            # 2 = circle, 4 = pronounced squircle
+WORKSPACE_COUNT=10          # how many workspaces get keybindings
+
+# ======================================================== decoration ======
+BLUR="true"
+BLUR_SIZE=6
+BLUR_PASSES=3
+BLUR_XRAY="false"           # also blur what is behind windows
+BLUR_NOISE=0.0117
+BLUR_CONTRAST=0.9
+BLUR_BRIGHTNESS=1.0
+BLUR_VIBRANCY=0.17
+BLUR_SPECIAL="false"        # blur on the special workspace too
+BLUR_POPUPS="true"
+
+SHADOW="true"
+SHADOW_RANGE=20
+SHADOW_RENDER_POWER=3
+SHADOW_OFFSET="0 4"
+
+ACTIVE_OPACITY=1.0
+INACTIVE_OPACITY=0.96
+DIM_INACTIVE="false"        # dim unfocused windows
+DIM_STRENGTH=0.05
+DIM_SPECIAL=0.2
+
+# ======================================================== animation =======
+ANIMATIONS="true"
+# The animation's CHARACTER — set of curves and durations:
+#   default  Balanced — medium speed, light popin (the project's original set)
+#   snappy   Snappy — very short and crisp, instant feel
+#   fluid    Fluid — long, smooth, slightly springy (the showiest)
+#   minimal  Minimal — fade only, nothing slides
+#   none     Off — no animation at all
+ANIMATION_PRESET="default"
+# Speed goes ON TOP of the preset: the preset says "how", this says "how fast".
+ANIMATION_SPEED=1.0         # 1.5 = 50% faster, 0.7 = slower
+
+# Custom animation lines
+# Used when the character is 'Custom'. Hyprland lines joined with ';;': "bezier =
+# name, 0.2, 1, 0.3, 1;;animation = windows, 1, 6, name, popin 80%". The Soup
+# Maker page moves a profile's animations here.
+ANIMATION_CUSTOM=""
+
+# Transition animation on theme change
+# While a profile or mix is being applied, the screen freezes, soup cooks on
+# top of it, and the new desktop fades in. When off, a short black screen
+# appears during the switch.
+RICE_TRANSITION=true
+
+# ======================================================== layout engine ===
+DWINDLE_PRESERVE_SPLIT="true"
+DWINDLE_SMART_SPLIT="false"
+DWINDLE_SMART_RESIZING="true"
+MASTER_NEW_STATUS="master"  # master | slave | inherit
+MASTER_MFACT=0.55
+
+# ======================================================== behavior ========
+ALLOW_TEARING="false"       # when on, games get the 'immediate' rule
+NO_FOCUS_FALLBACK="false"
+RESIZE_ON_BORDER="true"
+SNAP="true"                 # snap floating windows to edges
+SNAP_WINDOW_GAP=4
+SNAP_MONITOR_GAP=5
+VRR=1                       # 0 off | 1 on | 2 fullscreen only
+ENABLE_SWALLOW="false"      # hide the terminal behind GUI apps launched from it
+SWALLOW_REGEX="^(kitty|foot|Alacritty|com.mitchellh.ghostty)$"
+DPMS_ON_INPUT="true"        # mouse/keyboard wakes the display
+FOCUS_ON_ACTIVATE="true"
+ANIMATE_MANUAL_RESIZES="false"
+ON_FOCUS_UNDER_FULLSCREEN=2 # 0 ignore | 1 exit fullscreen | 2 send to back
+SCROLL_EVENT_DELAY=0
+HIDE_SPECIAL_ON_WS_CHANGE="true"
+
+# Prevent self-maximizing
+# Apps cannot enlarge themselves to cover the screen when they open; the
+# tiling layout is preserved.
+RULE_SUPPRESS_MAXIMIZE=true
+
+# Float tool windows
+# Audio/network/Bluetooth settings, file pickers, theme tools and the archive
+# manager are not tiled; they float in the center.
+RULE_FLOAT_TOOLS=true
+
+# Keep picture-in-picture in the corner
+# The browser's small video window floats in the bottom right corner and
+# shows on every workspace.
+RULE_PIP=true
+
+# Picture-in-picture width (px)
+# The height is computed at a 16:9 ratio.
+#   range: 240..1920
+PIP_WIDTH=640
+
+# Settings panel width (%)
+# Size of the MOD+I panel relative to the screen.
+#   range: 40..100
+QUICK_PANEL_WIDTH=80
+
+# Settings panel height (%)
+#   range: 40..100
+QUICK_PANEL_HEIGHT=80
+
+# ======================================================== keybindings =====
+# All keybindings are defined in config/keybinds.json; here they are overridden
+# one by one. Entries are separated by ';;', an empty value removes that
+# binding entirely. MOD = MOD_KEY above. Full list: config/keybinds.json or MOD + F1.
+KEYBINDS=""
+# Example:
+# KEYBINDS="terminal=MOD+Return;;filemanager=MOD+E;;color-picker="
+
+# ======================================================== input ===========
+KB_LAYOUT="us"              # for several: "us,tr"
+KB_VARIANT=""
+KB_OPTIONS=""               # e.g. "grp:alt_shift_toggle,caps:escape"
+REPEAT_DELAY=250            # key repeat start delay (ms)
+REPEAT_RATE=35              # key repeat rate (keys/s)
+NUMLOCK="true"
+FOLLOW_MOUSE=1              # 0 off | 1 normal | 2 loose | 3 full
+SENSITIVITY=0               # -1.0 .. 1.0 (mouse sensitivity)
+ACCEL_PROFILE=""            # empty | flat | adaptive
+OFF_WINDOW_AXIS_EVENTS=1
+
+NATURAL_SCROLL="false"
+TOUCHPAD_TAP="true"
+TOUCHPAD_DWT="true"         # disable the touchpad while typing
+TOUCHPAD_CLICKFINGER="false" # two fingers = right click
+TOUCHPAD_SCROLL_FACTOR=0.8
+
+# ======================================================== gestures ========
+GESTURE_SWIPE="true"
+GESTURE_FINGERS=3           # 3 | 4 | 5
+SWIPE_DISTANCE=300
+SWIPE_CANCEL_RATIO=0.5
+SWIPE_CREATE_NEW="true"
+SWIPE_DIRECTION_LOCK="true"
+
+# ======================================================== cursor ==========
+CURSOR_INACTIVE_TIMEOUT=5   # hide after this many seconds (0 = never)
+CURSOR_HOTSPOT_PADDING=1
+NO_HARDWARE_CURSORS="false" # try "true" if the cursor disappears
+
+# ======================================================== displays ========
+# If a ready-made rice (e.g. end-4/dots-hyprland) installs its own config tree:
+MANAGE_HYPR_CONFIGS=1       # 0 → no file is written under ~/.config/hypr
+                            #     (packages are installed, other apps are configured)
+
+# If a tool like nwg-displays manages monitors.conf itself:
+MANAGE_MONITORS=1           # 0 → the script never touches monitors.conf
+# You usually do not need to set this by hand: nwg-displays writes a
+# "# Generated by nwg-displays ..." line at the top of its file; when the script
+# sees it, it sets MANAGE_MONITORS to 0 by itself and leaves the file alone
+# (see lib/core.sh:foreign_config_owner). To take management back, delete the
+# file or turn the switch on in the settings app.
+
+# Format: "name,resolution@refresh,position,scale" — separate multiple displays with ';'
+MONITOR_SPEC=",preferred,auto,1"
+# Example:
+# MONITOR_SPEC="DP-1,1920x1080@180,3840x0,1;HDMI-A-2,1920x1080@120,1920x0,1"
+
+# Pin workspaces to displays: "no:display[:default]" — separated by ';'
+WORKSPACE_MONITOR_MAP=""
+# Example:
+# WORKSPACE_MONITOR_MAP="1:HDMI-A-2:default;2:HDMI-A-2;6:DP-1:default;7:DP-1"
+
+# "auto" while WORKSPACE_MONITOR_MAP is empty: workspaces are split evenly
+# across the displays detected at install time (2 displays, WORKSPACE_COUNT=10 → 1-5 / 6-10)
+WORKSPACE_SPLIT=""
+
+# ======================================================== window rules ====
+GLOBAL_OPACITY=""           # e.g. 0.92 — opacity for all windows (empty = off)
+XWAYLAND_NO_BLUR="false"    # disable blur for XWayland apps
+
+# ======================================================== environment =====
+QT_PLATFORM_THEME="qt6ct"   # qt6ct | qt5ct | kde | gtk3 | empty
+XDG_MENU_PREFIX=""          # for the KDE application menu: "plasma-"
+FLATPAK_DIRS="true"         # add flatpak .desktop/icon paths
+EDITOR_CMD=""               # e.g. "nvim" — if empty, EDITOR is not set
+TERMINAL_ARGS=""            # e.g. "-1" for kitty (single-instance mode)
+
+# Extra environment variables — entries separated by ';;'
+EXTRA_ENV=""
+# Example:
+# EXTRA_ENV="GTK_THEME=Adwaita-dark;;QT_SCALE_FACTOR=1.25"
+
+# Hyprland config language
+# Hyprland 0.57 removed the .conf parser; Automatic looks at the installed
+# version and picks the right one. Choose by hand only when troubleshooting:
+# forcing conf on a new version or lua on an old one leaves Hyprland unable
+# to read its config.
+#   auto  Automatic — based on the Hyprland version
+#   conf  hyprland.conf (classic)
+#   lua   hyprland.lua (experimental)
+HYPR_LANG="auto"
+
+# ======================================================== autostart =======
+GNOME_KEYRING="false"       # start gnome-keyring-daemon
+
+# Extra exec-once commands — entries separated by ';;'
+EXTRA_EXEC_ONCE=""
+# Example:
+# EXTRA_EXEC_ONCE="easyeffects --hide-window --service-mode;;solaar -w hide"
+
+# ======================================================== wallpaper =======
+WALLPAPER_PATH="$HOME/Pictures/wallpapers/wallpaper.png"
+
+# --- linux-wallpaperengine (if WALLPAPER_DAEMON="wallpaperengine") --------
+# https://github.com/Almamu/linux-wallpaperengine
+# Wallpaper Engine, bought on Steam, must be installed.
+# To list the IDs:
+#   ls ~/.steam/steam/steamapps/workshop/content/431960
+WPENGINE_ID=""              # e.g. "2667198602" — if empty, not started automatically
+WPENGINE_SCREEN=""          # e.g. "DP-1" — if empty, all displays
+WPENGINE_SCALING="default"  # default | stretch | fit | fill
+WPENGINE_FPS=""             # e.g. 30 — cap it to save GPU/battery
+WPENGINE_SILENT="true"      # mute the wallpaper's audio
+WPENGINE_EXTRA_ARGS=""      # e.g. "--no-fullscreen-pause"
+
+# Scene per display
+# A separate Workshop ID per display: "DP-1=123;HDMI-A-2=456". A display not
+# in the list plays the ID above. The gallery on the Wallpaper Engine page
+# writes this itself.
+WPENGINE_PER_SCREEN=""
+
+# Wallpaper pattern
+# Generated from the selected theme's colors. An existing wallpaper is not
+# overwritten. If the profile has its own WALLPAPER_IMAGE, this choice is skipped.
+#   (empty) | waves | stars | orb | mist | grid | paper | solid | dunes
+WALLPAPER_STYLE=""
+
+# Bundled image in the repo
+# Advanced: a path relative to the repo (e.g. wallpapers/lamp-paper.png) — if
+# the file exists it takes precedence over WALLPAPER_STYLE and is copied
+# straight to WALLPAPER_PATH. Usually filled in automatically by preset
+# selection; you do not need to fill it by hand.
+WALLPAPER_IMAGE=""
+
+# ============================================ default applications ======
+# THIS IS THE ONE PLACE FOR DEFAULT APPLICATIONS. Every value here is a
+# component id (config/components.json) and goes to three places at once:
+#   1. Keybindings — MOD+Return opens the terminal, MOD+E the file manager
+#      (the component's "exec" field, see config/keybinds.json).
+#   2. ~/.config/mimeapps.list — which app opens which file type
+#      (the component's "desktop" field, see templates/xdg/mimeapps.list.tmpl).
+#   3. ~/.config/xdg-terminals.list — which terminal anything that says
+#      "open in terminal" launches.
+# So the terminal/file manager is set from a single line; there are not
+# three separate places to configure.
+#
+# If left empty, it is determined automatically from the selected components:
+# in a single-choice category the first component found in SELECTED wins
+# (in catalog order).
+TERMINAL="kitty"            # kitty | alacritty | foot | ghostty | wezterm
+LAUNCHER="wofi"             # wofi | rofi | fuzzel | walker | tofi
+BAR="waybar"                # waybar | hyprpanel | quickshell-bar | wayle
+NOTIFIER="mako"             # mako | dunst | swaync
+FILEMANAGER="dolphin"       # dolphin | thunar | nautilus | nemo | yazi
+                            # The project standard is dolphin: the kdeglobals
+                            # theme is generated for it and hook_dolphin wraps
+                            # its .desktop entry with QT_QPA_PLATFORMTHEME=kde.
+                            # yazi runs in a terminal and has no .desktop
+                            # entry; if FILEMANAGER=yazi, no file manager
+                            # association is written to mimeapps.list.
+WALLPAPER_DAEMON="hyprpaper"  # hyprpaper | swww | waypaper | wallpaperengine
+BROWSER="firefox"           # a browser component from the "extras" category
+
+# hyprsunset color temperature (Kelvin) — the MOD+SHIFT+N binding toggles it.
+NIGHT_TEMP=4000
+
+# ============================================ window switcher ============
+# ALT+Tab window list (~/.config/hypr/scripts/windowswitch.py).
+# If the selected window is on another workspace, Hyprland SWITCHES THERE.
+# The list opens in the selected launcher's dmenu mode — no extra package needed.
+# overlay = GTK window with thumbnails (like Windows/KDE): each window's
+#           current image + app icon. Releasing ALT selects.
+# menu    = plain text list in the launcher's dmenu mode (no GTK needed).
+# false = our ALT+Tab is off; the profile's own alt-tab stays.
+SWITCHER_ENABLED=true
+WINDOW_SWITCHER="overlay"   # overlay | menu
+SWITCHER_THUMBS=true        # overlay: thumbnails (needs grim)
+SWITCHER_THUMB_WIDTH=260    # overlay: card width, pixels
+# Switcher opening animation: none | popin | slide. "none" is the fastest.
+# (The rule is generated in render.py: none -> "no_anim on", the others
+#  -> "animation <style>". Hyprland has NO "animation none"; if written,
+#  it silently falls back to the default animation.)
+SWITCHER_ANIM="none"
+# Keeps an invisible copy waiting in the background: ALT+Tab opens in ~90 ms
+# instead of ~260 ms, at the cost of ~68 MB of memory while idle. Starts at login.
+SWITCHER_PRELOAD=false
+SWITCHER_SCOPE="all"        # all | monitor | current
+SWITCHER_SORT="recent"      # recent (most recently used) | workspace
+SWITCHER_SHOW_WORKSPACE=true
+SWITCHER_SPECIAL=false      # also list scratchpad (special:*) windows
+
+# Priority
+# On CachyOS the login screen starts at low priority (nice 16) and most
+# programs in the session inherit it; ALT+Tab lags when the CPU is busy (gaming).
+# "Whole session" gives Hyprland normal priority, which fixes everything it
+# launches (fully in a new session). This is a system setting (an ananicy-cpp
+# rule): changing it opens a terminal that asks for the sudo password.
+# No effect without ananicy-cpp.
+#   off      Leave as is
+#   alttab   High priority for ALT+Tab
+#   session  Normal priority for the whole session (recommended)
+SWITCHER_PRIORITY="off"
+
+# ==================================================== idle ================
+# hypridle timeouts — SECONDS. 0 for any of them = that step is not generated.
+# The order should make sense: dim < lock < display off < sleep.
+# In the settings app: MOD+I → Session → Idle and lock
+IDLE_DIM=150                # dim the display (needs brightnessctl)
+IDLE_LOCK=300               # lock with hyprlock
+IDLE_DPMS=330               # turn the monitor off
+IDLE_SUSPEND=1800           # suspend the system (set 0 on desktops)
+
+# Dim level (%)
+# Display brightness when dimmed. Raise it if the screen is not visible at all.
+#   range: 1..90
+IDLE_DIM_LEVEL=10
+
+# Turn off keyboard backlight too
+# Turns off the keyboard backlight along with dimming (on laptops that
+# support it).
+IDLE_KBD_BACKLIGHT=true
+
+# Lock before sleep
+# The screen is locked first when the lid closes or you suspend by hand. If
+# you turn this off, no password is asked on wake.
+IDLE_LOCK_BEFORE_SLEEP=true
+
+# Wait while video plays
+# When a player or browser says "keep the screen on", dimming, locking and
+# sleep are postponed. When off, they always run on time.
+IDLE_RESPECT_INHIBIT=true
+
+# ======================================================== screen recording =
+# Settings for the "instant-replay" component (gpu-screen-recorder).
+# Keybindings: MOD+ALT+R toggle buffer · MOD+ALT+G save the last moments
+#              MOD+CTRL+R start/stop a normal recording
+RECORD_DIR="~/Videos"        # "~" is expanded at record time; "$HOME/Videos" works too
+RECORD_FPS=60
+# gpu-screen-recorder's -a flag. Empty = silent recording.
+#   default_output                 audio from the speakers
+#   default_output|default_input   system audio + microphone
+RECORD_AUDIO="default_output"
+# Instant replay buffer (seconds) — memory use is proportional to it.
+REPLAY_SECONDS=60
+
+# File format
+#   mp4  MP4 — opens everywhere
+#   mkv  MKV — survives an interrupted recording
+RECORD_FORMAT="mp4"
+
+# Video codec
+# If your card does not support the selected codec, recording will not
+# start; switch back to Automatic then.
+#   auto  Automatic — based on the graphics card
+#   h264  H.264 — most compatible
+#   hevc  HEVC — smaller file
+#   av1   AV1 — smallest, needs a recent card
+RECORD_CODEC="auto"
+
+# Quality
+#   medium     Medium
+#   high       High
+#   very_high  Very high
+#   ultra      Ultra — very large file
+RECORD_QUALITY="very_high"
+
+# Record the mouse cursor
+RECORD_CURSOR=true
+
+# Screenshot folder
+# If left empty, Pictures/Screenshots. The Print binding, the Actions menu and
+# the bar panel save here.
+SCREENSHOT_DIR=""
+
+# ==================================================== wallpaper transition =
+# swww transition effect (only applies when WALLPAPER_DAEMON="swww").
+# none|simple|fade|left|right|top|bottom|wipe|grow|center|outer|random
+SWWW_TRANSITION="grow"
+SWWW_TRANSITION_DURATION=2
+SWWW_TRANSITION_FPS=60
+
+# Wallpaper rotation — in minutes, 0 = off.
+# When on, a systemd user timer is installed:
+#   systemctl --user status hyprsetup-wallpaper.timer
+# To change it by hand: ~/.config/hypr/scripts/wallpaper.sh random
+WALLPAPER_ROTATE=0
+# Directory to scan — if empty, the directory containing WALLPAPER_PATH is used.
+# For the 48 bundled images in the repo: WALLPAPER_DIR="/path/hyprsetup/wallpapers"
+WALLPAPER_DIR=""
+
+# ================================================================== dock ====
+# In the settings app: MOD+I → Status Bar → Dock
+# A bar floating at the screen edge that holds only app icons
+# (nwg-dock-hyprland). Works independently of the status bar you choose.
+# Right-click an icon to pin or unpin it.
+
+# Show the dock
+# Starts right away when turned on and launches by itself at every login. On
+# first start your terminal, browser and file manager come pinned.
+DOCK_ENABLE=false
+
+# Position
+# If you pick the same edge as the status bar, the two overlap.
+#   bottom  Bottom
+#   left    Left
+#   right   Right
+#   top     Top
+DOCK_POSITION="bottom"
+
+# Auto-hide
+# When on, the dock only appears when the mouse goes to that screen edge.
+# When off, it is always visible and windows do not go under it.
+DOCK_AUTOHIDE=false
+
+# Icon size (px)
+#   range: 24..96
+DOCK_ICON_SIZE=40
+
+# Gap from the edge (px)
+# How far above the screen edge the dock floats. 0 = flush with the edge.
+#   range: 0..60
+DOCK_MARGIN=8
+
+# Corner rounding (px)
+#   range: 0..40
+DOCK_RADIUS=18
+
+# Background opacity
+# 1 = fully solid. The color comes from the selected theme.
+#   range: 0.2..1.0
+DOCK_OPACITY=0.85
+
+# App menu button
+# A button at the end of the dock that opens the selected launcher (wofi, rofi, fuzzel…).
+DOCK_LAUNCHER=true
+
+# Display
+# Empty = whichever display the mouse is on. For a specific display, write
+# its Hyprland name (e.g. DP-1).
+DOCK_MONITOR=""
+
+# ========================================================= night light ======
+# In the settings app: MOD+I → Session → Night light
+# Time-based screen filter with hyprshade. Scheduling runs on a systemd user
+# timer and is reinstalled when the setting changes.
+
+# Filter
+# Do NOT use it TOGETHER with hyprsunset: both lower the color temperature and
+# the screen turns twice as yellow. The MOD+SHIFT+N binding toggles hyprsunset.
+#   (empty)            Off
+#   blue-light-filter  Blue light filter — yellowish
+#   vibrance           Vibrance — vivid colors
+#   grayscale          Grayscale
+#   crt                CRT — scanlines
+NIGHT_SHADER=""
+
+# Start time
+# In HH:MM format. The filter turns on at this time.
+NIGHT_SHADER_START="20:00"
+
+# End time
+# In HH:MM format. The filter turns off at this time.
+NIGHT_SHADER_END="06:00"
+
+# ====================================================== window groups =======
+# In the settings app: MOD+I → Behavior → Window groups
+# Gathers several windows in one place as tabs. Their keybindings are empty
+# by default; assign them under Keybindings → Windows ("Create window
+# group").
+
+# Tab bar
+# Shows the tabs above a grouped window. When off, tabs are only switched
+# with keybindings.
+GROUPBAR=true
+
+# Look
+#   tabs       Filled tabs
+#   line       Thin line + title
+#   indicator  Line only
+GROUPBAR_STYLE="tabs"
+
+# Height (px)
+#   range: 4..40
+GROUPBAR_HEIGHT=18
+
+# Font size (pt)
+#   range: 6..24
+GROUPBAR_FONT_SIZE=10
+
+# ==================================================== hyprland plugins ======
+# In the settings app: MOD+I → Behavior → Hyprland plugins
+# Settings for hyprpm plugins. Install the plugin from Components → Plugins;
+# these settings have no effect while it is not installed.
+
+# hyprexpo: number of columns
+# How many workspaces are shown side by side in the workspace overview.
+#   range: 2..6
+HYPREXPO_COLUMNS=3
+
+# hyprbars: title height (px)
+#   range: 16..48
+HYPRBARS_HEIGHT=26
+
+# hyprbars: window buttons
+# Close / maximize / float buttons on the title bar.
+HYPRBARS_BUTTONS=true
+
+# ========================================================== lock screen =====
+# In the settings app: MOD+I → Session → Lock screen
+# How hyprlock looks. MOD+L, idle and sleep use the same screen.
+
+# Background
+# If screenshot is selected, the desktop right before locking is shown
+# blurred.
+#   wallpaper   Wallpaper
+#   screenshot  Current screen image
+#   color       Solid color (theme background)
+LOCK_BACKGROUND="wallpaper"
+
+# Blur passes
+# 0 = background is shown sharp.
+#   range: 0..6
+LOCK_BLUR_PASSES=3
+
+# Blur size
+#   range: 1..30
+LOCK_BLUR_SIZE=8
+
+# Background brightness
+# Below 1 darkens; the clock and text are easier to read.
+#   range: 0.1..1.5
+LOCK_BRIGHTNESS=0.8
+
+# Clock format
+# date format. %I:%M %p for 12-hour, %H:%M:%S with seconds.
+LOCK_CLOCK_FORMAT="%H:%M"
+
+# Clock size (pt)
+#   range: 30..240
+LOCK_CLOCK_SIZE=110
+
+# Show the date
+LOCK_SHOW_DATE=true
+
+# Date format
+# date format. Example: %A, %d %b → Monday, 05 Oct.
+LOCK_DATE_FORMAT="%d %B %Y, %A"
+
+# Show the username
+LOCK_SHOW_USER=true
+
+# Password field width (px)
+#   range: 160..800
+LOCK_INPUT_WIDTH=320
+
+# Password field placeholder
+LOCK_PLACEHOLDER="Password…"
+
+# Unlock-without-password window (s)
+# After an idle lock, moving the mouse within this time unlocks without a
+# password. Not applied to manual locks or sleep. 0 = password asked
+# immediately.
+#   range: 0..60
+LOCK_GRACE=2
+
+# ========================================================= notifications ====
+# In the settings app: MOD+I → Session → Notifications
+# Position, duration and size of notification bubbles. mako, dunst and swaync
+# use the same settings; the notification program is chosen on the Components page.
+
+# Position
+#   auto           Automatic — on the right, at the bar's edge
+#   top-right      Top right
+#   top-center     Top center
+#   top-left       Top left
+#   bottom-right   Bottom right
+#   bottom-center  Bottom center
+#   bottom-left    Bottom left
+NOTIFY_POSITION="auto"
+
+# Time on screen (s)
+# Low-priority notifications stay two thirds as long. 0 = stay until
+# clicked.
+#   range: 0..60
+NOTIFY_TIMEOUT=6
+
+# Keep critical notifications
+# Critical notifications such as a dying battery stay on screen until clicked.
+NOTIFY_CRITICAL_STICKY=true
+
+# Width (px)
+#   range: 200..900
+NOTIFY_WIDTH=380
+
+# Maximum at once
+# The rest are queued. swaync does not support this setting.
+#   range: 1..20
+NOTIFY_MAX_VISIBLE=5
+
+# Distance from the screen edge (px)
+# For mako and dunst. swaync uses its own margin.
+#   range: 0..200
+NOTIFY_MARGIN=12
+
+# Icon size (px)
+#   range: 16..128
+NOTIFY_ICON_SIZE=48
+
+# ============================================================ power menu ====
+# In the settings app: MOD+I → Session → Power menu
+# Lock / sleep / shut down menu (wlogout, or a menu opened through the
+# launcher).
+
+# Hibernate button
+# Hibernation does not work without swap and a kernel resume setting; turn
+# it off then.
+POWERMENU_HIBERNATE=true
+
+# Ask for confirmation
+# Shut down, reboot, log out and hibernate first ask "Are you
+# sure?". wlogout does not ask for its own confirmation.
+POWERMENU_CONFIRM=true
+
+# ============================================================= game mode ====
+# In the settings app: MOD+I → Session → Game mode
+# Takes load off the desktop while gaming: animation, blur and shadow are
+# turned off, Wallpaper Engine pauses, the visualizer stops, notifications
+# are muted. Everything comes back when you leave the game. Toggle by hand: MOD+F12.
+
+# Turn on automatically
+# Only the fullscreen window on the VISIBLE workspace is checked; moving the
+# game to another workspace turns the mode off. A manually enabled mode does not turn itself off.
+#   games       When a game goes fullscreen
+#   fullscreen  On any fullscreen window
+#   off         Off — keybinding only
+GAMEMODE_AUTO="games"
+
+# Game windows
+# Regular expression matched against the window class or title (case
+# insensitive). Steam games come with steam_app_<id>, Proton/Wine games with
+# an .exe class. To see the class: hyprctl activewindow.
+GAMEMODE_MATCH="^(steam_app_[0-9]+|gamescope|.+\.exe|Minecraft.*|cs2|dota2|factorio|hl2_linux)"
+
+# Turn off effects
+# Animation, blur and shadow. When the mode ends, the config is reloaded
+# and goes back to how it was.
+GAMEMODE_EFFECTS=true
+
+# Pause Wallpaper Engine
+# The scene is frozen (uses no GPU) and resumes where it left off.
+GAMEMODE_PAUSE_WALLPAPER=true
+
+# Mute notifications
+# Do-not-disturb mode of swaync, mako or dunst.
+GAMEMODE_DND=true
+
+# ===================================================== desktop tools ========
+# In the settings app: MOD+I → Session → Desktop tools
+# Bar panel, song recognition, notification history, update checks and
+# system snapshots. Where modules sit on the bar is changed on the Status Bar
+# page, keybindings on the Keybindings page.
+
+# Song recognition listening time (s)
+# Recording length for Shazam (songrec). 6–10 s is enough for most songs;
+# increase it in noisy environments.
+#   range: 4..20
+SONG_LISTEN_SECONDS=9
+
+# Notification history
+# Incoming notifications are kept for this session (in memory only, deleted
+# when the session ends); the bar panel's Notifications tab and the bell
+# module show it.
+NOTIFY_HISTORY=true
+
+# Notifications to keep
+#   range: 10..500
+NOTIFY_HISTORY_KEEP=50
+
+# Check for updates
+# The update module on the bar counts pending packages (checkupdates;
+# does not touch the system package database).
+UPDATES_CHECK=true
+
+# Check interval (min)
+#   range: 5..360
+UPDATES_INTERVAL=30
+
+# Count AUR packages too
+# If yay or paru is installed.
+UPDATES_AUR=true
+
+# External display brightness (DDC/CI)
+# The bar panel's Brightness tab adjusts desktop monitors with ddcutil.
+# Turn it off if your display does not support DDC/CI or detection is slow.
+BRIGHTNESS_DDC=true
+
+# Per-app volume
+# A separate slider for every playing app on the bar panel's Volume tab.
+PANEL_APP_VOLUME=true
+
+# Sync the installed copy automatically
+# When settings are applied from the repo folder, ~/.local/share/hyprsetup
+# is updated too (MOD+I, the bar panel and the keybinding cheat sheet run from there).
+SELFUPDATE_SYNC=true
+
+# Snapshot before system changes
+# A snapshot you can roll back to is taken before NVIDIA, Plymouth, login
+# manager and login screen changes.
+#   auto   On — if snapper/timeshift is present
+#   false  Off
+SNAPSHOT_BEFORE_SYSTEM="auto"

@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+#
+# hyprsetup-gui — graphical setup interface
+#
+# Required packages: gtk4 libadwaita python-gobject python-cairo
+#
+set -Eeuo pipefail
+
+SETUP_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+GUI_DEPS=(gtk4 libadwaita python-gobject python-cairo)
+
+_gui_deps_ok() {
+    python3 - <<'PY' 2>/dev/null
+import sys
+try:
+    import gi
+    gi.require_version("Gtk", "4.0")
+    gi.require_version("Adw", "1")
+    from gi.repository import Gtk, Adw  # noqa: F401
+except Exception:
+    sys.exit(1)
+PY
+}
+
+if ! _gui_deps_ok; then
+    printf 'Installing missing GUI dependencies: %s\n\n' "${GUI_DEPS[*]}"
+    if ! command -v pacman >/dev/null 2>&1; then
+        printf 'pacman not found — install the packages manually:\n\n    %s\n\n' "${GUI_DEPS[*]}"
+        exit 1
+    fi
+    if ! command -v sudo >/dev/null 2>&1; then
+        printf 'sudo not found — install the packages manually:\n\n    pacman -S --needed %s\n\n' "${GUI_DEPS[*]}"
+        exit 1
+    fi
+    if ! sudo pacman -S --needed --noconfirm "${GUI_DEPS[@]}"; then
+        printf '\nInstallation failed. Try manually:\n\n    sudo pacman -S --needed %s\n\n' "${GUI_DEPS[*]}"
+        exit 1
+    fi
+    if ! _gui_deps_ok; then
+        printf '\nPackages were installed but Python still cannot find gtk4/libadwaita. Check the installation.\n'
+        exit 1
+    fi
+    printf '\nDependencies installed, opening the interface...\n\n'
+fi
+
+exec env PYTHONPATH="$SETUP_ROOT/python${PYTHONPATH:+:$PYTHONPATH}" \
+    python3 -m hyprsetup gui \
+        --root "$SETUP_ROOT" \
+        --catalog "$SETUP_ROOT/config/components.json" \
+        --templates "$SETUP_ROOT/templates" \
+        "$@"

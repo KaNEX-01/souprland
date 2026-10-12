@@ -1,0 +1,54 @@
+{{! require: HAS_EWW || HAS_QUICKSHELL }}
+{{! target: hyprsetup/cpu-temp.sh }}
+{{! mode: 755 }}
+#!/usr/bin/env bash
+# CPU temperature (°C, integer) — data source for the temperature widget.
+#
+# Both engines (eww and Quickshell) call this: reading the number in two
+# places with two different one-liners led to one breaking while the other
+# kept working.
+#
+# WHY NOT /sys/class/thermal/thermal_zone0/temp directly: that path does not
+# exist on every machine. On AMD systems (k10temp) no thermal_zone is created
+# and the widget silently showed "--"; the temperature lives under
+# /sys/class/hwmon there. hwmon is searched first by CPU sensor name, falling
+# back to thermal_zone.
+set -uo pipefail
+
+read_file() {
+    local value
+    value=$(cat "$1" 2>/dev/null) || return 1
+    [[ "$value" =~ ^[0-9]+$ ]] || return 1
+    # sysfs reports millidegrees; some sensors already give degrees.
+    if (( value > 1000 )); then
+        printf '%d\n' $(( value / 1000 ))
+    else
+        printf '%d\n' "$value"
+    fi
+}
+
+# 1) hwmon: a CPU sensor with a known name.
+for hwmon in /sys/class/hwmon/hwmon*; do
+    [[ -r "$hwmon/name" ]] || continue
+    case "$(cat "$hwmon/name" 2>/dev/null)" in
+        k10temp|coretemp|zenpower|cpu_thermal|cpu-thermal|acpitz)
+            read_file "$hwmon/temp1_input" && exit 0
+            ;;
+    esac
+done
+
+# 2) thermal_zone: prefer one whose type is CPU, else the first zone.
+for zone in /sys/class/thermal/thermal_zone*; do
+    [[ -r "$zone/type" ]] || continue
+    case "$(cat "$zone/type" 2>/dev/null)" in
+        *x86_pkg_temp*|*cpu*|*CPU*|acpitz)
+            read_file "$zone/temp" && exit 0
+            ;;
+    esac
+done
+for zone in /sys/class/thermal/thermal_zone*; do
+    read_file "$zone/temp" && exit 0
+done
+
+# None found: empty output; widgets show it as "--".
+exit 0

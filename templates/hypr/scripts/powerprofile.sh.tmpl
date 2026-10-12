@@ -1,0 +1,48 @@
+{{! require: MANAGE_HYPR_CONFIGS }}
+{{! mode: 755 }}
+#!/usr/bin/env bash
+# Power profile — data source for Waybar's "custom/powerprofile" module.
+#
+# Shows power-profiles-daemon's current profile; --cycle switches to the next
+# one (this runs when the module is clicked). Without the daemon the module
+# stays silently empty: desktops may lack profile support, and an error text
+# sitting on the bar permanently would be worse.
+set -uo pipefail
+
+if ! command -v powerprofilesctl >/dev/null 2>&1; then
+    printf '{"text": "", "tooltip": "power-profiles-daemon is not installed"}\n'
+    exit 0
+fi
+
+# Supported profiles vary by machine (three on most laptops, two on some);
+# we read the list from the daemon itself.
+mapfile -t profiles < <(powerprofilesctl list 2>/dev/null |
+                        sed -nE 's/^[* ] ([a-z-]+):$/\1/p')
+current=$(powerprofilesctl get 2>/dev/null)
+
+if [[ ${#profiles[@]} -eq 0 || -z "$current" ]]; then
+    printf '{"text": "", "tooltip": "Could not read the power profile"}\n'
+    exit 0
+fi
+
+if [[ "${1:-}" == "--cycle" ]]; then
+    next="${profiles[0]}"
+    for i in "${!profiles[@]}"; do
+        if [[ "${profiles[$i]}" == "$current" ]]; then
+            next="${profiles[$(( (i + 1) % ${#profiles[@]} ))]}"
+            break
+        fi
+    done
+    powerprofilesctl set "$next" 2>/dev/null
+    current="$next"
+fi
+
+case "$current" in
+    power-saver)  icon="󰌪"; label="Power saver" ;;
+    balanced)     icon="󰾅"; label="Balanced" ;;
+    performance)  icon="󰓅"; label="Performance" ;;
+    *)            icon="󰈐"; label="$current" ;;
+esac
+
+printf '{"text": "%s", "tooltip": "Power profile: %s", "class": "%s"}\n' \
+    "$icon" "$label" "$current"

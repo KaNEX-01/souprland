@@ -1,0 +1,440 @@
+# arfan-on-clouds/hyprclouds — GitHub repo (not a Reddit post)
+# https://github.com/arfan-on-clouds/hyprclouds
+# Last commit dc56aa5 (2025-02-02, "Update README.md"); the screenshots in the README
+# are dated 2025-01-17/19, the same as workflow&assets/ in the repo.
+# NO license: the author's files don't go into the repo (the vendor archive is only
+# built locally; the install pulls from GitHub).
+#
+# The author's hyprland.conf is tailored to their own machine (Fedora /usr/libexec
+# portals, waypaper + hyprpaper + swww at once, "eww open bar" twice,
+# hypridle.conf run via exec, ~/set_wallpaper.sh which isn't in the repo); so
+# your Hyprland settings stay, the author's eww/rofi/wofi/wlogout/kitty/hyprlock
+# files come in, and the look (gaps, rounding, blur, animations, border
+# colors) is applied from ~/.config/hypr/rice.conf.
+#
+# Colors: the author's "wall" script generated colors from the wallpaper using
+# ~/.cache/material-you/c*.py scripts on their own machine (not in the
+# repo). The same files are generated in the same format with matugen
+# (~/.config/hyprclouds/hyprclouds_colors.py); every look calls it.
+
+default_variant = "sakura"
+provides = ["bar", "notify", "widget"]
+
+post_install = [
+  "chmod +x ~/.config/eww/scripts/* ~/.config/eww/scripts/material.py ~/.config/hyprclouds/scripts/dark_light ~/.config/hyprclouds/scripts/songdetail.sh ~/.config/hyprclouds/scripts/rofi_light_dark/*.sh ~/.config/rofi/launchers/type-6/launcher.sh 2>/dev/null || true",
+  "pkill -x waybar; pkill -x hyprpanel; pkill -x mako; pkill -x swaync; pkill -x dunst; true",
+  "hyprctl reload >/dev/null 2>&1 || true",
+]
+
+notes = [
+  "The author's wallpapers (pink sakura and cat, midnight-blue black cat, mushroom forest, orange flowers) aren't in the repo and their source couldn't be found. The looks ship with this project's redistributable wallpapers; colors are generated from whatever image is used (Material You), so it works with your own wallpaper too.",
+  "The gallery images are the screenshots from the author's README (with their own wallpapers).",
+  "Notifications are shown by the author's Python notification server inside eww (python-dbus); this project's notification daemon is stopped.",
+  "Weather comes with the author's OpenWeatherMap key and city (Nur-Sultan): change it on the CITY line in ~/.config/eww/scripts/weather.py.",
+  "The 'Dark mode' button in the control center runs the author's light/dark switch; the gsettings lines that changed your GTK and icon theme are disabled.",
+  "Fonts: SF Pro Display (AUR otf-apple-sf-pro); if AlfaSlabOne (lock screen) is missing, the default font is used instead.",
+]
+
+[source]
+repo = "https://github.com/arfan-on-clouds/hyprclouds"
+commit = "dc56aa5563da58ba1fd757c607a8630493686647"
+license = ""
+
+[[install]]
+from = "config/eww"
+to = "~/.config/eww"
+[[install]]
+from = "config/rofi"
+to = "~/.config/rofi"
+[[install]]
+from = "config/wofi"
+to = "~/.config/wofi"
+[[install]]
+from = "config/wlogout"
+to = "~/.config/wlogout"
+[[install]]
+from = "config/kitty"
+to = "~/.config/kitty"
+[[install]]
+from = "config/material-you"
+to = "~/.config/material-you"
+[[install]]
+from = "config/hypr/hyprlock.conf"
+to = "~/.config/hypr/hyprlock.conf"
+# What eww and the lock screen call from the author's Hyprland scripts:
+# ~/.config/hypr/scripts is where this project's own scripts live; keep them apart.
+[[install]]
+from = "config/hypr/scripts"
+to = "~/.config/hyprclouds/scripts"
+
+[[file]]
+to = "~/.config/hypr/rice.conf"
+content = """# hyprclouds (hyprsetup profile) — the look and eww startup from the
+# author's hyprland.conf. Keybindings and other settings are yours.
+exec-once = ~/.config/eww/scripts/start.sh
+
+# Border colors from the wallpaper (hyprclouds_colors.py → colors.conf).
+source = ~/.config/material-you/colors.conf
+general {
+    gaps_in = 2
+    gaps_out = 5
+    border_size = 2
+    col.active_border = $dark_primary
+    col.inactive_border = $dark_inverse-primary
+}
+decoration {
+    rounding = 20
+    active_opacity = 1
+    inactive_opacity = 0.95
+    blur {
+        enabled = true
+        size = 10
+        passes = 3
+        new_optimizations = true
+        ignore_opacity = true
+        xray = true
+        vibrancy_darkness = 2.0
+        popups = false
+    }
+    shadow {
+        enabled = false
+    }
+}
+animations {
+    enabled = true
+}
+bezier = overshot, 0.13, 0.99, 0.5, 1
+animation = layersIn, 1, 7, overshot, slide 80%
+animation = windows, 1, 7, overshot, slide
+animation = windowsIn, 1, 7, overshot, popin
+animation = windowsOut, 1, 7, overshot, slide
+animation = windowsMove, 1, 7, overshot, slide
+animation = border, 1, 8, default
+animation = fade, 1, 8, overshot
+
+windowrule = opacity 0.95 0.95, match:class ^(kitty)$
+layerrule = blur on, match:namespace ^(logout_dialog)$
+layerrule = blur on, match:namespace ^(rofi)$
+"""
+
+# Same thing, for this project's Lua mode (hyprland.lua → require("rice")).
+[[file]]
+to = "~/.config/hypr/rice.lua"
+content = """-- hyprclouds (hyprsetup profile) — the author's look and eww startup.
+hl.on("hyprland.start", function()
+    hl.exec_cmd("~/.config/eww/scripts/start.sh")
+end)
+hl.config({
+    general = { gaps_in = 2, gaps_out = 5, border_size = 2 },
+    decoration = {
+        rounding = 20, active_opacity = 1, inactive_opacity = 0.95,
+        blur = { enabled = true, size = 10, passes = 3, xray = true,
+                 ignore_opacity = true, popups = false },
+        shadow = { enabled = false },
+    },
+})
+hl.layer_rule({ match = { namespace = "logout_dialog" }, blur = true })
+hl.layer_rule({ match = { namespace = "rofi" }, blur = true })
+"""
+
+# eww's "current_theme" variable was fed by the author's material.py (not in
+# the repo): writes the selected mode (dark|light).
+[[file]]
+to = "~/.config/eww/scripts/material.py"
+content = """#!/usr/bin/env python3
+# hyprsetup: replaces the author's material.py, which isn't in the repo — the selected mode.
+from pathlib import Path
+path = Path.home() / ".config/kitty/current_theme.txt"
+try:
+    print(path.read_text().strip() or "dark", flush=True)
+except OSError:
+    print("dark", flush=True)
+"""
+
+[[file]]
+to = "~/.config/hyprclouds/hyprclouds_colors.py"
+content = '''#!/usr/bin/env python3
+"""hyprclouds (hyprsetup profile): Material You colors from the wallpaper.
+
+The author's "wall" script generated colors with ~/.cache/material-you/c*.py
+scripts on their own machine; those aren't in the repo. This writes the same
+files in the same format with matugen:
+
+  ~/.config/eww/colors.scss, ~/.config/material-you/colors.scss   $dark-*/$light-*
+  ~/.config/material-you/colors.conf      $dark_*/$light_* = rgb(..)  (Hyprland, hyprlock)
+  ~/.config/material-you/colors2.css      --dark-*/--light-*          (rofi scripts)
+  ~/.config/eww/scripts/colors/colors.scss  $primary…                  (selected mode)
+
+Then applies the mode (as the author's dark_light script did, without
+gsettings): eww.scss, wofi, kitty, rofi, the control center button.
+
+Usage: hyprclouds_colors.py <wallpaper> [dark|light]
+"""
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+CFG = Path.home() / ".config"
+
+
+def matugen(image):
+    out = subprocess.run(["matugen", "image", image, "--json", "hex", "--dry-run",
+                          "--prefer", "saturation"],
+                         capture_output=True, text=True, timeout=120)
+    if out.returncode != 0:
+        raise RuntimeError(out.stderr.strip()[-400:])
+    return json.loads(out.stdout)["colors"]
+
+
+def write(path, text):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def hexes(colors, mode):
+    return {name: value[mode]["color"] for name, value in sorted(colors.items())}
+
+
+def camel(name):
+    head, *rest = name.split("_")
+    return head + "".join(part.title() for part in rest)
+
+
+def write_colors(colors, mode):
+    dark, light = hexes(colors, "dark"), hexes(colors, "light")
+    scss = ["/* Dark Theme SCSS */"]
+    scss += [f"$dark-{k.replace('_', '-')}: {v};" for k, v in dark.items()]
+    scss += ["", "/* Light Theme SCSS */"]
+    scss += [f"$light-{k.replace('_', '-')}: {v};" for k, v in light.items()]
+    scss_text = "\n".join(scss) + "\n"
+    write(CFG / "eww/colors.scss", scss_text)
+    write(CFG / "material-you/colors.scss", scss_text)
+
+    conf = [f"$dark_{k.replace('_', '-')} = rgb({v[1:]})" for k, v in dark.items()]
+    conf += [f"$light_{k.replace('_', '-')} = rgb({v[1:]})" for k, v in light.items()]
+    write(CFG / "material-you/colors.conf", "\n".join(conf) + "\n")
+
+    css = [":root {", "  /* Dark Theme Colors */"]
+    css += [f"  --dark-{k.replace('_', '-')}: {v};" for k, v in dark.items()]
+    css += ["", "  /* Light Theme Colors */"]
+    css += [f"  --light-{k.replace('_', '-')}: {v};" for k, v in light.items()]
+    write(CFG / "material-you/colors2.css", "\n".join(css + ["}"]) + "\n")
+
+    chosen = dark if mode == "dark" else light
+    write(CFG / "eww/scripts/colors/colors.scss",
+          "".join(f"${camel(k)}: {v};\n" for k, v in chosen.items()))
+
+
+def apply_mode(mode, image):
+    eww = CFG / "eww"
+    source = eww / "scss" / mode / "eww.scss"
+    if source.is_file():
+        shutil.copyfile(source, eww / "eww.scss")
+    wofi = CFG / "wofi" / mode / "style.css"
+    if wofi.is_file():
+        shutil.copyfile(wofi, CFG / "wofi/style.css")
+    kitty = CFG / "kitty/kitty.conf"
+    theme = CFG / "kitty" / mode / "kitty.conf"
+    if kitty.is_file() and theme.is_file():
+        text = re.sub(r"\n?#BEGIN_COLORS.*?#END_COLORS\n?", "\n",
+                      kitty.read_text(encoding="utf-8"), flags=re.S)
+        kitty.write_text(text.rstrip("\n") + "\n\n#BEGIN_COLORS\n"
+                         + theme.read_text(encoding="utf-8") + "\n#END_COLORS\n",
+                         encoding="utf-8")
+    write(CFG / "kitty/current_theme.txt", mode + "\n")
+    # The control center button offers the opposite mode (like the author's dark_light).
+    yuck = eww / "modules/quick_settings.yuck"
+    if yuck.is_file():
+        other = "dark" if mode == "light" else "light"
+        text = yuck.read_text(encoding="utf-8")
+        text = re.sub(r"(\(defwidget theme \[\].*?:condition \{current_theme == \")[a-z]+",
+                      lambda m: m.group(1) + other, text, count=1, flags=re.S)
+        yuck.write_text(text, encoding="utf-8")
+    rofi = CFG / "hyprclouds/scripts/rofi_light_dark" / f"rofi_{mode}.sh"
+    if rofi.is_file():
+        # LC_NUMERIC=C: the script writes opacity with printf "%.1f"; under a
+        # Turkish locale it came out as "1,0" and broke the rofi theme.
+        subprocess.run(["bash", str(rofi), image], capture_output=True, timeout=60,
+                       env={**os.environ, "LC_NUMERIC": "C", "LC_ALL": "C.UTF-8"})
+
+
+def main():
+    if len(sys.argv) < 2:
+        print(__doc__)
+        return 2
+    image = str(Path(sys.argv[1]).expanduser())
+    mode = sys.argv[2] if len(sys.argv) > 2 else "dark"
+    if shutil.which("matugen"):
+        try:
+            write_colors(matugen(image), mode)
+        except (RuntimeError, ValueError, KeyError, OSError,
+                subprocess.SubprocessError) as exc:
+            print(f"hyprclouds: could not generate colors, keeping the author's: {exc}",
+                  file=sys.stderr)
+    else:
+        print("hyprclouds: matugen not found, keeping the author's colors", file=sys.stderr)
+    apply_mode(mode, image)
+    if os.environ.get("WAYLAND_DISPLAY") and shutil.which("eww"):
+        subprocess.Popen(["bash", str(CFG / "eww/scripts/start.sh")],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         start_new_session=True)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+'''
+
+# --- the author's own home directory paths ---------------------------------
+[[fix]]
+file = "~/.config/eww/scss/dark/eww.scss"
+replace = ["/home/alien/.config/material-you/colors.scss", "{home}/.config/material-you/colors.scss"]
+why = "hard-coded import from the author's home directory (/home/alien); when the scss failed to compile eww dropped all styles"
+[[fix]]
+file = "~/.config/eww/scss/light/eww.scss"
+replace = ["/home/alien/.config/material-you/colors.scss", "{home}/.config/material-you/colors.scss"]
+why = "hard-coded import from the author's home directory"
+[[fix]]
+file = "~/.config/eww/scss/dark/control_center.scss"
+replace = ["/home/alien/.config/material-you/colors.scss", "{home}/.config/material-you/colors.scss"]
+why = "hard-coded import from the author's home directory"
+[[fix]]
+file = "~/.config/eww/scss/dark/calendar.scss"
+replace = ["/home/alien/.config/material-you/colors.scss", "{home}/.config/material-you/colors.scss"]
+why = "hard-coded import from the author's home directory"
+[[fix]]
+file = "~/.config/eww/scss/dark/indicator.scss"
+replace = ["/home/alien/.config/material-you/colors.scss", "{home}/.config/material-you/colors.scss"]
+why = "hard-coded import from the author's home directory"
+[[fix]]
+file = "~/.config/eww/scss/light/indicator.scss"
+replace = ["/home/alien/.config/material-you/colors.scss", "{home}/.config/material-you/colors.scss"]
+why = "hard-coded import from the author's home directory"
+[[fix]]
+file = "~/.config/eww/scss/dark/tray.scss"
+replace = ["/home/alien/.config/material-you/colors.scss", "{home}/.config/material-you/colors.scss"]
+why = "hard-coded import from the author's home directory"
+[[fix]]
+file = "~/.config/eww/scss/dark/clock.scss"
+replace = ["/home/alien/.config/material-you/colors.scss", "{home}/.config/material-you/colors.scss"]
+why = "hard-coded import from the author's home directory"
+[[fix]]
+file = "~/.config/eww/scss/dark/info-center.scss"
+replace = ["/home/alien/Downloads/dotfiles2/.config/eww/colors.scss", "{home}/.config/eww/colors.scss"]
+why = "import from an old copy in the author's Downloads folder"
+[[fix]]
+file = "~/.config/eww/scss/light/info-center.scss"
+replace = ["/home/alien/Downloads/dotfiles2/.config/eww/colors.scss", "{home}/.config/eww/colors.scss"]
+why = "import from an old copy in the author's Downloads folder"
+[[fix]]
+file = "~/.config/eww/modules/powermenu.yuck"
+replace = ["/home/alien/.config/eww/", "{home}/.config/eww/"]
+why = "the power menu called a script in the author's home directory"
+[[fix]]
+file = "~/.config/eww/modules/power.yuck"
+replace = ["/home/alien/.config/eww/", "{home}/.config/eww/"]
+why = "the power button called a script in the author's home directory"
+[[fix]]
+file = "~/.config/eww/modules/clock.yuck"
+replace = ["/home/alien/.config/eww/", "{home}/.config/eww/"]
+why = "clicking the clock opened a calendar via a script in the author's home directory"
+[[fix]]
+file = "~/.config/eww/modules/quick_settings.yuck"
+replace = ["/home/alien/.config/hypr/scripts/dark_light", "{home}/.config/hyprclouds/scripts/dark_light"]
+why = "the light/dark button called a script in the author's home directory (the script is installed to ~/.config/hyprclouds/scripts)"
+[[fix]]
+file = "~/.config/rofi/launchers/type-6/style-9.rasi"
+replace = ["/home/alien/.config/rofi/", "{home}/.config/rofi/"]
+why = "the launcher's wallpaper image was read from the author's home directory"
+[[fix]]
+file = "~/.config/hypr/hyprlock.conf"
+replace = ["/home/alien/.config/hypr/scripts/songdetail.sh", "{home}/.config/hyprclouds/scripts/songdetail.sh"]
+why = "the song line on the lock screen called a script in the author's home directory"
+[[fix]]
+file = "~/.config/hyprclouds/scripts/dark_light"
+replace = [
+  "${HOME}/.config/hypr/scripts/rofi_light_dark/", "${HOME}/.config/hyprclouds/scripts/rofi_light_dark/",
+  "    gsettings set org.gnome", "    : gsettings set org.gnome",
+  "bash \"$rofi_light_script\"", "LC_ALL=C.UTF-8 bash \"$rofi_light_script\" \"$(readlink -f ~/.config/rofi/launchers/type-6/current-wallpaper.png)\"",
+  "bash \"$rofi_dark_script\"", "LC_ALL=C.UTF-8 bash \"$rofi_dark_script\" \"$(readlink -f ~/.config/rofi/launchers/type-6/current-wallpaper.png)\"",
+]
+why = "the scripts are installed to ~/.config/hyprclouds/scripts; the gsettings lines switched your GTK and icon theme to the author's (Material-wal, Tela-circle); when the rofi script was called without a wallpaper path the launcher image became a broken link; under a Turkish locale printf wrote the opacity as \"1,0\" and broke the rofi theme"
+
+[packages]
+repo = ["rofi", "wofi", "kitty", "hyprlock", "matugen", "playerctl", "pamixer",
+        "brightnessctl", "jq", "socat", "python", "python-dbus", "python-gobject",
+        "python-requests", "libnotify", "wf-recorder", "grim", "slurp",
+        "networkmanager", "bluez-utils", "ttf-jetbrains-mono-nerd"]
+aur = ["eww", "wlogout", "otf-apple-sf-pro"]
+
+# Looks: the author's light/dark mode + colors from the wallpaper. The
+# wallpapers are this project's (wallpapers/); the author's aren't in the repo.
+[variants.sakura]
+title = "Sakura — light, pink"
+wallpaper = "wallpapers/st-sakura.png"
+wallpaper_dest = "~/Pictures/wallpapers/hyprclouds-sakura.png"
+apply = [
+  "~/.config/hypr/scripts/wallpaper.sh set {wallpaper} || true",
+  "python3 ~/.config/hyprclouds/hyprclouds_colors.py {wallpaper} light",
+]
+credit = "This project's st-sakura wallpaper (the author's isn't in the repo)"
+[variants.alacakaranlik]
+title = "Twilight — dark, purple"
+wallpaper = "wallpapers/st-alacakaranlik.png"
+wallpaper_dest = "~/Pictures/wallpapers/hyprclouds-alacakaranlik.png"
+apply = [
+  "~/.config/hypr/scripts/wallpaper.sh set {wallpaper} || true",
+  "python3 ~/.config/hyprclouds/hyprclouds_colors.py {wallpaper} dark",
+]
+credit = "This project's st-alacakaranlik wallpaper (the author's isn't in the repo)"
+[variants.orman]
+title = "Forest — dark, orange"
+wallpaper = "wallpapers/st-orman.png"
+wallpaper_dest = "~/Pictures/wallpapers/hyprclouds-orman.png"
+apply = [
+  "~/.config/hypr/scripts/wallpaper.sh set {wallpaper} || true",
+  "python3 ~/.config/hyprclouds/hyprclouds_colors.py {wallpaper} dark",
+]
+credit = "This project's st-orman wallpaper (the author's isn't in the repo)"
+
+# The settings app's Bar page recognizes this bar (ricebar.py).
+[bar]
+kind = "eww"
+label = "hyprclouds (eww)"
+note = "The eww bar's settings live in the author's yuck/scss files; colors from the wallpaper (Looks)."
+
+# --- Soup Maker parts (python -m hyprsetup mix; see python/hyprsetup/mix.py) ---
+[[part]]
+slot = "bar"
+title = "Eww bar + control center"
+paths = ["~/.config/eww", "~/.config/material-you"]
+start = "~/.config/eww/scripts/start.sh"
+provides = ["bar", "notify"]
+packages = ["playerctl", "pamixer", "brightnessctl", "jq", "socat", "python-dbus", "python-gobject"]
+aur = ["eww"]
+
+[[part]]
+slot = "launcher"
+title = "Rofi (resimli, type-6)"
+paths = ["~/.config/rofi"]
+commands = { CMD_LAUNCHER = "~/.config/rofi/launchers/type-6/launcher.sh" }
+packages = ["rofi"]
+
+[[part]]
+slot = "terminal"
+title = "Kitty"
+paths = ["~/.config/kitty"]
+commands = { CMD_TERMINAL = "kitty" }
+packages = ["kitty"]
+
+[[part]]
+slot = "lock"
+title = "Hyprlock lock screen"
+paths = ["~/.config/hypr/hyprlock.conf"]
+needs = ["~/.config/material-you/colors.conf", "~/.config/hyprclouds/scripts/songdetail.sh", "~/.config/eww/pfp.png"]
+commands = { LOCK_CMD = "hyprlock" }
+packages = ["hyprlock", "playerctl"]

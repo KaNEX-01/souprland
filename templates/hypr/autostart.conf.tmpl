@@ -1,0 +1,38 @@
+{{! require: MANAGE_HYPR_CONFIGS && HYPR_LANG==conf }}
+####################################################################
+#  autostart.conf — apps started at login
+#
+#  The lines here are generated from the components you selected.
+#  Put your own additions in custom.conf.
+####################################################################
+
+# So the XDG portal starts with the right environment variables
+exec-once = dbus-update-activation-environment --systemd --all
+exec-once = systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
+
+{{AUTOSTART_LINES}}
+
+{{#if VIS_ENABLE}}
+# Audio visualizer — bars along the bottom edge reacting to music (cava)
+exec-once = ~/.config/hypr/scripts/visualizer.sh start
+{{/if}}
+
+{{#if NOTIFY_HISTORY}}
+# Notification history — the bar panel's Notifications tab (current session only)
+exec-once = ~/.config/hypr/scripts/notifylog.py run
+{{/if}}
+
+{{#if GAMEMODE_AUTO}}
+# Game mode — turns off effects in fullscreen games, pauses Wallpaper Engine
+exec-once = ~/.config/hypr/scripts/gamemode.py watch
+{{/if}}
+
+{{#if DOCK_ENABLE}}
+# Dock — app bar floating at the screen edge (nwg-dock-hyprland)
+exec-once = ~/.config/hypr/scripts/dock.sh start
+{{/if}}
+
+{{#if HAS_HYPRSUNSET}}
+# Night mode (off by default; toggle with SUPER+SHIFT+N)
+# exec-once = hyprsunset -t 4000
+{{/if}}

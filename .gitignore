@@ -1,0 +1,22 @@
+__pycache__/
+*.pyc
+
+# Bash does not expand a tilde inside quotes; if a regression feeds a literal "~/..."
+# path into a file operation, a real directory named "~" appears at the repo root
+# (see lib/core.sh:expand_tilde). Keep it from being committed unnoticed.
+/~/
+
+# Local trial output
+/render-out/
+*.log
+
+# Wallhaven images for the Script Test profiles: other people's uploads,
+# not put in the repo; downloaded on first use via sources.json (hyprsetup/wallhaven.py).
+wallpapers/wallhaven/*
+!wallpapers/wallhaven/sources.json
+
+# ruff cache
+.ruff_cache/
+
+# Personal Claude Code permissions (per machine)
+.claude/settings.local.json

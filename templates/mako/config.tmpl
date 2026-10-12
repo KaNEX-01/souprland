@@ -1,0 +1,43 @@
+{{! require: NOTIFIER==mako && HAS_MAKO }}
+# mako — notification config · theme: {{THEME}}
+
+font={{FONT_FAMILY}} {{FONT_SIZE}}
+background-color={{HEX_BG}}f2
+text-color={{HEX_FG}}
+border-color={{HEX_ACCENT}}
+progress-color=over {{HEX_SURFACE}}
+
+width={{NOTIFY_WIDTH_VALUE}}
+height=140
+margin={{NOTIFY_MARGIN_VALUE}}
+padding=14
+border-size=2
+border-radius={{ROUNDING}}
+icon-path=/usr/share/icons/{{ICON_THEME_NAME}}
+max-icon-size={{NOTIFY_ICON_SIZE_VALUE}}
+
+default-timeout={{NOTIFY_TIMEOUT_MS}}
+ignore-timeout=false
+layer=overlay
+anchor={{NOTIFY_ANCHOR}}
+sort=-time
+max-visible={{NOTIFY_MAX_VISIBLE_VALUE}}
+
+format=<b>%s</b>\n%b
+
+[urgency=low]
+border-color={{HEX_SUBTEXT}}
+default-timeout={{NOTIFY_TIMEOUT_LOW_MS}}
+
+[urgency=normal]
+border-color={{HEX_ACCENT}}
+
+[urgency=critical]
+border-color={{HEX_RED}}
+text-color={{HEX_RED}}
+default-timeout={{NOTIFY_TIMEOUT_CRIT_MS}}
+
+[category=mpd]
+border-color={{HEX_ACCENT2}}
+default-timeout=2000
+group-by=category

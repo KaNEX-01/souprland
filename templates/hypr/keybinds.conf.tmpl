@@ -1,0 +1,21 @@
+{{! require: MANAGE_HYPR_CONFIGS && HYPR_LANG==conf }}
+####################################################################
+#  keybinds.conf — keybindings
+#
+#  Main key (MOD): {{MOD_KEY}}
+#  To see all keybindings on screen: {{MOD_KEY}} + F1
+#
+#  This file is built from config/keybinds.json. For permanent changes:
+#    · GUI → Keybindings page, or
+#    · in settings.conf, KEYBINDS="terminal=MOD+T;;color-picker="
+#      (an empty value removes that keybinding)
+#  Anything you write here by hand is lost the next time the script runs;
+#  add your own keybindings to ~/.config/hypr/custom.conf.
+####################################################################
+
+$mod = {{MOD_KEY}}
+
+{{KEYBIND_LINES}}
+
+# --- Workspace numbers -----------------------------------
+{{WORKSPACE_BINDS}}

@@ -1,0 +1,26 @@
+{{! require: HAS_FASTFETCH }}
+{{! target: fastfetch/config.jsonc }}
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/master/doc/json_schema.json",
+  "logo": {
+    {{FETCH_LOGO_FIELDS}}"color": {
+      "1": "{{HEX_ACCENT}}",
+      "2": "{{HEX_GREEN}}",
+      "3": "{{HEX_YELLOW}}",
+      "4": "{{HEX_ACCENT2}}",
+      "5": "{{HEX_RED}}",
+      "6": "{{HEX_CYAN}}",
+      "7": "{{HEX_FG}}",
+      "8": "{{HEX_SUBTEXT}}"
+    }
+  },
+  "display": {
+    "color": {
+      "keys": "{{HEX_ACCENT}}",
+      "title": "{{HEX_ACCENT2}}",
+      "separator": "{{HEX_SUBTEXT}}",
+      "output": "{{HEX_FG}}"
+    }
+  },
+  "modules": {{FETCH_MODULES_JSON}}
+}

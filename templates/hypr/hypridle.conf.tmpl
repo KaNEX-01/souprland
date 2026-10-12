@@ -1,0 +1,70 @@
+{{! require: MANAGE_HYPR_CONFIGS && HAS_HYPRIDLE }}
+####################################################################
+#  hypridle.conf — idle behavior
+#
+#  Times are in SECONDS and come from the settings app
+#  (MOD+I → Session → Idle and lock). Setting a value to 0 removes that
+#  step entirely; manual edits here are lost on the next apply.
+#
+#  Order: dim ({{IDLE_DIM}}) < lock ({{IDLE_LOCK}}) <
+#         screen off ({{IDLE_DPMS}}) < suspend ({{IDLE_SUSPEND}})
+####################################################################
+
+general {
+    lock_cmd = pidof hyprlock || hyprlock          # one lock at a time
+{{#if IDLE_LOCK_BEFORE_SLEEP}}
+    before_sleep_cmd = loginctl lock-session       # uykuya girmeden kilitle
+{{/if}}
+    after_sleep_cmd = hyprctl dispatch dpms on     # screen on after wake
+    # false: wait when a video player/browser asks to "keep the screen on"
+    ignore_dbus_inhibit = {{IDLE_IGNORE_INHIBIT}}
+}
+
+{{#if HAS_BRIGHTNESS}}
+{{#if IDLE_DIM}}
+# Dim the screen (restored on activity)
+listener {
+    timeout = {{IDLE_DIM}}
+    on-timeout = brightnessctl -s set {{IDLE_DIM_LEVEL_VALUE}}%
+    on-resume = brightnessctl -r
+}
+{{#if IDLE_KBD_BACKLIGHT}}
+
+# Turn off the keyboard backlight
+listener {
+    timeout = {{IDLE_DIM}}
+    on-timeout = brightnessctl -sd rgb:kbd_backlight set 0
+    on-resume = brightnessctl -rd rgb:kbd_backlight
+}
+{{/if}}
+{{/if}}
+{{/if}}
+
+{{#if HAS_HYPRLOCK}}
+{{#if IDLE_LOCK}}
+# Lock the screen
+listener {
+    timeout = {{IDLE_LOCK}}
+    # Directly instead of lock_cmd: the lock screen grace period setting
+    # (--grace) applies only here, not when going to sleep.
+    on-timeout = pidof hyprlock || hyprlock{{LOCK_GRACE_FLAG}}
+}
+{{/if}}
+{{/if}}
+
+{{#if IDLE_DPMS}}
+# Turn the screen off
+listener {
+    timeout = {{IDLE_DPMS}}
+    on-timeout = hyprctl dispatch dpms off
+    on-resume = hyprctl dispatch dpms on
+}
+{{/if}}
+
+{{#if IDLE_SUSPEND}}
+# Suspend the system
+listener {
+    timeout = {{IDLE_SUSPEND}}
+    on-timeout = systemctl suspend
+}
+{{/if}}

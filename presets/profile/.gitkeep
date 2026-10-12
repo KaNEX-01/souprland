@@ -1,0 +1,9 @@
+# Profiles are kept in this directory (presets/profile/<name>.conf).
+#
+# This file keeps the directory itself alive: presets.py:default_dir falls back to the old
+# layout (presets/ directly) if presets/profile is NOT a directory, and mistakes the
+# bar/terminal/launcher presets for profiles. Since Git doesn't store empty directories,
+# this is exactly what would happen in a fresh clone if all profiles were ever deleted.
+#
+# Which real setup each profile here is based on: docs/preset-sources.md
+# Record of the older generation extracted from screenshots: docs/gallery-catalog.md

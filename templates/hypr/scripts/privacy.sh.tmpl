@@ -1,0 +1,65 @@
+{{! require: MANAGE_HYPR_CONFIGS }}
+{{! mode: 755 }}
+#!/usr/bin/env bash
+# Privacy indicator — data source for Waybar's "custom/privacy" module.
+#
+# Shows an icon when some app is currently READING the microphone, camera or
+# screen; otherwise returns empty text and the Waybar module draws nothing.
+#
+# The source is PipeWire's own graph (pw-dump): audio input is a
+# "Stream/Input/Audio" node, camera and screen sharing are
+# "Stream/Input/Video". Both reflect real use — not the device being on, but
+# an app being connected to it. To tell screen sharing from the camera, the
+# node name is checked: screen streams coming through the portal carry the
+# name "xdg-desktop-portal" / "screen".
+set -uo pipefail
+
+if ! command -v pw-dump >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
+    printf '{"text": ""}\n'
+    exit 0
+fi
+
+read -r mic video screen < <(
+    pw-dump 2>/dev/null | jq -r '
+        [ .[]
+          | select(.type == "PipeWire:Interface:Node")
+          | .info.props // {}
+          | select(.["media.class"] == "Stream/Input/Audio"
+                   or .["media.class"] == "Stream/Input/Video")
+          | { class: .["media.class"],
+              name: ((.["node.name"] // "") + " " + (.["application.name"] // "")
+                     + " " + (.["media.name"] // "")) | ascii_downcase }
+        ] as $streams
+        | [ ($streams | map(select(.class == "Stream/Input/Audio")) | length),
+            ($streams | map(select(.class == "Stream/Input/Video"
+                                   and (.name | test("portal|screen|monitor") | not)))
+                      | length),
+            ($streams | map(select(.class == "Stream/Input/Video"
+                                   and (.name | test("portal|screen|monitor"))))
+                      | length) ]
+        | @tsv' 2>/dev/null || printf '0\t0\t0'
+)
+
+mic=${mic:-0}; video=${video:-0}; screen=${screen:-0}
+
+icons=""; notes=""
+if (( mic > 0 )); then
+    icons+="󰍬"; notes+="microphone ($mic)"
+fi
+if (( video > 0 )); then
+    [[ -n "$icons" ]] && icons+=" "
+    [[ -n "$notes" ]] && notes+=", "
+    icons+="󰄀"; notes+="camera ($video)"
+fi
+if (( screen > 0 )); then
+    [[ -n "$icons" ]] && icons+=" "
+    [[ -n "$notes" ]] && notes+=", "
+    icons+="󰍹"; notes+="screen sharing ($screen)"
+fi
+
+if [[ -z "$icons" ]]; then
+    printf '{"text": ""}\n'
+else
+    printf '{"text": "%s", "tooltip": "In use: %s", "class": "active"}\n' \
+        "$icons" "$notes"
+fi

@@ -1,0 +1,11 @@
+{{! require: MANAGE_HYPR_CONFIGS && HAS_WAYBAR }}
+[Unit]
+Description=hyprsetup — reapply settings for the display layout
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+# nwg-displays writes two files back to back; let the second one finish too.
+# "$$": keep systemd from doing its own $VARIABLE expansion, so bash sees it.
+ExecStartPre=/usr/bin/sleep 1
+ExecStart=/usr/bin/env bash -c 'root="$${XDG_DATA_HOME:-$$HOME/.local/share}/hyprsetup"; [[ -d "$$root/python/hyprsetup" ]] || root="$$(dirname "{{SETUP_PYTHON}}")"; PYTHONPATH="$$root/python" exec python3 -m hyprsetup reapply --no-start --root "$$root"'
