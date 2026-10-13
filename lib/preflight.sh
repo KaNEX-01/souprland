@@ -26,7 +26,8 @@ preflight_check_distro() {
     step "Distribution: ${id:-unknown}"
     if [[ "$id" != "arch" && "$id" != "cachyos" && "$id_like" != *arch* ]]; then
         warn "Could not detect an Arch-based system (ID=$id)."
-        confirm "Continue anyway?" n || die "Installation cancelled."
+        # --dry-run only reports: stopping here would hide the rest of the plan.
+        [[ "${DRY_RUN:-0}" == 1 ]] || confirm "Continue anyway?" n || die "Installation cancelled."
     fi
     have pacman || die "pacman not found — this script is only for Arch-based systems."
 }
@@ -46,7 +47,7 @@ preflight_check_disk() {
     step "Free disk space: ${avail_mb} MB"
     if (( avail_mb < 3000 )); then
         warn "Less than 3 GB of free space. AUR builds may fail."
-        confirm "Continue?" n || die "Installation cancelled."
+        [[ "${DRY_RUN:-0}" == 1 ]] || confirm "Continue?" n || die "Installation cancelled."
     fi
 }
 
@@ -279,10 +280,31 @@ preflight_detect_hypr_lang() {
     export HYPR_LANG_RESOLVED
 }
 
+# The install writes under these directories at the very end (configs, the
+# settings app in ~/.local/bin). A directory left owned by root (e.g. created by
+# an earlier "sudo" command) used to surface only as a bare "Permission denied"
+# after the whole package install; catch it before anything is touched.
+preflight_check_home_writable() {
+    local d probe bad=()
+    for d in "$HOME/.config" "$HOME/.local/bin" "$HOME/.local/share" \
+             "$HOME/.local/state" "$HOME/.cache"; do
+        probe="$d"
+        while [[ ! -e "$probe" ]]; do probe="$(dirname -- "$probe")"; done
+        [[ -w "$probe" ]] || bad+=("$probe")
+    done
+    ((${#bad[@]})) || return 0
+    for d in "${bad[@]}"; do err "Not writable by $USER: $d (owner: $(stat -c %U -- "$d"))"; done
+    err "Fix the ownership and run the installer again:"
+    err "    sudo chown -R $USER: ${bad[*]}"
+    [[ "${DRY_RUN:-0}" == 1 ]] && return 0
+    die "Your home directory has folders you cannot write to."
+}
+
 preflight_run_all() {
     info "Preflight checks"
     preflight_check_root
     preflight_check_distro
+    preflight_check_home_writable
     preflight_check_gpu
     preflight_check_virt
     preflight_detect_hypr_lang

@@ -377,7 +377,7 @@ change.
 To verify the two sides have not drifted apart:
 
 ```bash
-python3 -m hyprsetup check-schema
+PYTHONPATH=python python3 -m hyprsetup check-schema
 ```
 
 To try it from the repository without installing anything: `./hyprsetup-gui`.
@@ -606,16 +606,16 @@ app.
 > wallpaper.
 >
 > ```bash
-> python3 -m hyprsetup rice list                  # profiles and their variants
-> python3 -m hyprsetup rice install caelestia --variant raiden
-> python3 -m hyprsetup rice variant caelestia --variant room   # switch variant later
-> python3 -m hyprsetup rice uninstall             # restore the previous state
+> PYTHONPATH=python python3 -m hyprsetup rice list                  # profiles and their variants
+> PYTHONPATH=python python3 -m hyprsetup rice install caelestia --variant raiden
+> PYTHONPATH=python python3 -m hyprsetup rice variant caelestia --variant room   # switch variant later
+> PYTHONPATH=python python3 -m hyprsetup rice uninstall             # restore the previous state
 > ```
 >
 > The authors' files ship with the project as archives of the pinned commit
 > (`vendor/rices/`, only the installed paths, no history) — installing needs
 > no network. Archives of repositories without a stated license are built
-> locally with `python3 -m hyprsetup rice vendor` but kept out of git; on
+> locally with `PYTHONPATH=python python3 -m hyprsetup rice vendor` but kept out of git; on
 > another machine those are fetched from the author's repository. Wallpapers
 > are always fetched from their public source, at a pinned version. The
 > authors' install scripts are never run; the user-level steps they perform
@@ -624,7 +624,7 @@ app.
 > system-wide steps (sudo, display manager, telemetry) are left out. Old
 > configs are converted to Hyprland 0.56 / hyprpaper 0.8 syntax during
 > install, and every manifest passes Hyprland's own validator
-> (`python3 -m hyprsetup rice verify <name>`). Everything replaced is backed
+> (`PYTHONPATH=python python3 -m hyprsetup rice verify <name>`). Everything replaced is backed
 > up and comes back on uninstall.
 >
 > [`docs/preset-sources.md`](docs/preset-sources.md) lists every profile's
@@ -649,17 +649,17 @@ opens another setup's launcher).
 | Bar, launcher, notifications, terminal, lock screen, widgets | the `[[part]]` tables in the manifest | the author's files are installed (with backups) and recolored to your color scheme |
 
 ```bash
-python3 -m hyprsetup mix list                       # every part
-python3 -m hyprsetup mix set wallpaper=caelestia/violet colors=r4ppz19/kiz \
+PYTHONPATH=python python3 -m hyprsetup mix list                       # every part
+PYTHONPATH=python python3 -m hyprsetup mix set wallpaper=caelestia/violet colors=r4ppz19/kiz \
         look=nothingos bar=ad1822/bar launcher=r4ppz19/launcher
-python3 -m hyprsetup mix save evening               # store under a name; mix load evening
-python3 -m hyprsetup mix clear                      # everything back to how it was
+PYTHONPATH=python python3 -m hyprsetup mix save evening               # store under a name; mix load evening
+PYTHONPATH=python python3 -m hyprsetup mix clear                      # everything back to how it was
 ```
 
 Quickshell shells can be split too: vantage's shell is offered as separate
 bar, launcher and desktop widget parts. `shell.qml` is rewritten with only the
 selected components. The parts catalog (`presets/mix/parts.json`) is generated
-from the authors' files with `python3 -m hyprsetup mix scan`.
+from the authors' files with `PYTHONPATH=python python3 -m hyprsetup mix scan`.
 
 ### Adding a setup by link
 
@@ -667,10 +667,10 @@ A dotfiles repository that is not in the list can be added by its link
 (*Profiles → Add by link*, or the command line):
 
 ```bash
-python3 -m hyprsetup rice import https://github.com/JaKooLit/Hyprland-Dots --dry-run  # report only
-python3 -m hyprsetup rice import JaKooLit/Hyprland-Dots        # write the manifest
-python3 -m hyprsetup rice install jakoolit-hyprland            # install (with backups, reversible)
-python3 -m hyprsetup rice forget jakoolit-hyprland             # remove from the list
+PYTHONPATH=python python3 -m hyprsetup rice import https://github.com/JaKooLit/Hyprland-Dots --dry-run  # report only
+PYTHONPATH=python python3 -m hyprsetup rice import JaKooLit/Hyprland-Dots        # write the manifest
+PYTHONPATH=python python3 -m hyprsetup rice install jakoolit-hyprland            # install (with backups, reversible)
+PYTHONPATH=python python3 -m hyprsetup rice forget jakoolit-hyprland             # remove from the list
 ```
 
 The repository is pinned to its current commit and its layout is recognized:
@@ -722,7 +722,7 @@ so each image is drawn from the palette instead
 
 > [!NOTE]
 > There are **no** `dotfiles/` trees for the current profiles: profiles now
-> install their authors' own files (`python3 -m hyprsetup rice install`), so
+> install their authors' own files (`PYTHONPATH=python python3 -m hyprsetup rice install`), so
 > there is nothing left to generate from this project's templates;
 > `build-dotfiles.sh` skips them.
 
@@ -868,7 +868,7 @@ realistic preview and the diagram update together.
 Commonly used:
 
 ```bash
-THEME="tokyo-night"              # list with: python3 -m hyprsetup themes
+THEME="tokyo-night"              # list with: PYTHONPATH=python python3 -m hyprsetup themes
 MOD_KEY="SUPER"                  # main modifier key
 LAYOUT="dwindle"                 # dwindle | master
 KB_LAYOUT="us"
@@ -1010,7 +1010,7 @@ The theme is applied to Hyprland borders, waybar, kitty/foot/alacritty,
 wofi/fuzzel, mako/dunst **and** all GTK/Qt applications at once.
 
 ```bash
-python3 -m hyprsetup themes      # themes with their colors
+PYTHONPATH=python python3 -m hyprsetup themes      # themes with their colors
 ```
 
 **`THEME="auto"`** is a special value: the palette is extracted from your
@@ -1378,7 +1378,7 @@ the copy commands for you.
 
 Backups are pruned automatically: the first backup is never deleted, and
 after that the newest 5 install backups and 10 settings app backups are kept
-(`python3 -m hyprsetup backups`). Install logs are under
+(`PYTHONPATH=python python3 -m hyprsetup backups`). Install logs are under
 `~/.local/state/hyprsetup/logs/`.
 
 ---
@@ -1454,7 +1454,7 @@ automatically.
 3. a `Setting` entry in `python/hyprsetup/settings.py`,
 4. if needed, a commented line in `config/settings.conf.example`.
 
-`python3 -m hyprsetup check-schema` verifies the two have not drifted apart.
+`PYTHONPATH=python python3 -m hyprsetup check-schema` verifies the two have not drifted apart.
 
 ### Component-specific install step
 

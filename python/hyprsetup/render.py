@@ -864,6 +864,9 @@ def _finish_derived(out: dict[str, str], variables: dict[str, str],
     specs = [s.strip() for s in (variables.get("MONITOR_SPEC") or "").split(";") if s.strip()]
     if not specs:
         specs = [",preferred,auto,1"]
+    # A rule with an empty name covers every display; the template's own
+    # catch-all default must then not follow it (the last rule wins).
+    out["MONITOR_NEEDS_DEFAULT"] = "" if any(not s.split(",")[0].strip() for s in specs) else "1"
     if lang == "lua":
         out["MONITOR_LINES"] = "\n".join(_lua_monitor_line(s) for s in specs)
     else:
@@ -2446,6 +2449,10 @@ def _widget_vars(variables: dict[str, str], selected: list[str],
     out["WIDGET_STACKING_EWW"] = "bt" if layer == "bottom" else "fg"
     out["WIDGET_LAYER_QML"] = ("WlrLayer.Bottom" if layer == "bottom"
                                else "WlrLayer.Top")
+    # Quickshell draws its widgets from the start; WIDGET_AUTOSTART=false
+    # starts them hidden (shown with MOD+G → widgets.sh → IpcHandler).
+    out["WIDGET_AUTOSTART_QML"] = ("true" if truthy(variables.get("WIDGET_AUTOSTART", "true"))
+                                   else "false")
     # eww :monitor wants an INDEX or the monitor NAME eww sees.
     # CAUTION: the name here is NOT the Wayland connector ("DP-1") but the
     # monitor's model name ("MSI G2412F") — given a connector name eww never
@@ -3281,7 +3288,7 @@ def _autostart_entries(variables: dict[str, str], catalog: Catalog,
         note = ("Quickshell (bar + widgets)" if both
                 else "Bar (Quickshell)" if "quickshell-bar" in selected
                 else "Widget engine (Quickshell)")
-        add("quickshell -p ~/.config/quickshell/shell.qml", note)
+        add("quickshell -p ~/.config/quickshell/hyprsetup/shell.qml", note)
 
     if "swayosd" in selected:
         # The server must be running first: swayosd-client connects to it on

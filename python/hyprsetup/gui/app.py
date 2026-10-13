@@ -23,6 +23,7 @@ from gi.repository import Adw, Gdk, GdkPixbuf, Gio, GLib, Gtk, Pango  # noqa: E4
 from ..catalog import Catalog  # noqa: E402
 from .. import cursors as cursors_mod  # noqa: E402
 from .. import icons as icons_mod  # noqa: E402
+from .. import conffile  # noqa: E402
 from .. import deps as deps_mod  # noqa: E402
 from .. import mix as mix_mod  # noqa: E402
 from .. import rice as rice_mod  # noqa: E402
@@ -2601,20 +2602,21 @@ class MainWindow(Adw.ApplicationWindow):
         except ValueError as exc:
             self._toast(f"Could not apply mix: {exc}")
             return
-        fade = None
-        if rice_mod.read_state():
-            fade = transition_mod.begin(label="Your mix is cooking…")
-            restored = rice_mod.uninstall()
-            self._toast(f"Profile removed ({len(restored)} files restored)")
+        # Plan first: it fetches the wallpaper and can fail. Removing the
+        # active rice before that left the user with neither the rice nor
+        # the mix when, e.g., a wallpaper's package was not installed.
         try:
             changes, state = mix_mod.plan(
                 self.root, {k: pending.get(k, "") for k in mix_mod.SLOT_IDS},
                 self.state.values)
         except (RuntimeError, KeyError, OSError, ValueError) as exc:
-            if fade:
-                fade.finish()
             self._toast(f"Could not apply mix: {exc}")
             return
+        fade = None
+        if rice_mod.read_state():
+            fade = transition_mod.begin(label="Your mix is cooking…")
+            restored = rice_mod.uninstall()
+            self._toast(f"Profile removed ({len(restored)} files restored)")
         for key, value in changes.items():
             self.state.set(key, value)
         state["parts"] = {k: v for k in mix_mod.APP_SLOT_IDS
@@ -4781,6 +4783,17 @@ class MainWindow(Adw.ApplicationWindow):
         to Waybar — on the bash side `lib/select.sh:selection_sync_bar_component`
         does this; here there was no equivalent.
         """
+        if backend and not self.state.is_selected(backend):
+            # A HyprPanel/Wayle preset without that program installed used to
+            # switch the backend anyway: waybar was stopped and no bar came up.
+            # Ask first, like every other component (install / enable / cancel).
+            comp = self.catalog.component(backend)
+            self._require([backend], comp.title if comp else backend,
+                          lambda: self._apply_bar_preset(name, backend), chosen=backend)
+            return
+        self._apply_bar_preset(name, backend)
+
+    def _apply_bar_preset(self, name: str, backend: str = "") -> None:
         self.state.apply_bar_preset(self.root, name)
         switched = bool(backend) and not self.state.is_selected(backend)
         if switched:
@@ -8387,9 +8400,28 @@ class MainWindow(Adw.ApplicationWindow):
         # forever.
         if not text or text == self._conf_written:
             return False
+        # Changes made here since our last save (still in the debounce or
+        # queued behind a running round) are not in the file yet. Loading the
+        # file wholesale would silently undo them — e.g. switching
+        # THEME_SCHEDULE off right after on: the timer it started rewrote the
+        # file with "true" and the reload brought it back. Keys the user
+        # touched since the last save keep the in-app value.
+        mine: dict[str, str] = {}
+        mine_selected: set[str] | None = None
+        if self._apply_source or self._apply_running:
+            saved = conffile.parse_text(self._conf_written)
+            mine = {k: v for k, v in self.state.values.items()
+                    if k in saved and saved[k] != v}
+            if set(filter(None, saved.get("COMPONENTS", "").split(","))) != self.state.selected:
+                mine_selected = set(self.state.selected)
         self._conf_written = text
         if not self.state.load_conf(self._conf_path()):
             return False
+        if mine or mine_selected is not None:
+            self.state.values.update(mine)
+            if mine_selected is not None:
+                self.state.selected = mine_selected
+            self._schedule_apply()
         # load_conf fires the listeners: the UI refreshes and the change is
         # applied to the desktop through the normal chain. The row widgets are only
         # read from the state by _sync_all_rows, so that must be called separately.

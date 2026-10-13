@@ -50,6 +50,23 @@ def _chunk(tag: bytes, data: bytes) -> bytes:
             + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF))
 
 
+#: tEXt chunk written right after IHDR. It marks the file as a generated
+#: pattern: apply.py/install.sh may then replace it when another pattern is
+#: picked (without it the first generated pattern counted as "your own image"
+#: and every later pattern choice silently did nothing).
+GENERATED_MARK = b"Software\x00souprland-pattern"
+
+
+def is_generated(path: Path) -> bool:
+    """Was the file written by write_png (a generated pattern)?"""
+    try:
+        with open(path, "rb") as f:
+            head = f.read(128)
+    except OSError:
+        return False
+    return GENERATED_MARK in head
+
+
 def write_png(path: Path, width: int, height: int, pixels: bytearray) -> Path:
     """``pixels`` is given row by row as RGB (without the filter byte)."""
     raw = bytearray()
@@ -59,6 +76,7 @@ def write_png(path: Path, width: int, height: int, pixels: bytearray) -> Path:
         raw += pixels[y * stride:(y + 1) * stride]
     png = (b"\x89PNG\r\n\x1a\n"
            + _chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+           + _chunk(b"tEXt", GENERATED_MARK)
            + _chunk(b"IDAT", zlib.compress(bytes(raw), 9))
            + _chunk(b"IEND", b""))
     path.parent.mkdir(parents=True, exist_ok=True)

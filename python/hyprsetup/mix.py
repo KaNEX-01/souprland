@@ -602,9 +602,15 @@ def _variant_colors(root: Path, profile: str, variant: str,
     return {"palette": extracted} if extracted else None
 
 
-def scan_profile(root: Path, profile: str, home: Path | None = None) -> dict:
+def scan_profile(root: Path, profile: str, home: Path | None = None,
+                 previous: dict | None = None, log=print) -> dict:
     """A rice's parts: its looks (wallpaper + colors) and its window
-    look."""
+    look.
+
+    ``previous`` is the profile's existing entry: if a wallpaper cannot be
+    fetched on this machine (package not installed, download failed) the
+    earlier result is kept instead of being downgraded to "no wallpaper"."""
+    old_variants = (previous or {}).get("variants", {})
     manifest = rice_mod.load(root, profile)
     preset = presets_mod.find(presets_mod.default_dir(root, "profile"), profile)
     entry: dict = {"title": preset.label if preset else profile,
@@ -616,6 +622,10 @@ def scan_profile(root: Path, profile: str, home: Path | None = None) -> dict:
             image, video = fetch_wallpaper(root, profile, name, home, staged)
             if image is not None:
                 _make_thumbnail(image, thumbnail_path(root, profile, name))
+            elif old_variants.get(name, {}).get("wallpaper"):
+                log(f"  {profile}/{name}: wallpaper not available here, keeping the previous result")
+                entry["variants"][name] = old_variants[name]
+                continue
             entry["variants"][name] = {
                 "title": variant.title or name,
                 "credit": variant.credit,
@@ -637,7 +647,8 @@ def scan(root: Path, profiles: list[str] | None = None,
                          if not rice_mod.is_imported(root, n)]
     for name in names:
         try:
-            data["profiles"][name] = scan_profile(root, name, home)
+            data["profiles"][name] = scan_profile(
+                root, name, home, data["profiles"].get(name), log)
             log(f"  {name}: ok")
         except Exception as exc:                                  # noqa: BLE001
             log(f"  {name}: ERROR — {exc}")
@@ -697,6 +708,22 @@ def describe(parts: dict, slot: str, value: str) -> str:
 
 
 # ------------------------------------------------------ mapping to settings ---
+def _wallpaper_hint(root: Path, profile: str, variant: str) -> str:
+    """Why fetch_wallpaper came back empty, in words the user can act on."""
+    manifest = rice_mod.load(root, profile)
+    chosen = manifest.variants.get(variant)
+    source = chosen.wallpaper if chosen else ""
+    if "://" in source:
+        return " (download failed — check the internet connection)"
+    if os.path.isabs(source) and not Path(source).is_file():
+        # e.g. athena: /usr/share/backgrounds/archlinux/… from archlinux-wallpaper
+        names = [p for p in (*manifest.packages_repo, *manifest.packages_aur)
+                 if "wallpaper" in p or "background" in p]
+        need = f"install {', '.join(names)}" if names else "it comes with a package of this rice"
+        return f" ({source} is missing — {need})"
+    return ""
+
+
 def slot_values(root: Path, parts: dict, slot: str, value: str,
                 home: Path | None = None) -> dict[str, str]:
     """Settings a slot selection writes. The wallpaper slot also puts the image
@@ -706,7 +733,8 @@ def slot_values(root: Path, parts: dict, slot: str, value: str,
         profile, variant = split_ref(value)
         image, _video = fetch_wallpaper(root, profile, variant, home)
         if image is None:
-            raise RuntimeError(f"could not fetch wallpaper: {value}")
+            raise RuntimeError(f"could not fetch wallpaper: {value}"
+                               f"{_wallpaper_hint(root, profile, variant)}")
         dest = home_dir / "Pictures" / "wallpapers" / f"mix-{profile}-{variant}{image.suffix}"
         dest.parent.mkdir(parents=True, exist_ok=True)
         if not dest.is_file() or dest.read_bytes() != image.read_bytes():
@@ -1306,6 +1334,38 @@ def _dmenu_commands(part: rice_mod.Part) -> dict[str, str]:
     return {}
 
 
+def _missing_program(command: str, home: Path) -> str:
+    """First program of ``command`` that is not installed ("" = all there).
+
+    A path (``~/.config/eww/scripts/start.sh``) counts as installed if the
+    file exists; ``_command_binaries`` alone only keeps the base name, which
+    ``which`` cannot find."""
+    for name in rice_mod._command_binaries(command):              # noqa: SLF001
+        if shutil.which(name):
+            continue
+        paths = [rice_mod.expand(word, home) for word in command.split()
+                 if "/" in word and os.path.basename(word) == name]
+        if not any(p.is_file() for p in paths):
+            return name
+    return ""
+
+
+def _missing_shell_package(part) -> str:
+    """A bar/shell program the part depends on but is not installed.
+
+    The start command may be the author's script (hyprclouds:
+    ``~/.config/eww/scripts/start.sh``): the script exists, but the eww it
+    runs does not, so checking the command alone stopped the user's waybar
+    for a bar that never opened. Only programs of the autostart groups count
+    — a missing jq or playerctl leaves the bar on screen.
+    """
+    shells = set().union(*rice_mod._AUTOSTART_GROUPS)            # noqa: SLF001
+    for name in (*part.packages_repo, *part.packages_aur):
+        if name in shells and not shutil.which(name):
+            return name
+    return ""
+
+
 def install_parts(root: Path, chosen: dict[str, str], values: dict[str, str],
                   home: Path | None = None, log=print) -> list[str]:
     """Installs the selected app parts (previous ones are reverted first).
@@ -1333,6 +1393,9 @@ def install_parts(root: Path, chosen: dict[str, str], values: dict[str, str],
     owned: list[str] = []
     warnings: list[str] = []
     provides: list[str] = []
+    #: start command → roles its part takes over (launch_parts stops the
+    #: role's other programs only for these).
+    exec_roles: dict[str, list[str]] = {}
     commands: dict[str, str] = {}
     starts: list[str] = []
     hypr_lines: list[str] = []
@@ -1437,19 +1500,37 @@ def install_parts(root: Path, chosen: dict[str, str], values: dict[str, str],
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(palette_file(kind, palette, wallpaper), encoding="utf-8")
                 owned.append(str(target))
-            provides += [c for c in part.provides if c not in provides]
+            missing = ((_missing_program(part.start, home_dir)
+                        or _missing_shell_package(part)) if part.start else "")
+            if missing:
+                # The part cannot do its job: it does not take over the role
+                # or the autostart. Otherwise the user's own bar was stopped
+                # and nothing replaced it (athena's eww bar without eww).
+                warnings.append(f"{part.title or part.slot}: '{missing}' is not installed "
+                                f"(package: {' '.join(part.packages_repo + part.packages_aur) or missing})"
+                                " — not started, your own one stays")
+            else:
+                provides += [c for c in part.provides if c not in provides]
             for key, value in {**_dmenu_commands(part), **part.commands}.items():
+                # A key command whose program is not installed is NOT taken
+                # over: r4ppz19's lock bound SUPER+L to swaylock without
+                # swaylock installed, so the lock key silently did nothing.
+                absent = (_missing_program(value, home_dir)
+                          if key in ("CMD_LAUNCHER", "CMD_TERMINAL", "LOCK_CMD") else "")
+                if absent:
+                    warnings.append(f"{part.title or part.slot}: '{absent}' is not installed "
+                                    f"(package: {' '.join(part.packages_repo + part.packages_aur) or absent})"
+                                    f" — your own {_COMMAND_SLOT.get(key, key)} command stays")
+                    continue
                 # If two parts want the same command, the slot owning that job
                 # wins (the launcher slot's command overrides the bar's).
                 if key not in commands or _COMMAND_SLOT.get(key) == _slot:
                     commands[key] = value
-            if part.start:
-                binary = rice_mod._command_binaries(part.start)[-1:]  # noqa: SLF001
-                if binary and not shutil.which(binary[0]):
-                    warnings.append(f"{part.title or part.slot}: '{binary[0]}' is not installed "
-                                    f"(package: {' '.join(part.packages_repo + part.packages_aur) or binary[0]})")
-            if part.start and part.start not in starts:
-                starts.append(part.start)
+            if part.start and not missing:
+                if part.start not in starts:
+                    starts.append(part.start)
+                roles = exec_roles.setdefault(part.start, [])
+                roles += [c for c in part.provides if c not in roles]
             hypr_lines += [line for line in part.hypr if line not in hypr_lines]
             if part.note:
                 warnings.append(f"{part.title or part.slot}: {part.note}")
@@ -1470,7 +1551,7 @@ def install_parts(root: Path, chosen: dict[str, str], values: dict[str, str],
     state = read_state(home)
     state["installed"] = {"parts": chosen, "owned": owned, "backup": str(backup),
                           "provides": provides, "commands": commands,
-                          "exec": starts, "warnings": warnings}
+                          "exec": starts, "exec_roles": exec_roles, "warnings": warnings}
     write_state(state, home)
     # Manual settings saved for this bar on the bar page (ricebar) are
     # written again because the files were reinstalled.
@@ -1502,13 +1583,31 @@ def launch_parts(home: Path | None = None) -> list[str]:
         if group and not group & own:
             for name in group:
                 subprocess.run(["pkill", "-x", name], capture_output=True, check=False)
+    group_role = {frozenset(g): r for r, g in roles.items()}
+    # Mixes installed before exec_roles existed: every command owns its group.
+    exec_roles = installed.get("exec_roles")
     for command in installed.get("exec", []):
         binaries = rice_mod._command_binaries(command)            # noqa: SLF001
+        owned_roles = None if exec_roles is None else set(exec_roles.get(command, []))
+        restart_only = False
         for name in binaries:
-            peers = next((g for g in rice_mod._AUTOSTART_GROUPS   # noqa: SLF001
-                          if name in g), {name})
+            group = next((g for g in rice_mod._AUTOSTART_GROUPS   # noqa: SLF001
+                          if name in g), None)
+            if group is None:
+                peers = {name}
+            elif owned_roles is None or group_role.get(frozenset(group)) in owned_roles:
+                peers = group
+            else:
+                # An extra program that is not the role's (eww desktop
+                # cards, a quickshell widget): stopping its group killed the
+                # user's waybar. Only an earlier copy of this command goes.
+                restart_only = True
+                continue
             for peer in peers:
                 subprocess.run(["pkill", "-x", peer], capture_output=True, check=False)
+        if restart_only:
+            subprocess.run(["pkill", "-f", "-x", f"(bash -lc )?{re.escape(command)}"],
+                           capture_output=True, check=False)
         argv = (["systemd-run", "--user", "--scope", "--quiet", f"--slice={SLICE}",
                  "--", "bash", "-lc", command] if shutil.which("systemd-run")
                 else ["bash", "-lc", command])
@@ -1547,6 +1646,10 @@ def apply(root: Path, slots: dict[str, str], log=print) -> dict[str, str]:
     wanted.update({k: v for k, v in slots.items() if k in APP_SLOT_IDS})
     validate_parts(root, wanted)
     if rice_mod.read_state():
+        # Fetch everything that can fail (wallpaper download, missing package
+        # file) BEFORE removing the rice: otherwise a failed mix leaves the
+        # user with neither the rice nor the mix. plan() writes no state.
+        plan(root, {k: v for k, v in slots.items() if k in SLOT_IDS}, {})
         restored = rice_mod.uninstall()
         log(f"Rice uninstalled ({len(restored)} files restored from backup)")
     catalog = Catalog.load(root / "config" / "components.json")

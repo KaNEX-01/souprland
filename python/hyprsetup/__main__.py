@@ -141,8 +141,12 @@ def _cmd_share(args: argparse.Namespace) -> int:
     from .gui.state import SetupState, config_path
 
     if args.action == "import":
-        name, skipped = profileshare.import_archive(Path(args.file),
-                                                    root=Path(args.root).resolve())
+        try:
+            name, skipped = profileshare.import_archive(Path(args.file),
+                                                        root=Path(args.root).resolve())
+        except Exception as exc:   # noqa: BLE001 — same as the GUI: a broken archive can raise anything
+            print(f"could not import {args.file}: {exc}", file=sys.stderr)
+            return 1
         print(f"Imported: {name} → {profileshare.SHARED_DIR / (name + '.conf')}")
         print("It can be applied from Profiles.")
         if skipped:
@@ -447,10 +451,15 @@ def _rice_install(root: Path, args: argparse.Namespace) -> int:
             print("your bar settings were re-applied")
         # exec-once lines only run at login; start the author's startup
         # programs now so the rice shows up right away.
+        provides = rice.read_state().get("provides", [])
         started, note = rice.start_session(
             root, args.name, args.variant or "",
             skip=os.environ.get("HYPRSETUP_AUTOSTART_SKIP", ""),
             pending=result.session)
+        if rice.read_state().get("provides", []) != provides:
+            # A role went back to the user (its program is not installed):
+            # their bar/notifier starts again.
+            print(_reapply_settings(root, start_missing=True))
         if started:
             print(f"started ({len(started)}): " + ", ".join(c.split()[0] for c in started))
         if note:

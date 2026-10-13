@@ -211,7 +211,7 @@ class SetupState:
         known_keys = self._conf_keys()
         self.extra_values = {k: v for k, v in loaded.items()
                              if k not in known_keys and k not in skip
-                             and k != "PROFILE"}
+                             and k not in ("PROFILE", "OVERWRITE_CONFIGS")}
         self._notify()
         return True
 
@@ -735,10 +735,13 @@ class SetupState:
             emit(key, self.get(key))
         lines.append("")
 
+        # Keys written in their own section (header, scope…) are skipped here:
+        # otherwise the file carries the same key twice.
+        own_section = {*HEADER_KEYS, *BAR_MODULE_KEYS, *KEYBIND_KEYS, *SCOPE_KEYS}
         for group in schema.GROUPS:
             lines.append(f"# --- {group.title} ---")
             for setting in group.settings:
-                if setting.key in ("CURSOR_SIZE",):
+                if setting.key in own_section:
                     continue
                 emit(setting.key, self.get(setting.key))
             lines.append("")

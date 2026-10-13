@@ -162,39 +162,47 @@ install_firefox_theme() {
     local src="$HOME/.config/hyprsetup/firefox/userChrome.css"
     [[ -r "$src" ]] || { debug "userChrome.css not generated, skipping"; return 0; }
 
-    local ini="$HOME/.mozilla/firefox/profiles.ini"
-    if [[ ! -r "$ini" ]]; then
+    # Firefox 147+ creates new profiles under $XDG_CONFIG_HOME/mozilla/firefox;
+    # older/upgraded installs stay in ~/.mozilla/firefox. Both are read.
+    local -a bases=()
+    local base
+    for base in "$HOME/.mozilla/firefox" "${XDG_CONFIG_HOME:-$HOME/.config}/mozilla/firefox"; do
+        [[ -r "$base/profiles.ini" ]] && bases+=("$base")
+    done
+    if ((${#bases[@]} == 0)); then
         warn "No Firefox profile found — open the browser once and rerun the installer."
         warn "  ./install.sh"
         return 0
     fi
 
     # The Path= lines in profiles.ini give the profile dirs.
-    # If IsRelative=1 the path is relative to ~/.mozilla/firefox (the typical case).
+    # If IsRelative=1 the path is relative to the profiles.ini directory (the typical case).
     local applied=0 path dir
-    while IFS= read -r path; do
-        [[ -n "$path" ]] || continue
-        if [[ "$path" == /* ]]; then dir="$path"; else dir="$HOME/.mozilla/firefox/$path"; fi
-        [[ -d "$dir" ]] || continue
+    for base in "${bases[@]}"; do
+        while IFS= read -r path; do
+            [[ -n "$path" ]] || continue
+            if [[ "$path" == /* ]]; then dir="$path"; else dir="$base/$path"; fi
+            [[ -d "$dir" ]] || continue
 
-        run mkdir -p "$dir/chrome"
-        [[ -e "$dir/chrome/userChrome.css" ]] && backup_path "$dir/chrome/userChrome.css"
-        if run cp "$src" "$dir/chrome/userChrome.css"; then
-            applied=$((applied + 1))
-        fi
-
-        # userChrome.css has been IGNORED BY DEFAULT since Firefox 69;
-        # without enabling this setting the file does nothing and the user says
-        # "the theme was not applied". user.js is merged into prefs.js when the profile opens.
-        local userjs="$dir/user.js"
-        if ! grep -qF 'legacyUserProfileCustomizations' "$userjs" 2>/dev/null; then
-            [[ -e "$userjs" ]] && backup_path "$userjs"
-            if [[ "${DRY_RUN:-0}" != 1 ]]; then
-                printf '\n// hyprsetup: read userChrome.css\nuser_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);\n' \
-                    >>"$userjs"
+            run mkdir -p "$dir/chrome"
+            [[ -e "$dir/chrome/userChrome.css" ]] && backup_path "$dir/chrome/userChrome.css"
+            if run cp "$src" "$dir/chrome/userChrome.css"; then
+                applied=$((applied + 1))
             fi
-        fi
-    done < <(sed -n 's/^Path=//p' "$ini")
+
+            # userChrome.css has been IGNORED BY DEFAULT since Firefox 69;
+            # without enabling this setting the file does nothing and the user says
+            # "the theme was not applied". user.js is merged into prefs.js when the profile opens.
+            local userjs="$dir/user.js"
+            if ! grep -qF 'legacyUserProfileCustomizations' "$userjs" 2>/dev/null; then
+                [[ -e "$userjs" ]] && backup_path "$userjs"
+                if [[ "${DRY_RUN:-0}" != 1 ]]; then
+                    printf '\n// hyprsetup: read userChrome.css\nuser_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);\n' \
+                        >>"$userjs"
+                fi
+            fi
+        done < <(sed -n 's/^Path=//p' "$base/profiles.ini")
+    done
 
     if ((applied)); then
         ok "Firefox theme applied to $applied profile(s) — restart Firefox."
@@ -347,16 +355,18 @@ hook_wayle() {
 }
 
 hook_quickshell() {
-    step "Quickshell installed — ~/.config/quickshell/shell.qml generated."
+    step "Quickshell installed — ~/.config/quickshell/hyprsetup/shell.qml generated."
     step "Docs: https://quickshell.outfoxxed.me"
     # Note: this message used to say "no config is generated"; now
     # templates/quickshell/shell.qml.tmpl generates both the bar and the widgets.
     #
     # The command DELIBERATELY uses "-p". "-c" expects a config *name* and
     # looks for ~/.config/quickshell/<name>/shell.qml; given a path, Quickshell
-    # cannot find the config and the bar never opens. Our file sits in the base
-    # folder (~/.config/quickshell/shell.qml), so the right flag is "-p".
-    step "To start manually: quickshell -p ~/.config/quickshell/shell.qml"
+    # cannot find the config and the bar never opens. Our file sits in its own
+    # folder (~/.config/quickshell/hyprsetup/shell.qml), so the right flag is "-p".
+    # NOT in the base folder: a shell.qml there makes Quickshell ignore every
+    # named config, so a rice's "qs -c <name>" bar could never start.
+    step "To start manually: quickshell -p ~/.config/quickshell/hyprsetup/shell.qml"
 }
 
 # The cli-tools packages (zoxide, fzf, eza, bat) are nearly useless without

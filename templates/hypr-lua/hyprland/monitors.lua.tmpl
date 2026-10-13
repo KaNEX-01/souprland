@@ -15,6 +15,9 @@
 ----------------------------------------------------------------------
 
 {{MONITOR_LINES}}
+{{#if MONITOR_NEEDS_DEFAULT}}
 
--- Safe default for unknown displays
+-- Safe default for unknown displays (left out when a line above already
+-- covers every display: the last matching rule wins).
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
+{{/if}}

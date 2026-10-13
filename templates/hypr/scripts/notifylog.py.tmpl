@@ -65,8 +65,30 @@ def _alive(pid_file: Path) -> bool:
         return False
 
 
+def _single_instance(lock: Path, wait: float = 3.0):
+    """Holds an exclusive lock for this process's lifetime; None if another
+    copy keeps it. Waits a little: on sync the old copy is still exiting."""
+    import fcntl
+    handle = open(lock, "w")
+    deadline = time.monotonic() + wait
+    while True:
+        try:
+            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return handle
+        except OSError:
+            if time.monotonic() > deadline:
+                handle.close()
+                return None
+            time.sleep(0.1)
+
+
 def run() -> int:
     if not ENABLED or _alive(PID):
+        return 0
+    # One recorder only, even when several syncs start one at the same moment
+    # (every copy would log each notification again).
+    guard = _single_instance(RUNTIME / "hyprsetup-notifylog.lock")
+    if guard is None:
         return 0
     from gi.repository import Gio, GLib
 
@@ -186,6 +208,11 @@ def main() -> int:
         except (OSError, ValueError):
             pass
         PID.unlink(missing_ok=True)
+        # The pid file only knows the last one: two syncs close together (rice
+        # install → uninstall → reapply) left an earlier copy running, possibly
+        # from a rice's script folder that no longer exists.
+        subprocess.run(["pkill", "-u", str(os.getuid()), "-f", r"notifylog\.py run$"],
+                       capture_output=True, check=False)
         if ENABLED:
             subprocess.Popen([sys.executable, __file__, "run"], start_new_session=True,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

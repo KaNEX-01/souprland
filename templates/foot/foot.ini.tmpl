@@ -13,7 +13,10 @@ multiplier=3.0
 style={{TERM_CURSOR}}
 blink={{TERM_BLINK_YESNO}}
 
-[colors]
+# foot 1.24+: [colors] was split into [colors-dark]/[colors-light]; the old
+# name is rejected ("invalid section name") and the whole palette is lost.
+# colors-dark is the default theme, so light palettes work here too.
+[colors-dark]
 alpha={{TERM_OPACITY_VALUE}}
 background={{COL_BG}}
 foreground={{COL_FG}}

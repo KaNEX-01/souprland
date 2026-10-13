@@ -111,7 +111,9 @@ sudo_init() {
         die "Could not get sudo privileges."
     fi
     # Keep the sudo session alive during long installs.
-    ( while true; do sudo -n true 2>/dev/null; sleep 50; kill -0 "$$" 2>/dev/null || exit; done ) &
+    # "|| true": the subshell inherits set -e and the ERR trap, so a single
+    # failed refresh would print "Unexpected error" and kill the keepalive.
+    ( while true; do sudo -n true 2>/dev/null || true; sleep 50; kill -0 "$$" 2>/dev/null || exit 0; done ) &
     SUDO_KEEPALIVE_PID=$!
 }
 

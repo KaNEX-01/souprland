@@ -905,6 +905,64 @@ class Result:
     session: list[str] = field(default_factory=list)
 
 
+#: The user's shared theme files that authors' scripts rewrite at run time
+#: although the rice does not install them (vantage: apply-foot-colors.py
+#: rewrites foot.ini; end4 applies its palette to KDE's kdeglobals,
+#: Trolltech.conf, gtkrc). They are not "owned", so uninstall used to leave
+#: the author's colors in them. Snapshotted at install, put back at uninstall.
+SHARED_FILES = (
+    ".config/foot/foot.ini", ".config/kdeglobals", ".config/Trolltech.conf",
+    ".config/gtkrc", ".config/gtkrc-2.0", ".gtkrc-2.0", ".config/konsolerc",
+    ".config/qt5ct/qt5ct.conf", ".config/qt6ct/qt6ct.conf",
+    ".config/Kvantum/kvantum.kvconfig", ".config/gtk-3.0/gtk.css",
+    ".config/gtk-4.0/gtk.css", ".config/gtk-3.0/colors.css", ".config/gtk-4.0/colors.css",
+)
+_SHARED = "_shared"            # snapshot in the backup ("_": not restored as a file)
+_SHARED_ABSENT = ".absent"     # shared files that did not exist at install
+_SHARED_RICE = "_shared-rice"  # the rice-time versions, kept in case they are wanted
+
+
+def _snapshot_shared(backup: Path, home: Path) -> None:
+    absent = []
+    for rel in SHARED_FILES:
+        path = home / rel
+        if path.is_file() and not path.is_symlink():
+            _copy(path, backup / _SHARED / rel)
+        elif not path.exists() and not path.is_symlink():
+            absent.append(rel)
+    (backup / _SHARED).mkdir(parents=True, exist_ok=True)
+    (backup / _SHARED / _SHARED_ABSENT).write_text("\n".join(absent), encoding="utf-8")
+
+
+def _restore_shared(backup: Path, home: Path, owned: list[str]) -> list[str]:
+    """Shared files the rice changed go back to their install-time content;
+    ones it created are removed. Both rice-time versions go to _shared-rice."""
+    snap = backup / _SHARED
+    if not snap.is_dir():
+        return []                   # installed before this existed
+    mine = [Path(o) for o in owned]
+    absent = set((snap / _SHARED_ABSENT).read_text(encoding="utf-8").split()) \
+        if (snap / _SHARED_ABSENT).is_file() else set()
+    restored = []
+    for rel in SHARED_FILES:
+        target = home / rel
+        if any(o == target or o in target.parents for o in mine):
+            continue                # the rice installs it: owned/backup handle it
+        saved = snap / rel
+        if saved.is_file():
+            if target.is_file() and target.read_bytes() == saved.read_bytes():
+                continue
+        elif not (rel in absent and target.is_file()):
+            continue
+        if target.is_file() or target.is_symlink():
+            _copy(target, backup / _SHARED_RICE / rel)
+            target.unlink()
+        if saved.is_file():
+            _copy(saved, target)
+        restored.append(str(target))
+    return restored
+
+
 def _move_aside(target: Path, backup: Path, home: Path) -> None:
     rel = target.relative_to(home)
     dest = backup / rel
@@ -955,6 +1013,7 @@ def install(root: Path, profile: str, variant: str = "",
             return result
 
         backup = backups_mod.new_dir("install", home)
+        _snapshot_shared(backup, home)
         owned: list[str] = []
         for src, dest, mode in plan.items:
             # A target that falls inside an earlier item (e.g. hypr/hyprlock.conf
@@ -1016,10 +1075,19 @@ def install(root: Path, profile: str, variant: str = "",
     chosen = plan.variant
     state = {"profile": profile, "variant": chosen, "commit": manifest.commit,
              "repo": manifest.repo, "owned": owned, "backup": result.backup_dir,
-             "provides": manifest.provides,
+             "provides": _available_provides(
+                 manifest.provides, home, (*manifest.packages_repo, *manifest.packages_aur)),
              "installed_at": datetime.now().isoformat(timespec="seconds")}
     state_path(home).parent.mkdir(parents=True, exist_ok=True)
     state_path(home).write_text(json.dumps(state, indent=2), encoding="utf-8")
+
+    # A Lua setup has just replaced hyprland.conf: a conf session falls back to
+    # Hyprland's STUB at once (no keybindings, SUPER+M logs out). The builds
+    # below can take minutes (end4: uv over a slow network), so the bridge
+    # goes in now, not only in start_session.
+    if (run_commands and home == Path.home() and config_provider() not in ("", "lua")
+            and _lua_rice_without_conf(home / ".config/hypr")):
+        _write_lua_bridge(home / ".config/hypr")
 
     if run_commands:
         for command in manifest.build:
@@ -1333,6 +1401,19 @@ LUA_BRIDGE_MARK = "# hyprsetup: temporary bridge for the Lua setup"
 _LEGACY_LUA_BRIDGE_MARK = "# hyprsetup: Lua kurulumu için geçici köprü"
 
 
+def _lua_rice_without_conf(hypr: Path) -> bool:
+    """The author's setup is Lua (hyprland.lua) and hyprland.conf is gone, is
+    Hyprland's STUB or our bridge — a conf session then needs the bridge."""
+    conf = hypr / "hyprland.conf"
+    head = conf.read_text(errors="ignore") if conf.is_file() else ""
+    stub = "This config is a STUB" in head or head.startswith(
+        (LUA_BRIDGE_MARK, _LEGACY_LUA_BRIDGE_MARK))
+    lua = hypr / "hyprland.lua"
+    lua_rice = (lua.is_file() and not lua.read_text(errors="ignore")
+                .startswith((CONF_BRIDGE_MARK, _LEGACY_CONF_BRIDGE_MARK)))
+    return lua_rice and (stub or not conf.is_file())
+
+
 def _write_lua_bridge(hypr: Path) -> None:
     """Temporary hyprland.conf for a (conf) session running a Lua setup.
 
@@ -1480,6 +1561,85 @@ def sync_conf_bridge(home: Path | None = None, reload: bool = True) -> bool:
     return True
 
 
+def _available_provides(provides: list[str], home: Path,
+                        packages: tuple[str, ...] = ()) -> list[str]:
+    """The roles the theme can really take over on this machine.
+
+    athena "provides" the bar with eww; without eww installed the user's
+    waybar was still dropped (the role belonged to the theme) and the screen
+    had no bar at all. A role whose programs named in the theme's autostart
+    are all missing stays with the user. A role started through a script
+    (hyprclouds' start.sh) is judged by the theme's packages; with neither
+    (vantage's launch.sh) it is kept.
+    """
+    roles = dict(zip(("notify", "wallpaper", "bar"), _AUTOSTART_GROUPS, strict=False))
+    named = {b for c in autostart_commands(home) for b in _command_binaries(c)}
+    named |= set(packages)
+    out = []
+    for role in provides:
+        programs = named & roles.get(role, set())
+        if programs and not any(shutil.which(b) for b in programs):
+            continue
+        out.append(role)
+    return out
+
+
+def _roles_in_slice() -> set[str]:
+    """Roles (bar/notify/wallpaper) with a program running in the theme's SLICE."""
+    roles = dict(zip(("notify", "wallpaper", "bar"), _AUTOSTART_GROUPS, strict=False))
+    out: set[str] = set()
+    for role, group in roles.items():
+        for name in group:
+            pids = subprocess.run(["pgrep", "-u", str(os.getuid()), "-x", name],
+                                  capture_output=True, text=True).stdout.split()
+            for pid in pids:
+                try:
+                    if SLICE in Path(f"/proc/{pid}/cgroup").read_text():
+                        out.add(role)
+                except OSError:
+                    continue
+    return out
+
+
+def _stop_replaced_outside_slice(settle: float = 2.0) -> list[str]:
+    """Stops the user's bar/notifier/wallpaper daemon the theme has replaced.
+
+    Peers were only stopped when the theme's command line named a known
+    program; a theme starting its bar through a script (vantage's
+    ``launch.sh``, ``caelestia shell``) left the user's waybar on screen next
+    to the theme's own bar. Everything the theme starts runs in SLICE, so per
+    role: if a program of that role runs inside the slice, the same role's
+    programs outside it are the user's and go (they come back on uninstall).
+    """
+    import signal
+    import time
+
+    time.sleep(settle)                  # scripts spawn their real programs late
+    stopped: list[str] = []
+    for group in _AUTOSTART_GROUPS:
+        inside: list[int] = []
+        outside: list[tuple[str, int]] = []
+        for name in sorted(group):
+            out = subprocess.run(["pgrep", "-u", str(os.getuid()), "-x", name],
+                                 capture_output=True, text=True).stdout
+            for pid in map(int, out.split()):
+                try:
+                    cgroup = Path(f"/proc/{pid}/cgroup").read_text()
+                except OSError:
+                    continue
+                (inside.append(pid) if SLICE in cgroup
+                 else outside.append((name, pid)))
+        if not inside:
+            continue
+        for name, pid in outside:
+            try:
+                os.kill(pid, signal.SIGTERM)
+                stopped.append(name)
+            except OSError:
+                pass
+    return stopped
+
+
 def start_session(root: Path, profile: str, variant: str = "",
                   home: Path | None = None, skip: str = "",
                   pending: list[str] | None = None) -> tuple[list[str], str]:
@@ -1507,15 +1667,8 @@ def start_session(root: Path, profile: str, variant: str = "",
         _run(look, home, {}, wait_daemon=wait_daemon)
 
     hypr = home / ".config/hypr"
-    conf = hypr / "hyprland.conf"
-    head = conf.read_text(errors="ignore") if conf.is_file() else ""
-    stub = "This config is a STUB" in head or head.startswith(
-        (LUA_BRIDGE_MARK, _LEGACY_LUA_BRIDGE_MARK))
     provider = config_provider()
-    lua_rice = ((hypr / "hyprland.lua").is_file()
-                and not (hypr / "hyprland.lua").read_text(errors="ignore")
-                .startswith((CONF_BRIDGE_MARK, _LEGACY_CONF_BRIDGE_MARK)))
-    if lua_rice and (stub or not conf.is_file()):
+    if _lua_rice_without_conf(hypr):
         if provider == "lua":
             # The session is already Lua: the author's hyprland.lua loads directly.
             subprocess.run(["hyprctl", "reload"], capture_output=True, check=False,
@@ -1536,6 +1689,7 @@ def start_session(root: Path, profile: str, variant: str = "",
     skip_re = re.compile(skip) if skip else None
     handled: set[str] = set()
     started: list[str] = []
+    missing: set[str] = set()
     # Bars that do not specify a monitor are placed on the focused one: like at
     # login, focus the primary monitor and start, then restore the old focus.
     was_focused = displays_mod.focused_monitor()
@@ -1549,6 +1703,12 @@ def start_session(root: Path, profile: str, variant: str = "",
         def running(name: str) -> bool:
             return subprocess.run(["pgrep", "-x", name], capture_output=True).returncode == 0
         restart = [b for b in binaries if b in _AUTOSTART_RESTART]
+        absent = [b for b in restart if not shutil.which(b)]
+        if absent:
+            # Stopping the user's waybar/mako for an eww that is not installed
+            # (athena, hyprclouds without their packages) left no bar at all.
+            missing.update(absent)
+            continue
         if not restart and binaries and running(binaries[-1]):
             continue                    # already running (e.g. the polkit agent)
         for name in restart:
@@ -1563,6 +1723,28 @@ def start_session(root: Path, profile: str, variant: str = "",
     # The wallpaper daemon has now been started; the look commands wait for it.
     run_look(wait_daemon=any(b in ("awww-daemon", "swww-daemon")
                              for c in started for b in _command_binaries(c)))
+    if started and shutil.which("systemd-run"):
+        _stop_replaced_outside_slice()
+    # Now the autostart lines are all in place (rice.conf themes get them
+    # from this project's render): drop the roles nothing here can play.
+    state = read_state(home)
+    try:
+        manifest = load(root, profile)
+        packages = (*manifest.packages_repo, *manifest.packages_aur)
+    except (OSError, ValueError, KeyError):
+        packages = ()
+    # What really runs in the theme's slice wins over any guess: vantage
+    # lists a missing mpvpaper but draws its wallpaper with awww-daemon.
+    live = _roles_in_slice() if started and shutil.which("systemd-run") else set()
+    guess = _available_provides(state.get("provides", []), home, packages)
+    keep = [r for r in state.get("provides", []) if r in live or r in guess]
+    if state and keep != state.get("provides", []):
+        state["provides"] = keep
+        state_path(home).write_text(json.dumps(state, indent=2), encoding="utf-8")
+    if missing:
+        note = " ".join(filter(None, [note, (
+            f"Not installed: {', '.join(sorted(missing))} — install this theme's packages; "
+            "until then your own bar/notifications stay.")]))
     if was_focused != primary:
         displays_mod.focus_monitor(was_focused)
     return started, note
@@ -1611,6 +1793,7 @@ def uninstall(home: Path | None = None) -> list[str]:
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(item, target, follow_symlinks=False)
             restored.append(str(target))
+        restored += _restore_shared(backup, home, state.get("owned", []))
     # The layout in the backup is the pre-install state; the latest layout is put back.
     displays_mod.restore(home)
     state_path(home).unlink(missing_ok=True)

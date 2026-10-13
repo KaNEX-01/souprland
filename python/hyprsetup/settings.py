@@ -1144,7 +1144,7 @@ GROUPS: list[Group] = [
                                ("python", "Built-in PNG decoder")],
                       help="Only used when the theme is 'auto': colors are "
                            "extracted from the wallpaper. matugen gives the "
-                           "best result (AUR: matugen-bin); the built-in "
+                           "best result (package: matugen); the built-in "
                            "decoder has no dependencies but only reads PNG."),
               Setting("WALLPAPER_IMAGE", "Bundled image in the repo", kind="text",
                       default="",

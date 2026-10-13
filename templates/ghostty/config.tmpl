@@ -34,7 +34,9 @@ palette = 15={{HEX_FG}}
 
 scrollback-limit = {{TERM_SCROLLBACK_BYTES}}
 background-opacity = {{TERM_OPACITY_VALUE}}
-background-blur-radius = {{BLUR_SIZE}}
+# No background-blur here: Ghostty only supports it on macOS/KDE, under
+# Hyprland the blur comes from decoration:blur (background-blur-radius was
+# removed and makes Ghostty print an InvalidField error).
 window-padding-x = {{TERM_PADDING_VALUE}}
 window-padding-y = {{TERM_PADDING_VALUE}}
 {{#if TERM_BG_ON}}

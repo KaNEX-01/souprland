@@ -401,7 +401,7 @@ BAR_MODULES_RIGHT=cpu,memory,pulseaudio,network,battery
   skipped, exactly like Waybar's behavior.
 * **One process.** The bar and the widgets share the same `shell.qml`; even if
   both are given to Quickshell, a single line is written to autostart
-  (`render.py`, "quickshell -p ~/.config/quickshell/shell.qml").
+  (`render.py`, "quickshell -p ~/.config/quickshell/hyprsetup/shell.qml").
 * **The difference from widgets is `exclusiveZone`:** the bar reserves space
   at the edge, so windows do not end up underneath it. Desktop widgets keep
   floating with `exclusiveZone: 0`.

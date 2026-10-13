@@ -134,7 +134,7 @@
           "keys": "MOD+G",
           "dispatcher": "exec",
           "args": "~/.config/hypr/scripts/widgets.sh toggle",
-          "require": "HAS_EWW"
+          "require": "HAS_EWW || HAS_QUICKSHELL"
         },
         {
           "id": "notifications",

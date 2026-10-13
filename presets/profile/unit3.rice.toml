@@ -18,9 +18,10 @@ provides = ["bar", "widget", "launcher", "notify", "wallpaper"]
 post_install = [
   "find ~/.config/hypr ~/.config/quickshell ~/.config/waybar -type f \\( -name '*.sh' -o -name '*.py' \\) -exec chmod +x {} + 2>/dev/null || true",
   "mkdir -p ~/Pictures/wallpapers ~/Screenshots",
-  # The pixel-wave videos are generated on first start (wave-check.sh, ~10 s);
-  # generating them during install spares the first login the wait.
-  "~/.config/quickshell/wave-check.sh >/dev/null 2>&1 || true",
+  # wave-check.sh (the pixel-wave videos) is NOT run here: it blocks until the
+  # videos are rendered (over a minute without a GPU) and these commands run in
+  # one script with the look, so the wallpaper waited for it; the author's
+  # exec-once (started by start_session) runs it anyway, in the background.
   "hyprctl reload >/dev/null 2>&1 || true",
 ]
 

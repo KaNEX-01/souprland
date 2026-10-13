@@ -187,7 +187,7 @@ config_defaults() {
     # Palette name, or "auto" → extract the colors from the wallpaper.
     : "${THEME:=catppuccin-mocha}"       # python3 -m hyprsetup themes
     # Extraction backend for THEME="auto". auto = try them in order.
-    #   matugen  Material You (AUR: matugen-bin) — best result
+    #   matugen  Material You (extra: matugen) — best result
     #   magick   ImageMagick histogram — reads every image format
     #   python   built-in PNG decoder — no dependencies, PNG only
     : "${PALETTE_BACKEND:=auto}"         # auto | matugen | magick | python

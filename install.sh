@@ -275,6 +275,8 @@ color_scheme_step() {
 # script, and overwriting it is safe.
 _wallpaper_is_ours() {
     local existing="$1" size sum="" candidate
+    # A pattern generated earlier (python/hyprsetup/wallpaper.py GENERATED_MARK).
+    head -c 128 -- "$existing" 2>/dev/null | grep -aq 'souprland-pattern' && return 0
     have md5sum || return 1
     size=$(stat -c %s -- "$existing" 2>/dev/null) || return 1
     # Size first: only the candidates matching in size among the repo's ~75 MB are read.
@@ -506,6 +508,25 @@ EOF
            warn "  Add to your shell:  export PATH=\"\$HOME/.local/bin:\$PATH\"" ;;
     esac
     ok "Settings app installed — open it with MOD+I or from the app menu"
+}
+
+# The default CURSOR_THEME (Bibata) comes from the cursor-theme component, which
+# is not in DEFAULT_COMPONENTS. Pointing GTK/Hyprland at a missing theme leaves
+# the cursor invisible or inconsistent, so fall back to Adwaita (always present
+# with gtk) — the same idea as the GTK/icon theme derivation in render.py.
+cursor_theme_fallback() {
+    local c="${CURSOR_THEME:-}" d
+    [[ -n "$c" ]] || return 0
+    for d in "/usr/share/icons/$c" "$HOME/.icons/$c" "$HOME/.local/share/icons/$c" \
+             "$SETUP_ROOT/assets/cursors/$c"; do
+        [[ -d "$d" ]] && return 0
+    done
+    # In --dry-run the package step installed nothing; the theme may arrive later.
+    if [[ "${DRY_RUN:-0}" == 1 ]] && in_list cursor-theme "${SELECTED[@]}"; then
+        return 0
+    fi
+    warn "Cursor theme '$c' is not installed — using Adwaita instead."
+    CURSOR_THEME="Adwaita"
 }
 
 summary_step() {
@@ -770,6 +791,7 @@ main() {
     fi
 
     install_packages_step
+    cursor_theme_fallback
     wallpaper_step
     run_hooks_step
     # The nvidia and plymouth hooks may touch mkinitcpio.conf separately; if

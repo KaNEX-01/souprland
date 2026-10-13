@@ -108,7 +108,9 @@ main() {
     fi
     ((${#created[@]})) && step "${#created[@]} files were newly created by that install — they will be deleted"
 
-    confirm "Continue? Existing files will be overwritten." n ||
+    # --dry-run lists what would happen below; the default "no" here used to
+    # end it before a single file was shown.
+    [[ "$DRY_RUN" == 1 ]] || confirm "Continue? Existing files will be overwritten." n ||
         { warn "Cancelled."; exit 0; }
 
     # System files (e.g. /etc/...) are kept under "_root"; since they need root

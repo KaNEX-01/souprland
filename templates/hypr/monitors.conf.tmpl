@@ -22,9 +22,13 @@
 ####################################################################
 
 {{MONITOR_LINES}}
+{{#if MONITOR_NEEDS_DEFAULT}}
 
-# Safe default for unknown displays
+# Safe default for unknown displays (left out when a line above already covers
+# every display — Hyprland takes the LAST matching rule, so this one used to
+# override a scale/resolution set for all displays).
 monitor = , preferred, auto, 1
+{{/if}}
 
 # ------------------------------------------------------------ workspaces ---
 # To pin workspaces to displays, set in settings.conf:

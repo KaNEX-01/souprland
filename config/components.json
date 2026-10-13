@@ -120,7 +120,11 @@
             "hyprland-guiutils",
             "hyprcursor",
             "hyprutils",
-            "gnome-themes-extra"
+            "gnome-themes-extra",
+            "gtk4",
+            "libadwaita",
+            "python-gobject",
+            "python-cairo"
           ],
           "aur": []
         },
@@ -236,7 +240,7 @@
             "quickshell"
           ],
           "aur": [],
-          "exec": "quickshell -p ~/.config/quickshell/shell.qml"
+          "exec": "quickshell -p ~/.config/quickshell/hyprsetup/shell.qml"
         },
         {
           "id": "wayle",
@@ -274,7 +278,7 @@
             "quickshell"
           ],
           "aur": [],
-          "exec": "quickshell -p ~/.config/quickshell/shell.qml",
+          "exec": "quickshell -p ~/.config/quickshell/hyprsetup/shell.qml",
           "url": "https://quickshell.outfoxxed.me"
         }
       ]
@@ -800,10 +804,10 @@
           "id": "matugen",
           "title": "matugen (Material You)",
           "desc": "Extracts a palette from the wallpaper — for THEME=\"auto\"",
-          "repo": [],
-          "aur": [
-            "matugen-bin"
-          ]
+          "repo": [
+            "matugen"
+          ],
+          "aur": []
         },
         {
           "id": "plymouth",

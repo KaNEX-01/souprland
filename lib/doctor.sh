@@ -90,8 +90,19 @@ _doctor_session() {
 _doctor_configs() {
     _d_head "Config files"
     local base="$HOME/.config"
+    # While a ready-made profile (rice) is installed, ~/.config/hypr is the
+    # author's: our split files are not there by design, and "./install.sh"
+    # would overwrite the profile. Its config is checked by "rice verify".
+    local rice_state="$base/hyprsetup/rice.json" rice_name=""
+    if [[ -r "$rice_state" ]] && have jq &&
+       jq -e --arg d "$base/hypr" '.owned | index($d)' "$rice_state" >/dev/null 2>&1; then
+        rice_name=$(jq -r '.profile // "?"' "$rice_state" 2>/dev/null)
+    fi
 
-    if [[ "${MANAGE_HYPR_CONFIGS:-1}" == 0 ]]; then
+    if [[ -n "$rice_name" ]]; then
+        _d_ok "Hyprland config belongs to the installed profile '$rice_name'"
+        _d_hint "Check it with: PYTHONPATH=python python3 -m hyprsetup rice verify $rice_name   (in the repo folder)"
+    elif [[ "${MANAGE_HYPR_CONFIGS:-1}" == 0 ]]; then
         _d_ok "Hyprland config is not managed by this tool (MANAGE_HYPR_CONFIGS=0)"
     elif [[ "${HYPR_LANG_RESOLVED:-conf}" == lua ]]; then
         local file

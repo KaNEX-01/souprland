@@ -1,4 +1,4 @@
-{{! require: MANAGE_HYPR_CONFIGS && HAS_EWW }}
+{{! require: MANAGE_HYPR_CONFIGS && HAS_EWW || MANAGE_HYPR_CONFIGS && HAS_QUICKSHELL }}
 {{! mode: 755 }}
 #!/usr/bin/env bash
 # widgets.sh — show/hide the desktop widgets (MOD+W).
@@ -19,6 +19,18 @@
 #     widgets.sh hide      close
 set -uo pipefail
 
+{{#if HAS_QUICKSHELL}}
+# Quickshell engine: every widget lives in quickshell/hyprsetup/shell.qml,
+# which shows/hides them itself (IpcHandler "widgets"); nothing to open one
+# by one. Without this branch MOD+G did nothing and WIDGET_AUTOSTART was
+# ignored with Quickshell.
+case "${1:-toggle}" in
+    toggle|show|hide)
+        exec quickshell -p ~/.config/quickshell/hyprsetup/shell.qml ipc call widgets "${1:-toggle}" ;;
+    *)
+        echo "usage: widgets.sh toggle|show|hide" >&2; exit 2 ;;
+esac
+{{/if}}
 WIDGETS=({{WIDGET_NAMES}})
 
 if ! command -v eww >/dev/null 2>&1; then
