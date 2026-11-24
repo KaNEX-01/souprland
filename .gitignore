@@ -10,10 +10,8 @@ __pycache__/
 /render-out/
 *.log
 
-# Wallhaven images for the Script Test profiles: other people's uploads,
-# not put in the repo; downloaded on first use via sources.json (hyprsetup/wallhaven.py).
-wallpapers/wallhaven/*
-!wallpapers/wallhaven/sources.json
+# Former Wallhaven downloads (replaced by the CC0 photos in wallpapers/photo/).
+wallpapers/wallhaven/
 
 # ruff cache
 .ruff_cache/

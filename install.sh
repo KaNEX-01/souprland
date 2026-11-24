@@ -298,15 +298,18 @@ wallpaper_step() {
 
     if [[ -n "${WALLPAPER_IMAGE:-}" ]]; then
         local src="$SETUP_ROOT/$WALLPAPER_IMAGE"
-        # Wallhaven images are not in the repo (sources.json): downloaded, or else
-        # the profile's old generated wallpaper (python/hyprsetup/wallhaven.py).
-        if [[ ! -r "$src" && "$WALLPAPER_IMAGE" == wallpapers/wallhaven/* \
-              && "${DRY_RUN:-0}" != 1 ]]; then
-            src=$(PYTHONPATH="$SETUP_ROOT/python" python3 -c \
-                'import sys; from pathlib import Path; from hyprsetup import wallhaven
-p = wallhaven.ensure(Path(sys.argv[1]), sys.argv[2]); print(p or "")' \
-                "$SETUP_ROOT" "$WALLPAPER_IMAGE" 2>/dev/null)
-            [[ -n "$src" ]] || src="$SETUP_ROOT/$WALLPAPER_IMAGE"
+        # The Wallhaven picks were replaced by CC0 photos (wallpapers/photo/):
+        # an old wallpapers/wallhaven/<profile>.* path from a settings.conf maps
+        # to the same profile's photo, else its generated wallpaper
+        # (python/hyprsetup/photos.py).
+        if [[ ! -r "$src" && "$WALLPAPER_IMAGE" == wallpapers/wallhaven/* ]]; then
+            local stem="${WALLPAPER_IMAGE##*/}"
+            stem="${stem%.*}"
+            if [[ -r "$SETUP_ROOT/wallpapers/photo/$stem.jpg" ]]; then
+                src="$SETUP_ROOT/wallpapers/photo/$stem.jpg"
+            elif [[ -r "$SETUP_ROOT/wallpapers/$stem.png" ]]; then
+                src="$SETUP_ROOT/wallpapers/$stem.png"
+            fi
         fi
         if [[ -r "$src" ]]; then
             if [[ -e "$wp" ]] && ! _wallpaper_is_ours "$wp"; then

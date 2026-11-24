@@ -594,6 +594,14 @@ app.
 > `temaornek/` folder that is not part of the repository): the look is
 > rebuilt with our own palette, bar CSS and a procedurally drawn wallpaper —
 > no image is copied from the references.
+>
+> Twenty-nine of them open with a **real photograph** by default (their
+> *photo* look variant): CC0 or public-domain images from Wikimedia Commons,
+> shipped in `wallpapers/photo/` and credited in
+> [`wallpapers/photo/CREDITS.md`](wallpapers/photo/CREDITS.md). The
+> *generated* variant switches back to the drawn wallpaper. (These replaced
+> earlier Wallhaven picks that were downloaded at install time; several were
+> game, film or anime art and none had a licence on record.)
 
 > **The author profiles are real setups.** Each of the 18 author profiles
 > installs **the author's own dotfiles** instead of imitating them with this

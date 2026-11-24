@@ -1137,11 +1137,10 @@ class Applier:
 
         if image:
             source = self.root / image
-            if not source.is_file() and image.startswith("wallpapers/wallhaven/"):
-                # Wallhaven images are not in the repo: downloaded on first use,
-                # otherwise the profile's old generated wallpaper (wallhaven.py).
-                from . import wallhaven
-                source = wallhaven.ensure(self.root, image) or source
+            if not source.is_file():
+                # A former Wallhaven path → the profile's CC0 photo (photos.py).
+                from . import photos
+                source = photos.resolve(self.root, image) or source
             if source.is_file():
                 try:
                     if (target.exists()

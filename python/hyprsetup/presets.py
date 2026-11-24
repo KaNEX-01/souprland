@@ -315,6 +315,9 @@ def load_variants(root: Path, profile: str) -> list[Preset]:
 def find_variant(root: Path, profile: str, name: str) -> Preset | None:
     if not name or "/" in name or name.startswith("."):
         return None
+    # Renamed variants (e.g. "wallhaven" → "photo", see photos.py).
+    from .photos import VARIANT_ALIAS
+    name = VARIANT_ALIAS.get(name, name)
     path = variants_dir(root, profile) / f"{name}.conf"
     return parse(path) if path.is_file() else None
 
@@ -393,7 +396,8 @@ def resolve_chain(root: Path, profile: str = "", bar: str = "",
         variant_preset = find_variant(root, profile, variant_name)
         if variant_preset:
             values.update(variant_preset.values)
-            values["PROFILE_VARIANT"] = variant_name
+            from .photos import VARIANT_ALIAS
+            values["PROFILE_VARIANT"] = VARIANT_ALIAS.get(variant_name, variant_name)
         else:
             values.pop("PROFILE_VARIANT", None)
 
