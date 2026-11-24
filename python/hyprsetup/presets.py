@@ -102,11 +102,20 @@ WIDGET_SET_KEYS = (
     "WIDGETS", "WIDGET_ZONE_TL", "WIDGET_ZONE_TC", "WIDGET_ZONE_TR",
     "WIDGET_ZONE_BL", "WIDGET_ZONE_BC", "WIDGET_ZONE_BR", "WIDGET_OFFSETS",
     "WIDGET_MARGIN", "WIDGET_GAP", "WIDGET_SCALE",
-    "WIDGET_RADIUS", "WIDGET_OPACITY",
+)
+
+#: Keys owned by a widget STYLE (presets/widget-style/): how the widgets look,
+#: independent of which ones are on and where (the widget set). Same list as
+#: lib/preset.sh:PRESET_WIDGET_STYLE_KEYS and render.WIDGET_LOOK_DEFAULTS.
+WIDGET_STYLE_KEYS = (
+    "WIDGET_RADIUS", "WIDGET_OPACITY", "WIDGET_BOX", "WIDGET_SURFACE",
+    "WIDGET_BORDER", "WIDGET_BORDER_TONE", "WIDGET_SHADOW", "WIDGET_BLUR",
+    "WIDGET_METER", "WIDGET_MUSIC", "WIDGET_CLOCK",
 )
 
 #: Independent axes — see lib/preset.sh
-KINDS = ("profile", "bar", "terminal", "launcher", "widget", "widget-set")
+KINDS = ("profile", "bar", "terminal", "launcher", "widget", "widget-set",
+         "widget-style")
 
 #: Settings "owned" by a bar preset. All of them are reset when the preset
 #: changes: otherwise leftover values from the previous preset leak — e.g.
@@ -357,7 +366,7 @@ def reset_values(keys, defaults: dict[str, str]) -> dict[str, str]:
 def resolve_chain(root: Path, profile: str = "", bar: str = "",
                   widgets: str = "", terminal: str = "",
                   launcher: str = "", widget_set: str = "",
-                  variant: str = "") -> dict[str, str]:
+                  variant: str = "", widget_style: str = "") -> dict[str, str]:
     """Resolves the profile → bar / terminal / launcher preset → widget chain.
 
     Same precedence rules as ``lib/preset.sh:preset_apply_chain``:
@@ -409,11 +418,13 @@ def resolve_chain(root: Path, profile: str = "", bar: str = "",
     # widget-set: which widgets are on and in which corner — all in one.
     # Behaves like a bar preset, but since it also writes the WIDGETS list it
     # must be applied BEFORE the widget resolution below.
+    # widget-style: how the widgets look; like widget-set, no "auto" match.
     for kind, given, key in (("widget-set", widget_set, "WIDGET_SET"),
+                             ("widget-style", widget_style, "WIDGET_STYLE"),
                              ("terminal", terminal, "TERM_PRESET"),
                              ("launcher", launcher, "LAUNCHER_PRESET")):
         name = given or values.get(key, "")
-        if not name and kind != "widget-set":
+        if not name and kind not in ("widget-set", "widget-style"):
             name = AUTO          # no name given: the preset matching the bar preset
         if not name:
             continue

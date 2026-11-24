@@ -262,6 +262,35 @@ together (`WIDGET_SET`); after applying it you can change it however you like
 in the corner editor. Source table:
 [`preset-sources.md`](preset-sources.md).
 
+## 6b. Widget styles
+
+Widget sets say *which* widgets go *where*; until now every widget still had
+the same dark box with a 2 px accent border. A **widget style**
+(`presets/widget-style/`, `WIDGET_STYLE`) is the look axis: it writes the
+look settings together, and each of them stays editable under *Look and
+size* afterwards.
+
+| Style | Look |
+|---|---|
+| `box` | the original: dark box, accent border, counters as text, compact clock |
+| `capsule` | borderless pills on the surface tone, thin bars — matches capsule bars |
+| `bare` | no boxes: a big thin clock and bars straight on the wallpaper |
+| `glass` | translucent cards, Hyprland blur, light edge, shadow, rings, music card |
+| `material` | large tonal cards with shadow, stacked clock, rings, music card |
+
+The look settings: `WIDGET_BOX`, `WIDGET_SURFACE`, `WIDGET_BORDER`,
+`WIDGET_BORDER_TONE`, `WIDGET_SHADOW`, `WIDGET_BLUR`, `WIDGET_METER`
+(text / bar / ring), `WIDGET_MUSIC` (line / card), `WIDGET_CLOCK`
+(compact / large / stacked), plus `WIDGET_RADIUS` and `WIDGET_OPACITY`, which
+moved from the widget sets to the style. Gauges, clock and music layouts are
+Quickshell-only; eww follows the box, border and colour.
+
+The Quickshell widgets read music, volume and battery from Quickshell's own
+MPRIS, PipeWire and UPower services (live, no `playerctl`/`pamixer` polling),
+hide when there is nothing to show (no battery, no player, no backlight), and
+open on `WIDGET_MONITOR` — a connector name (`DP-1`) or index — or, when
+empty, on the monitor focused at startup.
+
 ## 7. Finding a setting: search
 
 The box at the top left of the settings app searches **all settings** by

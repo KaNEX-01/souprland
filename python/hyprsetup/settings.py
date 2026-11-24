@@ -677,11 +677,11 @@ GROUPS: list[Group] = [
                            "covered by windows; widgets on the 'desktop' "
                            "layer are only visible on an empty workspace. "
                            "If you want to see them at any time, choose "
-                           "'top' and toggle them with MOD+W."),
+                           "'top' and toggle them with MOD+G."),
               Setting("WIDGET_AUTOSTART", "Show on startup", kind="bool",
                       default="true",
                       help="When off, widgets are not shown at session "
-                           "start; they only open with the MOD+W "
+                           "start; they only open with the MOD+G "
                            "binding. That is the natural use together with "
                            "the 'Top' layer."),
               Setting("WIDGET_MONITOR", "Display", kind="text", default="",
@@ -708,14 +708,63 @@ GROUPS: list[Group] = [
                       help="Enlarges/shrinks the widget boxes and their text "
                            "together. 1.0 = the designed size."),
               Setting("WIDGET_RADIUS", "Corner rounding", kind="int",
-                      default="12", minimum=0, maximum=40, unit="px",
+                      default="12", minimum=0, maximum=999, unit="px",
                       affects_preview=True,
-                      help="Corner radius of the widget box."),
+                      help="Corner radius of the widget box. A value above half "
+                           "the box height (e.g. 999) makes a pill."),
               Setting("WIDGET_OPACITY", "Background opacity", kind="float",
                       default="0.85", minimum=0.0, maximum=1.0, step=0.05,
                       affects_preview=True,
                       help="Opacity of the box background. The text always "
                            "stays fully opaque."),
+              # ---- Look: written together by a widget style
+              # (presets/widget-style/, WIDGET_STYLE) and changeable one by one.
+              # The Quickshell engine draws all of them; eww uses the plate,
+              # border and surface settings only.
+              Setting("WIDGET_BOX", "Draw a box", kind="bool", default="true",
+                      affects_preview=True,
+                      help="Off: no plate at all — the text sits straight on "
+                           "the wallpaper with a soft shadow."),
+              Setting("WIDGET_SURFACE", "Box colour", kind="choice", default="bg",
+                      choices=[("bg", "Background — the theme's darkest tone"),
+                               ("surface", "Surface — the lighter tonal colour")],
+                      affects_preview=True,
+                      help="Which theme colour the box is painted with."),
+              Setting("WIDGET_BORDER", "Border width", kind="int", default="2",
+                      minimum=0, maximum=8, unit="px", affects_preview=True,
+                      help="0 = no border."),
+              Setting("WIDGET_BORDER_TONE", "Border colour", kind="choice",
+                      default="accent",
+                      choices=[("accent", "Accent — the theme's accent colour"),
+                               ("soft", "Soft — faded accent"),
+                               ("light", "Light — a thin glass edge")],
+                      affects_preview=True),
+              Setting("WIDGET_SHADOW", "Drop shadow", kind="bool", default="false",
+                      help="A soft shadow under each box (Quickshell)."),
+              Setting("WIDGET_BLUR", "Blur behind boxes", kind="bool",
+                      default="false",
+                      help="Hyprland blurs the wallpaper behind the box — the "
+                           "frosted-glass look. Best with a low opacity "
+                           "(Quickshell)."),
+              Setting("WIDGET_METER", "Gauges", kind="choice", default="text",
+                      choices=[("text", "Text — \"CPU 39%\""),
+                               ("bar", "Bar — a thin progress bar"),
+                               ("ring", "Ring — a circular gauge")],
+                      affects_preview=True,
+                      help="How CPU/RAM, disk, battery, volume, brightness and "
+                           "temperature are drawn (Quickshell)."),
+              Setting("WIDGET_MUSIC", "Music widget", kind="choice",
+                      default="line",
+                      choices=[("line", "Line — artist and title"),
+                               ("card", "Card — cover, progress and buttons")],
+                      affects_preview=True,
+                      help="(Quickshell)"),
+              Setting("WIDGET_CLOCK", "Clock", kind="choice", default="compact",
+                      choices=[("compact", "Compact — time and date in a small box"),
+                               ("large", "Large — a big thin clock"),
+                               ("stacked", "Stacked — hours over minutes")],
+                      affects_preview=True,
+                      help="(Quickshell)"),
           ]),
 
     Group("visualizer", "Audio visualizer", "audio-x-generic-symbolic",

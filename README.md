@@ -784,7 +784,7 @@ applied to the desktop. With the app closed, a command does the same job:
 hyprsetup watch &          # watch the file, apply on every change
 ```
 
-There are 314 settings;
+There are 324 settings;
 [`config/settings.conf.example`](config/settings.conf.example) lists them all
 with descriptions. 289 of them appear in the app's settings schema as regular
 rows; the rest (theme, fonts, bar modules, keybindings, default apps,
@@ -1178,6 +1178,14 @@ generates the config. The page also names the selected engine, warns when the
 engine's package is not installed, and says why when a component a widget
 needs is missing. Ready-made widget sets live in `presets/widget-set/`.
 
+How the widgets **look** is a separate axis: a widget style
+(`presets/widget-style/`, `WIDGET_STYLE`) sets the box, border, shadow, blur,
+gauges (text / bar / ring), clock (compact / large / stacked) and music
+layout (line / cover card) together — `box`, `capsule`, `bare`, `glass`,
+`material`. After applying one, each look setting can still be changed on its
+own. The gauges, clock and music layouts are drawn by the Quickshell engine;
+eww uses the box, border and colour settings.
+
 ---
 
 ## Generated files
@@ -1488,7 +1496,7 @@ modules/*.sh               component-specific post-install steps
 config/components.json     component catalog (single source of truth)
 config/keybinds.json       keybindings (conf + app + help screen)
 config/settings.conf.example  example settings file
-presets/bar|terminal|launcher|widget|widget-set/*.conf   preset looks
+presets/bar|terminal|launcher|widget|widget-set|widget-style/*.conf   preset looks
 presets/profile/           profiles (*.conf; author setups also *.rice.toml)
 templates/                 configuration templates
 dotfiles/<name>/           ready-made configs generated from the templates

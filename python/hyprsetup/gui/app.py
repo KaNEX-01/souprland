@@ -1055,6 +1055,10 @@ class MainWindow(Adw.ApplicationWindow):
         # corner layout + sizes. Not to be confused with presets/widget/.
         self.widget_sets = presets_mod.load_all(
             presets_mod.default_dir(root, "widget-set"))
+        # Widget LOOK presets (presets/widget-style/): plate, border, gauges,
+        # clock and music layout. Independent of the layout above.
+        self.widget_styles = presets_mod.load_all(
+            presets_mod.default_dir(root, "widget-style"))
         self.term_presets = presets_mod.load_all(
             presets_mod.default_dir(root, "terminal"))
         self.launcher_presets = presets_mod.load_all(
@@ -4875,6 +4879,7 @@ class MainWindow(Adw.ApplicationWindow):
         page.add(self._widget_engine_group())
         page.add(self._widget_toggle_group())
         page.add(self._widget_set_group())
+        page.add(self._widget_style_group())
         page.add(self._widget_zone_group())
 
         # Look settings come from the schema; WIDGETS and the zone lists are
@@ -5179,6 +5184,48 @@ class MainWindow(Adw.ApplicationWindow):
                     button.remove_css_class("suggested-action")
         title = next((p.title for p in self.widget_sets if p.name == name), name)
         self._toast(f"Widget layout applied: {title}")
+
+    def _widget_style_group(self) -> Adw.PreferencesGroup:
+        """Look presets: how the widgets are drawn, whatever the layout.
+
+        The layouts above only said WHICH widgets go WHERE; every widget still
+        had the same dark box with an accent border. A style writes the look
+        settings (plate, border, shadow, blur, gauges, clock, music card)
+        together; each of them stays editable in "Look and size" below.
+        """
+        group = Adw.PreferencesGroup(
+            title="Widget style",
+            description="A style sets how every widget looks — box, border, "
+                        "gauges, clock and music layout. The layout above "
+                        "stays as it is; after applying, each look setting "
+                        "can still be changed below.")
+        self._widget_style_rows: dict[str, Adw.ActionRow] = {}
+        current = self.state.get("WIDGET_STYLE")
+        for preset in self.widget_styles:
+            row = Adw.ActionRow(title=esc(preset.title or preset.name),
+                                subtitle=esc(preset.desc))
+            row.set_subtitle_lines(3)
+            button = Gtk.Button(label="Apply", valign=Gtk.Align.CENTER)
+            button.connect("clicked", self._on_widget_style_clicked, preset.name)
+            row.add_suffix(button)
+            if preset.name == current:
+                button.add_css_class("suggested-action")
+            self._widget_style_rows[preset.name] = row
+            group.add(row)
+        return group
+
+    def _on_widget_style_clicked(self, _button, name: str) -> None:
+        self.state.apply_widget_style(self.root, name)
+        self._sync_all_rows()               # the look rows show the new values
+        for style_name, row in self._widget_style_rows.items():
+            button = row.get_last_child()   # the "Apply" button
+            if isinstance(button, Gtk.Button):
+                if style_name == name:
+                    button.add_css_class("suggested-action")
+                else:
+                    button.remove_css_class("suggested-action")
+        title = next((p.title for p in self.widget_styles if p.name == name), name)
+        self._toast(f"Widget style applied: {title}")
 
     def _widget_zone_group(self) -> Adw.PreferencesGroup:
         """Positions in the same layout as their places on screen: 3 columns × 2 rows."""

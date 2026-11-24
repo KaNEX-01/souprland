@@ -2249,6 +2249,72 @@ QUICKSHELL_WIDGET_REQUIRES: dict[str, str] = {
     if spec.requires and "quickshell" in spec.engines}
 
 
+#: Widget LOOK settings (presets/widget-style/ writes them together; each
+#: one can then be changed on its own). Defaults reproduce the original
+#: look ("box"), so a config that never picked a style renders unchanged.
+#: Same keys as presets.py:WIDGET_STYLE_KEYS minus the preset name itself.
+WIDGET_LOOK_DEFAULTS: dict[str, str] = {
+    "WIDGET_RADIUS": "12",
+    "WIDGET_OPACITY": "0.85",
+    "WIDGET_BOX": "true",          # false: no plate, text straight on the wallpaper
+    "WIDGET_SURFACE": "bg",        # bg | surface — the theme colour of the plate
+    "WIDGET_BORDER": "2",          # border width (px)
+    "WIDGET_BORDER_TONE": "accent",  # accent | soft | light
+    "WIDGET_SHADOW": "false",
+    "WIDGET_BLUR": "false",        # Hyprland blur behind the plate
+    "WIDGET_METER": "text",        # text | bar | ring — CPU/RAM/disk/battery…
+    "WIDGET_MUSIC": "line",        # line | card (cover, progress, buttons)
+    "WIDGET_CLOCK": "compact",     # compact | large | stacked
+}
+WIDGET_LOOK_CHOICES: dict[str, tuple[str, ...]] = {
+    "WIDGET_SURFACE": ("bg", "surface"),
+    "WIDGET_BORDER_TONE": ("accent", "soft", "light"),
+    "WIDGET_METER": ("text", "bar", "ring"),
+    "WIDGET_MUSIC": ("line", "card"),
+    "WIDGET_CLOCK": ("compact", "large", "stacked"),
+}
+
+#: Meter widgets: one value drawn as text, a bar or a ring (WIDGET_METER).
+METER_WIDGETS = ("sysinfo", "battery", "volume", "brightness", "disk",
+                 "temperature")
+
+
+def widget_look(variables: dict[str, str]) -> dict[str, str]:
+    """The effective look settings: user/style values, defaults for the gaps,
+    unknown choice values fall back to the default."""
+    out: dict[str, str] = {}
+    for key, default in WIDGET_LOOK_DEFAULTS.items():
+        value = (variables.get(key) or "").strip() or default
+        choices = WIDGET_LOOK_CHOICES.get(key)
+        out[key] = value if not choices or value in choices else default
+    return out
+
+
+def widget_size(name: str, variables: dict[str, str],
+                engine: str = "quickshell") -> tuple[int, int]:
+    """Unscaled box size of a widget. The catalog size fits the original text
+    layout; the Quickshell-only layouts (rings, music card, big clocks) need
+    a different box, and the layout/preview must know it up front."""
+    spec = WIDGET_CATALOG[name]
+    if engine != "quickshell":
+        return spec.width, spec.height
+    look = widget_look(variables)
+    if name == "clock":
+        return {"large": (300, 120), "stacked": (210, 190)}.get(
+            look["WIDGET_CLOCK"], (spec.width, spec.height))
+    if name == "music" and look["WIDGET_MUSIC"] == "card":
+        return 330, 124
+    if name == "calendar":
+        return 250, 236
+    if name in METER_WIDGETS:
+        meter = look["WIDGET_METER"]
+        if meter == "ring":
+            return (230, 124) if name == "sysinfo" else (124, 124)
+        if meter == "bar":
+            return (230, 88) if name == "sysinfo" else (210, 58)
+    return spec.width, spec.height
+
+
 def _split_widgets(value: str) -> list[str]:
     return [w.strip() for w in (value or "").split(",") if w.strip()]
 
@@ -2378,9 +2444,9 @@ def widget_layout(variables: dict[str, str], selected: list[str],
         if h_edge == "center":
             side = 0
         for name in ordered[zone]:
-            spec = WIDGET_CATALOG[name]
-            width = int(round(spec.width * scale))
-            height = int(round(spec.height * scale))
+            base_w, base_h = widget_size(name, variables, engine)
+            width = int(round(base_w * scale))
+            height = int(round(base_h * scale))
             dx, dy = offsets.get(name, (0, 0))
             if h_edge == "center":
                 dx = 0
@@ -2486,6 +2552,7 @@ def _widget_vars(variables: dict[str, str], selected: list[str],
     out["WIDGET_RADIUS_VALUE"] = str(max(0, _int(variables.get("WIDGET_RADIUS", ""), 12)))
     out["WIDGET_BG_QML"] = qml_bg
     out["WIDGET_BG_CSS"] = css_bg
+    out.update(_widget_look_vars(variables, colors))
     # Precomputed font sizes and padding for the eww/GTK side: SCSS has no
     # multiplication, these numbers are the counterpart of QML's Item.scale.
     out["WIDGET_FS_TITLE"] = str(max(8, round(28 * scale)))
@@ -2497,6 +2564,60 @@ def _widget_vars(variables: dict[str, str], selected: list[str],
     # sizes are multiplied by it (the QML side uses Item.scale).
     out["WIDGET_FONT_SCALE"] = f"{scale:.2f}"
     return out
+
+
+def _qml_rgba(hex_color: str, alpha: float) -> str:
+    """"#rrggbb" + alpha → QML "#AARRGGBB"."""
+    raw = (hex_color or "#000000").lstrip("#")[:6].ljust(6, "0")
+    return f"#{round(max(0.0, min(alpha, 1.0)) * 255):02x}{raw}"
+
+
+def _widget_look_vars(variables: dict[str, str],
+                      colors: dict[str, str]) -> dict[str, str]:
+    """WS_* variables: the widget style in template form (see shell.qml.tmpl
+    "widget style" QtObject — every widget reads its look from there)."""
+    look = widget_look(variables)
+    accent = colors.get("HEX_ACCENT") or "#89b4fa"
+    fg = colors.get("HEX_FG") or "#cdd6f4"
+    base = (colors.get("HEX_SURFACE") if look["WIDGET_SURFACE"] == "surface"
+            else colors.get("HEX_BG")) or "#1e1e2e"
+    opacity = _clamp01(look["WIDGET_OPACITY"], 0.85)
+    box = truthy(look["WIDGET_BOX"])
+    border = max(0, min(_int(look["WIDGET_BORDER"], 2), 8))
+    tone = look["WIDGET_BORDER_TONE"]
+    border_color = {"accent": _qml_rgba(accent, 1.0),
+                    "soft": _qml_rgba(accent, 0.35),
+                    "light": _qml_rgba("#ffffff", 0.18)}[tone]
+    shadow = box and truthy(look["WIDGET_SHADOW"])
+    blur = box and truthy(look["WIDGET_BLUR"])
+    qml_bg, css_bg = _widget_bg({"HEX_BG": base}, opacity)
+    return {
+        "WS_BOX": "true" if box else "false",
+        "WS_BG": qml_bg,
+        "WS_BG_CSS": css_bg,
+        "WS_BORDER_WIDTH": str(border if box else 0),
+        "WS_BORDER_COLOR": border_color,
+        "WS_BORDER_CSS": (f"{border}px solid {accent}" if box and border and tone == "accent"
+                          else f"{border}px solid rgba(255, 255, 255, 0.18)"
+                          if box and border and tone == "light"
+                          else f"{border}px solid {_widget_bg({'HEX_BG': accent}, 0.35)[1]}"
+                          if box and border else "none"),
+        "WS_SHADOW": "true" if shadow else "false",
+        # Room around the plate for the drop shadow (the layer surface would
+        # clip it otherwise).
+        "WS_SHADOW_PAD": "14" if shadow else "0",
+        # Without a plate the text sits on the wallpaper: a soft text shadow
+        # keeps it readable on bright images.
+        "WS_TEXT_SHADOW": "false" if box else "true",
+        "WS_TRACK": _qml_rgba(fg, 0.14),
+        "WS_METER": look["WIDGET_METER"],
+        "WS_MUSIC": look["WIDGET_MUSIC"],
+        "WS_CLOCK": look["WIDGET_CLOCK"],
+        # Hyprland blurs the layer behind namespaces matched in
+        # hypr/windowrules (see "hyprsetup-widget-blur").
+        "WS_NAMESPACE": "hyprsetup-widget-blur" if blur else "hyprsetup-widget",
+        "WS_MONITOR": (variables.get("WIDGET_MONITOR") or "").strip().replace('"', ""),
+    }
 
 
 def _eww_widget_vars(variables: dict[str, str], selected: list[str],

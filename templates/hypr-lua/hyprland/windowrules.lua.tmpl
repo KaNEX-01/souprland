@@ -134,6 +134,10 @@ hl.layer_rule({ name = "dock-blur", match = { namespace = "^(nwg-dock)$" }, blur
 {{#if HAS_WAYBAR}}
 hl.layer_rule({ name = "barpanel-blur", match = { namespace = "^(hyprsetup-panel)$" }, blur = true, ignore_alpha = 0.3, no_anim = true })
 {{/if}}
+{{#if HAS_QUICKSHELL}}
+-- Desktop widgets with WIDGET_BLUR ("glass" style); see windowrules.conf.tmpl.
+hl.layer_rule({ name = "widget-blur", match = { namespace = "^(hyprsetup-widget-blur)$" }, blur = true, ignore_alpha = 0.2 })
+{{/if}}
 {{#if HAS_WOFI}}
 hl.layer_rule({ name = "wofi-blur", match = { namespace = "^(wofi)$" }, blur = true, ignore_alpha = 0.5 })
 {{/if}}

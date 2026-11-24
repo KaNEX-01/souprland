@@ -237,9 +237,13 @@ WIDGETS=""                  # e.g. "clock,calendar,disk"
 #   Widgets → Layout presets
 # minimal | dashboard | media | laptop | monitor | material | traveler | showcase
 WIDGET_SET=""
+# Widget look preset (presets/widget-style/): box, border, gauges, clock and
+# music layout together. In the settings app: Widgets → Widget style.
+# box | capsule | bare | glass | material
+WIDGET_STYLE=""
 # Which layer are widgets drawn on? On a tiling desktop the screen is almost
 # always covered by windows, so widgets on the "bottom" layer are in practice
-# only visible on an EMPTY workspace. To see them at any time: "top" + MOD+SHIFT+W.
+# only visible on an EMPTY workspace. To see them at any time: "top" + MOD+G.
 WIDGET_LAYER="bottom"       # bottom | top
 WIDGET_AUTOSTART=true       # show at session start?
 # Which display: index (0, 1…). A name is accepted too, but it is the MODEL
@@ -261,6 +265,15 @@ WIDGET_GAP=10               # gap between widgets (px)
 WIDGET_SCALE=1.0            # box + text scale (0.5–2.0)
 WIDGET_RADIUS=12            # corner rounding (px)
 WIDGET_OPACITY=0.85         # opacity of the box background (text stays opaque)
+WIDGET_BOX=true             # false: no box, text straight on the wallpaper
+WIDGET_SURFACE="bg"         # bg | surface — theme colour of the box
+WIDGET_BORDER=2             # border width (px, 0 = none)
+WIDGET_BORDER_TONE="accent" # accent | soft | light
+WIDGET_SHADOW=false         # drop shadow (Quickshell)
+WIDGET_BLUR=false           # Hyprland blur behind the box (Quickshell)
+WIDGET_METER="text"         # text | bar | ring — gauges (Quickshell)
+WIDGET_MUSIC="line"         # line | card — music widget (Quickshell)
+WIDGET_CLOCK="compact"      # compact | large | stacked (Quickshell)
 
 # Widget engine — chosen on the Components page. Empty = no widgets.
 #   eww | quickshell

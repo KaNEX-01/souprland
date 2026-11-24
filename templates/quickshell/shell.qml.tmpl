@@ -35,9 +35,14 @@ import Quickshell
 // kept the config from loading at all, and the bar never opened).
 import Quickshell.Wayland
 import Quickshell.Io
-{{#if QS_BAR}}
+// Hyprland: the bar's workspaces and the widgets' screen/workspace.
 import Quickshell.Hyprland
-{{/if}}
+// Widgets: drop shadow (MultiEffect) and Quickshell's own services — MPRIS,
+// PipeWire and UPower update live instead of polling playerctl/pamixer.
+import QtQuick.Effects
+import Quickshell.Services.Mpris
+import Quickshell.Services.Pipewire
+import Quickshell.Services.UPower
 
 ShellRoot {
     id: shellRoot
@@ -395,245 +400,443 @@ ShellRoot {
     }
     }
 {{/if}}
-{{#if HAS_QS_WIDGET_CLOCK}}
-    PanelWindow {
-        visible: shellRoot.widgetsShown
-        anchors { top: {{WG_CLOCK_TOP}}; bottom: {{WG_CLOCK_BOTTOM}}; left: {{WG_CLOCK_LEFT}}; right: {{WG_CLOCK_RIGHT}} }
-        margins { top: {{WG_CLOCK_Y}}; bottom: {{WG_CLOCK_Y}}; left: {{WG_CLOCK_X}}; right: {{WG_CLOCK_X}} }
-        implicitWidth: {{WG_CLOCK_W}}
-        implicitHeight: {{WG_CLOCK_H}}
+    // ---------------------------------------------------------- widgets ---
+    // Every desktop widget is drawn through WidgetWindow + Card + WText/Meter,
+    // and all of them read their look from the "ws" object below. Those
+    // values come from the widget STYLE (presets/widget-style/, then the
+    // WIDGET_* look settings one by one): changing a style changes every
+    // widget in one place. Before this, each widget hard-coded its own plate
+    // (dark box, 2 px accent border), so there was exactly one look.
+    QtObject {
+        id: ws
+        readonly property real s: {{WIDGET_SCALE_VALUE}}
+        readonly property bool box: {{WS_BOX}}
+        readonly property color bg: "{{WS_BG}}"
+        readonly property color border: "{{WS_BORDER_COLOR}}"
+        readonly property int borderWidth: {{WS_BORDER_WIDTH}}
+        readonly property int radius: {{WIDGET_RADIUS_VALUE}}
+        readonly property bool shadow: {{WS_SHADOW}}
+        readonly property int pad: {{WS_SHADOW_PAD}}
+        readonly property bool textShadow: {{WS_TEXT_SHADOW}}
+        readonly property string meter: "{{WS_METER}}"
+        readonly property string music: "{{WS_MUSIC}}"
+        readonly property string clock: "{{WS_CLOCK}}"
+        readonly property string ns: "{{WS_NAMESPACE}}"
+        readonly property color fg: "{{HEX_FG}}"
+        readonly property color sub: "{{HEX_SUBTEXT}}"
+        readonly property color accent: "{{HEX_ACCENT}}"
+        readonly property color inkOnAccent: "{{HEX_BG}}"
+        readonly property color track: "{{WS_TRACK}}"
+        readonly property string font: "{{FONT_FAMILY}}"
+        // Icons are Nerd Font glyphs: the UI font usually lacks them (they
+        // showed up as boxes), the terminal font is a Nerd Font.
+        readonly property string iconFont: "{{FONT_MONO}}"
+        function px(n) { return Math.round(n * s) }
+    }
+
+    // Which screen the widgets live on. WIDGET_MONITOR: connector name
+    // ("DP-1") or index; empty = the monitor focused when the shell starts.
+    // Without a screen Quickshell used its first screen, which is often not
+    // the one with the bar.
+    property var widgetScreen: null
+    Component.onCompleted: {
+        const want = "{{WS_MONITOR}}"
+        const screens = Quickshell.screens
+        let name = want
+        if (want === "" && Hyprland.focusedMonitor)
+            name = Hyprland.focusedMonitor.name
+        for (let i = 0; i < screens.length; i++)
+            if (screens[i].name === name || String(i) === want) {
+                widgetScreen = screens[i]
+                return
+            }
+        widgetScreen = screens.length ? screens[0] : null
+    }
+
+    component WidgetWindow: PanelWindow {
+        id: win
+        property bool atTop
+        property bool atBottom
+        property bool atLeft
+        property bool atRight
+        property int mx
+        property int my
+        property int boxW
+        property int boxH
+        // A widget with nothing to show (no battery, no player…) hides.
+        property bool hasData: true
+        default property alias content: card.inner
+        screen: shellRoot.widgetScreen
+        visible: shellRoot.widgetsShown && hasData
+        anchors { top: atTop; bottom: atBottom; left: atLeft; right: atRight }
+        margins {
+            top: Math.max(0, my - ws.pad); bottom: Math.max(0, my - ws.pad)
+            left: Math.max(0, mx - ws.pad); right: Math.max(0, mx - ws.pad)
+        }
+        implicitWidth: boxW + 2 * ws.pad
+        implicitHeight: boxH + 2 * ws.pad
         color: "transparent"
         exclusiveZone: 0
-        // Desktop widget: bottom layer. With the default WlrLayer.Top the
-        // window would stay above every app (see the note at the top of the file).
+        // Bottom = on the desktop below windows, Top = above (WIDGET_LAYER).
         WlrLayershell.layer: {{WIDGET_LAYER_QML}}
+        WlrLayershell.namespace: ws.ns
         focusable: false
+        Card { id: card; anchors.fill: parent; anchors.margins: ws.pad }
+    }
 
+    component Card: Item {
+        default property alias inner: body.data
         Rectangle {
             anchors.fill: parent
-            color: "{{WIDGET_BG_QML}}"
-            radius: {{WIDGET_RADIUS_VALUE}}
-            border.color: "{{HEX_ACCENT}}"
-            border.width: 2
+            visible: ws.box
+            color: ws.bg
+            radius: Math.min(ws.radius, height / 2)
+            border.color: ws.border
+            border.width: ws.borderWidth
+            layer.enabled: ws.shadow
+            layer.effect: MultiEffect {
+                shadowEnabled: true
+                shadowColor: "#90000000"
+                shadowBlur: 0.9
+                shadowVerticalOffset: 4
+                autoPaddingEnabled: true
+            }
+        }
+        Item {
+            id: body
+            anchors.fill: parent
+            anchors.margins: ws.box ? ws.px(12) : 0
+        }
+    }
 
-            Column {
-                anchors.centerIn: parent
-                scale: {{WIDGET_SCALE_VALUE}}
-                spacing: 4
+    component WText: Text {
+        color: ws.fg
+        font.family: ws.font
+        font.pixelSize: ws.px(14)
+        style: ws.textShadow ? Text.Raised : Text.Normal
+        styleColor: "#a0000000"
+        elide: Text.ElideRight
+    }
+    component WIcon: WText {
+        font.family: ws.iconFont
+        color: ws.accent
+    }
 
-                Text {
-                    id: clockTime
-                    text: Qt.formatTime(new Date(), "hh:mm:ss")
-                    color: "{{HEX_ACCENT}}"
-                    font.pixelSize: 28
-                    font.bold: true
-                    font.family: "{{FONT_FAMILY}}"
-                }
-                Text {
-                    id: clockDate
-                    text: Qt.formatDate(new Date(), "dddd, d MMMM")
-                    color: "{{HEX_SUBTEXT}}"
-                    font.pixelSize: 13
-                    font.family: "{{FONT_FAMILY}}"
+    // One value as text ("CPU 39%"), a thin bar or a ring (WIDGET_METER).
+    component Meter: Item {
+        id: m
+        property string icon
+        property string label
+        property real value: 0          // 0..1
+        property string valueText: Math.round(value * 100) + "%"
+        property real shown: value
+        Behavior on shown { NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
+        onShownChanged: ring.requestPaint()
+
+        RowLayout {
+            anchors.fill: parent
+            visible: ws.meter === "text"
+            spacing: ws.px(8)
+            WIcon { text: m.icon; font.pixelSize: ws.px(16) }
+            WText { text: m.label; color: ws.sub; Layout.fillWidth: true }
+            WText { text: m.valueText; font.bold: true }
+        }
+        ColumnLayout {
+            anchors.fill: parent
+            visible: ws.meter === "bar"
+            spacing: ws.px(6)
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: ws.px(8)
+                WIcon { text: m.icon; font.pixelSize: ws.px(15) }
+                WText { text: m.label; color: ws.sub; Layout.fillWidth: true }
+                WText { text: m.valueText; font.bold: true }
+            }
+            Rectangle {
+                Layout.fillWidth: true
+                implicitHeight: ws.px(5)
+                radius: height / 2
+                color: ws.track
+                Rectangle {
+                    width: parent.width * Math.max(0, Math.min(m.shown, 1))
+                    height: parent.height
+                    radius: height / 2
+                    color: ws.accent
                 }
             }
         }
+        Item {
+            anchors.fill: parent
+            visible: ws.meter === "ring"
+            Canvas {
+                id: ring
+                width: Math.min(parent.width, parent.height - ws.px(16))
+                height: width
+                anchors.horizontalCenter: parent.horizontalCenter
+                onPaint: {
+                    const ctx = getContext("2d")
+                    ctx.reset()
+                    const lw = Math.max(3, ws.px(6))
+                    const r = width / 2 - lw / 2 - 1
+                    ctx.lineWidth = lw
+                    ctx.lineCap = "round"
+                    ctx.strokeStyle = ws.track
+                    ctx.beginPath()
+                    ctx.arc(width / 2, height / 2, r, 0, 2 * Math.PI)
+                    ctx.stroke()
+                    const v = Math.max(0, Math.min(m.shown, 1))
+                    if (v > 0.005) {
+                        ctx.strokeStyle = ws.accent
+                        ctx.beginPath()
+                        ctx.arc(width / 2, height / 2, r, -Math.PI / 2,
+                                -Math.PI / 2 + 2 * Math.PI * v)
+                        ctx.stroke()
+                    }
+                }
+                WText {
+                    anchors.centerIn: parent
+                    text: m.valueText
+                    font.bold: true
+                    font.pixelSize: ws.px(15)
+                }
+            }
+            WText {
+                anchors.bottom: parent.bottom
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: m.label
+                color: ws.sub
+                font.pixelSize: ws.px(11)
+            }
+        }
+    }
 
-        Timer {
-            interval: 1000
-            running: true
-            repeat: true
-            onTriggered: {
-                clockTime.text = Qt.formatTime(new Date(), "hh:mm:ss")
-                clockDate.text = Qt.formatDate(new Date(), "dddd, d MMMM")
+{{#if HAS_QS_WIDGET_CLOCK}}
+    WidgetWindow {
+        atTop: {{WG_CLOCK_TOP}}; atBottom: {{WG_CLOCK_BOTTOM}}; atLeft: {{WG_CLOCK_LEFT}}; atRight: {{WG_CLOCK_RIGHT}}
+        mx: {{WG_CLOCK_X}}; my: {{WG_CLOCK_Y}}; boxW: {{WG_CLOCK_W}}; boxH: {{WG_CLOCK_H}}
+
+        Item {
+            id: clockFace
+            anchors.fill: parent
+            property date now: new Date()
+            Timer {
+                interval: 1000; running: true; repeat: true
+                onTriggered: clockFace.now = new Date()
+            }
+            // compact: time + date in one small card
+            Column {
+                anchors.centerIn: parent
+                visible: ws.clock === "compact"
+                spacing: ws.px(2)
+                WText {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: Qt.formatTime(clockFace.now, "hh:mm:ss")
+                    color: ws.accent
+                    font.pixelSize: ws.px(28)
+                    font.bold: true
+                }
+                WText {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: Qt.formatDate(clockFace.now, "dddd, d MMMM")
+                    color: ws.sub
+                    font.pixelSize: ws.px(13)
+                }
+            }
+            // large: a big thin clock, the classic "text on the wallpaper"
+            Column {
+                anchors.centerIn: parent
+                visible: ws.clock === "large"
+                spacing: 0
+                WText {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: Qt.formatTime(clockFace.now, "hh:mm")
+                    font.pixelSize: ws.px(68)
+                    font.weight: Font.Light
+                    font.letterSpacing: ws.px(2)
+                }
+                WText {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: Qt.formatDate(clockFace.now, "dddd, d MMMM")
+                    color: ws.accent
+                    font.pixelSize: ws.px(15)
+                    font.letterSpacing: ws.px(1)
+                }
+            }
+            // stacked: hours over minutes
+            Column {
+                anchors.centerIn: parent
+                visible: ws.clock === "stacked"
+                spacing: -ws.px(14)
+                WText {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: Qt.formatTime(clockFace.now, "hh")
+                    font.pixelSize: ws.px(72)
+                    font.bold: true
+                }
+                WText {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: Qt.formatTime(clockFace.now, "mm")
+                    color: ws.accent
+                    font.pixelSize: ws.px(72)
+                    font.bold: true
+                }
+                Item { width: 1; height: ws.px(18) }
+                WText {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: Qt.formatDate(clockFace.now, "ddd, d MMM")
+                    color: ws.sub
+                    font.pixelSize: ws.px(13)
+                }
             }
         }
     }
 {{/if}}
 {{#if HAS_QS_WIDGET_SYSINFO}}
-    PanelWindow {
-        visible: shellRoot.widgetsShown
-        anchors { top: {{WG_SYSINFO_TOP}}; bottom: {{WG_SYSINFO_BOTTOM}}; left: {{WG_SYSINFO_LEFT}}; right: {{WG_SYSINFO_RIGHT}} }
-        margins { top: {{WG_SYSINFO_Y}}; bottom: {{WG_SYSINFO_Y}}; left: {{WG_SYSINFO_X}}; right: {{WG_SYSINFO_X}} }
-        implicitWidth: {{WG_SYSINFO_W}}
-        implicitHeight: {{WG_SYSINFO_H}}
-        color: "transparent"
-        exclusiveZone: 0
-        // Desktop widget: bottom layer. With the default WlrLayer.Top the
-        // window would stay above every app (see the note at the top of the file).
-        WlrLayershell.layer: {{WIDGET_LAYER_QML}}
-        focusable: false
+    WidgetWindow {
+        atTop: {{WG_SYSINFO_TOP}}; atBottom: {{WG_SYSINFO_BOTTOM}}; atLeft: {{WG_SYSINFO_LEFT}}; atRight: {{WG_SYSINFO_RIGHT}}
+        mx: {{WG_SYSINFO_X}}; my: {{WG_SYSINFO_Y}}; boxW: {{WG_SYSINFO_W}}; boxH: {{WG_SYSINFO_H}}
 
-        Rectangle {
+        GridLayout {
+            id: sysinfo
             anchors.fill: parent
-            color: "{{WIDGET_BG_QML}}"
-            radius: {{WIDGET_RADIUS_VALUE}}
-            border.color: "{{HEX_ACCENT}}"
-            border.width: 2
+            // Rings side by side, text/bars one under the other.
+            columns: ws.meter === "ring" ? 2 : 1
+            columnSpacing: ws.px(12)
+            rowSpacing: ws.px(ws.meter === "bar" ? 8 : 4)
+            property var last: null
+            Meter { id: cpuMeter; icon: "󰻠"; label: "CPU"; Layout.fillWidth: true; Layout.fillHeight: true }
+            Meter { id: ramMeter; icon: "󰍛"; label: "RAM"; Layout.fillWidth: true; Layout.fillHeight: true }
 
-            Column {
-                anchors.centerIn: parent
-                scale: {{WIDGET_SCALE_VALUE}}
-                spacing: 6
-
-                Text {
-                    id: sysinfoCpu
-                    text: "CPU  --%"
-                    color: "{{HEX_FG}}"
-                    font.pixelSize: 15
-                    font.family: "{{FONT_FAMILY}}"
-                }
-                Text {
-                    id: sysinfoRam
-                    text: "RAM  --%"
-                    color: "{{HEX_FG}}"
-                    font.pixelSize: 15
-                    font.family: "{{FONT_FAMILY}}"
-                }
+            // CPU from the /proc/stat delta, RAM from /proc/meminfo — one cat,
+            // no top/free (top alone costs ~100 ms each run).
+            Timer {
+                interval: 2500; running: true; repeat: true; triggeredOnStart: true
+                onTriggered: sysProc.running = true
             }
-        }
-
-        // top's one-line total CPU usage; free -m for RAM.
-        // The eww version used the built-in EWW_CPU/EWW_RAM "magic" variables
-        // — Quickshell has no equivalent, so they are read directly with a
-        // shell command.
-        Timer {
-            interval: 3000
-            running: true
-            repeat: true
-            triggeredOnStart: true
-            onTriggered: { cpuProc.running = true; ramProc.running = true }
-        }
-
-        Process {
-            id: cpuProc
-            command: ["bash", "-c",
-                "top -bn1 | awk '/Cpu\\(s\\)/{printf \"%.0f\", 100-$8}'"]
-            stdout: SplitParser {
-                onRead: data => sysinfoCpu.text = "CPU  " + data + "%"
-            }
-        }
-
-        Process {
-            id: ramProc
-            command: ["bash", "-c",
-                "free | awk '/Mem:/{printf \"%.0f\", $3/$2*100}'"]
-            stdout: SplitParser {
-                onRead: data => sysinfoRam.text = "RAM  " + data + "%"
+            Process {
+                id: sysProc
+                command: ["cat", "/proc/stat", "/proc/meminfo"]
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        const t = text
+                        const cpu = t.match(/^cpu\s+(.*)$/m)
+                        if (cpu) {
+                            const f = cpu[1].trim().split(/\s+/).map(Number)
+                            const idle = f[3] + (f[4] || 0)
+                            const total = f.reduce((a, b) => a + b, 0)
+                            if (sysinfo.last) {
+                                const dt = total - sysinfo.last.total
+                                if (dt > 0) cpuMeter.value = 1 - (idle - sysinfo.last.idle) / dt
+                            }
+                            sysinfo.last = { idle: idle, total: total }
+                        }
+                        const tot = t.match(/^MemTotal:\s+(\d+)/m)
+                        const avail = t.match(/^MemAvailable:\s+(\d+)/m)
+                        if (tot && avail) ramMeter.value = 1 - Number(avail[1]) / Number(tot[1])
+                    }
+                }
             }
         }
     }
 {{/if}}
 {{#if HAS_QS_WIDGET_BATTERY}}
-    PanelWindow {
-        visible: shellRoot.widgetsShown
-        anchors { top: {{WG_BATTERY_TOP}}; bottom: {{WG_BATTERY_BOTTOM}}; left: {{WG_BATTERY_LEFT}}; right: {{WG_BATTERY_RIGHT}} }
-        margins { top: {{WG_BATTERY_Y}}; bottom: {{WG_BATTERY_Y}}; left: {{WG_BATTERY_X}}; right: {{WG_BATTERY_X}} }
-        implicitWidth: {{WG_BATTERY_W}}
-        implicitHeight: {{WG_BATTERY_H}}
-        color: "transparent"
-        exclusiveZone: 0
-        // Desktop widget: bottom layer. With the default WlrLayer.Top the
-        // window would stay above every app (see the note at the top of the file).
-        WlrLayershell.layer: {{WIDGET_LAYER_QML}}
-        focusable: false
+    WidgetWindow {
+        id: batWin
+        atTop: {{WG_BATTERY_TOP}}; atBottom: {{WG_BATTERY_BOTTOM}}; atLeft: {{WG_BATTERY_LEFT}}; atRight: {{WG_BATTERY_RIGHT}}
+        mx: {{WG_BATTERY_X}}; my: {{WG_BATTERY_Y}}; boxW: {{WG_BATTERY_W}}; boxH: {{WG_BATTERY_H}}
+        // UPower: hidden on a desktop without a battery (it used to show an
+        // empty "🔋 --" box).
+        readonly property var dev: UPower.displayDevice
+        hasData: dev !== null && dev.isLaptopBattery && dev.isPresent
 
-        Rectangle {
+        Meter {
             anchors.fill: parent
-            color: "{{WIDGET_BG_QML}}"
-            radius: {{WIDGET_RADIUS_VALUE}}
-            border.color: "{{HEX_ACCENT}}"
-            border.width: 2
-
-            Text {
-                id: batteryLabel
-                anchors.centerIn: parent
-                scale: {{WIDGET_SCALE_VALUE}}
-                text: "🔋 --"
-                color: "{{HEX_FG}}"
-                font.pixelSize: 15
-                font.family: "{{FONT_FAMILY}}"
-            }
-        }
-
-        // On a desktop (no battery) the BAT0 path does not exist — the command
-        // exits empty/failed, SplitParser never fires and the label quietly stays
-        // at "--" (same fallback as EWW_BATTERY.BAT0 ?: 0 in the eww version).
-        Timer {
-            interval: 5000
-            running: true
-            repeat: true
-            triggeredOnStart: true
-            onTriggered: batteryProc.running = true
-        }
-
-        Process {
-            id: batteryProc
-            command: ["bash", "-c",
-                "cat /sys/class/power_supply/BAT0/capacity 2>/dev/null; " +
-                "s=$(cat /sys/class/power_supply/BAT0/status 2>/dev/null); " +
-                "[ -n \"$s\" ] && echo \" $s\""]
-            stdout: SplitParser {
-                onRead: data => batteryLabel.text = "🔋 " + data + "%"
-            }
+            readonly property real p: batWin.dev ? batWin.dev.percentage : 0
+            readonly property bool charging: batWin.dev !== null
+                && batWin.dev.state === UPowerDeviceState.Charging
+            icon: charging ? "󰂄" : value > 0.6 ? "󰁹" : value > 0.25 ? "󰁾" : "󰁺"
+            label: charging ? "Charging" : "Battery"
+            // percentage is 0..1 in Quickshell 0.2+, 0..100 before.
+            value: p > 1 ? p / 100 : p
         }
     }
 {{/if}}
 {{#if HAS_QS_WIDGET_CALENDAR}}
-    PanelWindow {
-        visible: shellRoot.widgetsShown
-        anchors { top: {{WG_CALENDAR_TOP}}; bottom: {{WG_CALENDAR_BOTTOM}}; left: {{WG_CALENDAR_LEFT}}; right: {{WG_CALENDAR_RIGHT}} }
-        margins { top: {{WG_CALENDAR_Y}}; bottom: {{WG_CALENDAR_Y}}; left: {{WG_CALENDAR_X}}; right: {{WG_CALENDAR_X}} }
-        implicitWidth: {{WG_CALENDAR_W}}
-        implicitHeight: {{WG_CALENDAR_H}}
-        color: "transparent"
-        exclusiveZone: 0
-        // Desktop widget: bottom layer. With the default WlrLayer.Top the
-        // window would stay above every app (see the note at the top of the file).
-        WlrLayershell.layer: {{WIDGET_LAYER_QML}}
-        focusable: false
+    WidgetWindow {
+        atTop: {{WG_CALENDAR_TOP}}; atBottom: {{WG_CALENDAR_BOTTOM}}; atLeft: {{WG_CALENDAR_LEFT}}; atRight: {{WG_CALENDAR_RIGHT}}
+        mx: {{WG_CALENDAR_X}}; my: {{WG_CALENDAR_Y}}; boxW: {{WG_CALENDAR_W}}; boxH: {{WG_CALENDAR_H}}
 
-        Rectangle {
+        // Own grid instead of MonthGrid: MonthGrid's delegate model gave odd
+        // colours, today was not marked, and it ignored WIDGET_SCALE.
+        ColumnLayout {
+            id: cal
             anchors.fill: parent
-            color: "{{WIDGET_BG_QML}}"
-            radius: {{WIDGET_RADIUS_VALUE}}
-            border.color: "{{HEX_ACCENT}}"
-            border.width: 2
-
-            Column {
-                anchors.fill: parent
-                scale: {{WIDGET_SCALE_VALUE}}
-                anchors.margins: 12
-                spacing: 6
-
-                Text {
-                    text: Qt.formatDate(new Date(), "MMMM yyyy")
-                    color: "{{HEX_ACCENT}}"
-                    font.pixelSize: 15
-                    font.bold: true
-                    font.family: "{{FONT_FAMILY}}"
+            spacing: ws.px(4)
+            property date today: new Date()
+            readonly property var loc: Qt.locale()
+            readonly property int first: loc.firstDayOfWeek % 7      // 0 = Sunday
+            readonly property var cells: {
+                const y = today.getFullYear(), mo = today.getMonth()
+                const start = (new Date(y, mo, 1).getDay() - first + 7) % 7
+                const out = []
+                for (let i = 0; i < 42; i++) {
+                    const d = new Date(y, mo, 1 - start + i)
+                    out.push({ day: d.getDate(), inMonth: d.getMonth() === mo,
+                               isToday: d.toDateString() === today.toDateString() })
                 }
-
-                // Qt.labs.calendar's MonthGrid (a standard Qt Quick module, not a
-                // Quickshell-specific component) — the closest match to eww's
-                // built-in (calendar) widget.
-                MonthGrid {
-                    id: monthGrid
-                    width: parent.width
-                    height: parent.height - 30
-                    month: new Date().getMonth()
-                    year: new Date().getFullYear()
-                    locale: Qt.locale("tr_TR")
-
-                    delegate: Text {
-                        required property var model
-                        text: model.day
-                        color: model.month === monthGrid.month
-                               ? "{{HEX_FG}}" : "{{HEX_SUBTEXT}}"
-                        font.pixelSize: 12
-                        font.family: "{{FONT_FAMILY}}"
+                return out
+            }
+            Timer {
+                interval: 60000; running: true; repeat: true
+                onTriggered: cal.today = new Date()
+            }
+            WText {
+                text: cal.loc.standaloneMonthName(cal.today.getMonth()) + " " + cal.today.getFullYear()
+                color: ws.accent
+                font.bold: true
+                font.pixelSize: ws.px(15)
+            }
+            GridLayout {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                columns: 7
+                rowSpacing: 0
+                columnSpacing: 0
+                Repeater {
+                    model: 7
+                    WText {
+                        required property int index
+                        Layout.fillWidth: true
                         horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
+                        text: cal.loc.dayName((cal.first + index) % 7, Locale.NarrowFormat)
+                        color: ws.sub
+                        font.pixelSize: ws.px(11)
+                        font.bold: true
+                    }
+                }
+                Repeater {
+                    model: cal.cells
+                    Item {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: Math.min(parent.width, parent.height) - 2
+                            height: width
+                            radius: width / 2
+                            color: ws.accent
+                            visible: modelData.isToday
+                        }
+                        WText {
+                            anchors.centerIn: parent
+                            text: modelData.day
+                            font.pixelSize: ws.px(12)
+                            font.bold: modelData.isToday
+                            style: Text.Normal
+                            color: modelData.isToday ? ws.inkOnAccent : ws.fg
+                            opacity: modelData.inMonth ? 1 : 0.35
+                        }
                     }
                 }
             }
@@ -641,634 +844,424 @@ ShellRoot {
     }
 {{/if}}
 {{#if HAS_QS_WIDGET_MUSIC}}
-    PanelWindow {
-        visible: shellRoot.widgetsShown
-        anchors { top: {{WG_MUSIC_TOP}}; bottom: {{WG_MUSIC_BOTTOM}}; left: {{WG_MUSIC_LEFT}}; right: {{WG_MUSIC_RIGHT}} }
-        margins { top: {{WG_MUSIC_Y}}; bottom: {{WG_MUSIC_Y}}; left: {{WG_MUSIC_X}}; right: {{WG_MUSIC_X}} }
-        implicitWidth: {{WG_MUSIC_W}}
-        implicitHeight: {{WG_MUSIC_H}}
-        color: "transparent"
-        exclusiveZone: 0
-        // Desktop widget: bottom layer. With the default WlrLayer.Top the
-        // window would stay above every app (see the note at the top of the file).
-        WlrLayershell.layer: {{WIDGET_LAYER_QML}}
-        focusable: false
+    WidgetWindow {
+        id: musicWin
+        atTop: {{WG_MUSIC_TOP}}; atBottom: {{WG_MUSIC_BOTTOM}}; atLeft: {{WG_MUSIC_LEFT}}; atRight: {{WG_MUSIC_RIGHT}}
+        mx: {{WG_MUSIC_X}}; my: {{WG_MUSIC_Y}}; boxW: {{WG_MUSIC_W}}; boxH: {{WG_MUSIC_H}}
+        // MPRIS through Quickshell's own service: updates at once instead of
+        // polling playerctl every 3 s. The playing player wins, else the first.
+        readonly property var player: {
+            const list = Mpris.players.values
+            for (let i = 0; i < list.length; i++)
+                if (list[i].isPlaying) return list[i]
+            return list.length ? list[0] : null
+        }
+        hasData: player !== null
 
-        Rectangle {
+        // Position is not pushed by MPRIS; ask for it while playing.
+        Timer {
+            interval: 1000
+            running: musicWin.player !== null && musicWin.player.isPlaying && ws.music === "card"
+            repeat: true
+            onTriggered: musicWin.player.positionChanged()
+        }
+
+        RowLayout {
             anchors.fill: parent
-            color: "{{WIDGET_BG_QML}}"
-            radius: {{WIDGET_RADIUS_VALUE}}
-            border.color: "{{HEX_ACCENT}}"
-            border.width: 2
-
-            Text {
-                id: musicLabel
-                anchors.fill: parent
-                scale: {{WIDGET_SCALE_VALUE}}
-                anchors.margins: 10
-                text: "▷ Nothing playing"
-                color: "{{HEX_FG}}"
-                font.pixelSize: 14
-                font.family: "{{FONT_FAMILY}}"
-                elide: Text.ElideRight
-                verticalAlignment: Text.AlignVCenter
+            visible: ws.music === "line"
+            spacing: ws.px(8)
+            WIcon { text: musicWin.player && musicWin.player.isPlaying ? "󰏤" : "󰐊"; font.pixelSize: ws.px(15)
+                MouseArea { anchors.fill: parent; onClicked: musicWin.player.togglePlaying() } }
+            WText {
+                Layout.fillWidth: true
+                text: musicWin.player
+                      ? (musicWin.player.trackArtist ? musicWin.player.trackArtist + " – " : "")
+                        + musicWin.player.trackTitle
+                      : ""
             }
         }
 
-        Timer {
-            interval: 3000
-            running: true
-            repeat: true
-            triggeredOnStart: true
-            onTriggered: musicProc.running = true
-        }
-
-        Process {
-            id: musicProc
-            command: ["bash", "-c",
-                "a=$(playerctl metadata artist 2>/dev/null); " +
-                "t=$(playerctl metadata title 2>/dev/null); " +
-                "[ -n \"$t\" ] && echo \"$a - $t\" || echo '▷ Nothing playing'"]
-            stdout: SplitParser {
-                onRead: data => musicLabel.text = data
+        RowLayout {
+            anchors.fill: parent
+            visible: ws.music === "card"
+            spacing: ws.px(12)
+            Rectangle {
+                Layout.preferredWidth: parent.height
+                Layout.preferredHeight: parent.height
+                radius: Math.min(ws.radius, width / 2) * 0.7
+                color: ws.track
+                clip: true
+                Image {
+                    anchors.fill: parent
+                    source: musicWin.player ? musicWin.player.trackArtUrl : ""
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    sourceSize.width: 200
+                    opacity: status === Image.Ready ? 1 : 0
+                    Behavior on opacity { NumberAnimation { duration: 300 } }
+                }
+                WIcon {
+                    anchors.centerIn: parent
+                    text: "󰎆"
+                    font.pixelSize: ws.px(30)
+                    color: ws.sub
+                    visible: !musicWin.player || !musicWin.player.trackArtUrl
+                }
+            }
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                spacing: ws.px(2)
+                WText {
+                    Layout.fillWidth: true
+                    text: musicWin.player ? musicWin.player.trackTitle : ""
+                    font.bold: true
+                    font.pixelSize: ws.px(15)
+                }
+                WText {
+                    Layout.fillWidth: true
+                    text: musicWin.player ? musicWin.player.trackArtist : ""
+                    color: ws.sub
+                    font.pixelSize: ws.px(12)
+                }
+                Item { Layout.fillHeight: true }
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: ws.px(4)
+                    radius: height / 2
+                    color: ws.track
+                    visible: musicWin.player !== null && musicWin.player.length > 0
+                    Rectangle {
+                        height: parent.height
+                        radius: height / 2
+                        color: ws.accent
+                        width: musicWin.player && musicWin.player.length > 0
+                               ? parent.width * Math.min(1, musicWin.player.position / musicWin.player.length) : 0
+                        Behavior on width { NumberAnimation { duration: 900 } }
+                    }
+                }
+                RowLayout {
+                    Layout.alignment: Qt.AlignHCenter
+                    spacing: ws.px(18)
+                    Repeater {
+                        model: [
+                            { icon: "󰒮", act: "previous" },
+                            { icon: "play", act: "toggle" },
+                            { icon: "󰒭", act: "next" }
+                        ]
+                        WIcon {
+                            required property var modelData
+                            text: modelData.icon !== "play" ? modelData.icon
+                                  : (musicWin.player && musicWin.player.isPlaying ? "󰏤" : "󰐊")
+                            font.pixelSize: ws.px(modelData.icon === "play" ? 22 : 17)
+                            color: modelData.icon === "play" ? ws.accent : ws.fg
+                            scale: tap.pressed ? 0.85 : 1
+                            Behavior on scale { NumberAnimation { duration: 120 } }
+                            MouseArea {
+                                id: tap
+                                anchors.fill: parent
+                                anchors.margins: -6
+                                onClicked: {
+                                    const p = musicWin.player
+                                    if (!p) return
+                                    if (modelData.act === "toggle") p.togglePlaying()
+                                    else if (modelData.act === "next") p.next()
+                                    else p.previous()
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 {{/if}}
 {{#if HAS_QS_WIDGET_NETWORK}}
-    PanelWindow {
-        visible: shellRoot.widgetsShown
-        anchors { top: {{WG_NETWORK_TOP}}; bottom: {{WG_NETWORK_BOTTOM}}; left: {{WG_NETWORK_LEFT}}; right: {{WG_NETWORK_RIGHT}} }
-        margins { top: {{WG_NETWORK_Y}}; bottom: {{WG_NETWORK_Y}}; left: {{WG_NETWORK_X}}; right: {{WG_NETWORK_X}} }
-        implicitWidth: {{WG_NETWORK_W}}
-        implicitHeight: {{WG_NETWORK_H}}
-        color: "transparent"
-        exclusiveZone: 0
-        // Desktop widget: bottom layer. With the default WlrLayer.Top the
-        // window would stay above every app (see the note at the top of the file).
-        WlrLayershell.layer: {{WIDGET_LAYER_QML}}
-        focusable: false
+    WidgetWindow {
+        atTop: {{WG_NETWORK_TOP}}; atBottom: {{WG_NETWORK_BOTTOM}}; atLeft: {{WG_NETWORK_LEFT}}; atRight: {{WG_NETWORK_RIGHT}}
+        mx: {{WG_NETWORK_X}}; my: {{WG_NETWORK_Y}}; boxW: {{WG_NETWORK_W}}; boxH: {{WG_NETWORK_H}}
 
-        Rectangle {
+        RowLayout {
             anchors.fill: parent
-            color: "{{WIDGET_BG_QML}}"
-            radius: {{WIDGET_RADIUS_VALUE}}
-            border.color: "{{HEX_ACCENT}}"
-            border.width: 2
-
-            Text {
-                id: networkLabel
-                anchors.centerIn: parent
-                scale: {{WIDGET_SCALE_VALUE}}
-                text: "󰤭 Not connected"
-                color: "{{HEX_FG}}"
-                font.pixelSize: 15
-                font.family: "{{FONT_FAMILY}}"
-            }
+            spacing: ws.px(8)
+            WIcon { id: netIcon; text: "󰤭"; font.pixelSize: ws.px(16) }
+            WText { id: netLabel; text: "Not connected"; Layout.fillWidth: true }
         }
-
         Timer {
-            interval: 5000
-            running: true
-            repeat: true
-            triggeredOnStart: true
-            onTriggered: networkProc.running = true
+            interval: 5000; running: true; repeat: true; triggeredOnStart: true
+            onTriggered: netProc.running = true
         }
-
         Process {
-            id: networkProc
+            id: netProc
             command: ["bash", "-c",
-                "nmcli -t -f NAME connection show --active 2>/dev/null | head -1"]
-            stdout: SplitParser {
-                onRead: data => networkLabel.text = data === ""
-                    ? "󰤭 Not connected" : "󰤨 " + data
+                "nmcli -t -f NAME,TYPE connection show --active 2>/dev/null | grep -v ':loopback$' | head -1"]
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    const line = text.trim()
+                    const parts = line.split(":")
+                    netLabel.text = line === "" ? "Not connected" : parts[0]
+                    netIcon.text = line === "" ? "󰤭"
+                                 : (parts[1] || "").indexOf("wireless") >= 0 ? "󰤨" : "󰈀"
+                }
             }
         }
     }
 {{/if}}
 {{#if HAS_QS_WIDGET_VOLUME}}
-    // pamixer (audio-tools component) — the same command as waybar's pulseaudio module.
-    PanelWindow {
-        visible: shellRoot.widgetsShown
-        anchors { top: {{WG_VOLUME_TOP}}; bottom: {{WG_VOLUME_BOTTOM}}; left: {{WG_VOLUME_LEFT}}; right: {{WG_VOLUME_RIGHT}} }
-        margins { top: {{WG_VOLUME_Y}}; bottom: {{WG_VOLUME_Y}}; left: {{WG_VOLUME_X}}; right: {{WG_VOLUME_X}} }
-        implicitWidth: {{WG_VOLUME_W}}
-        implicitHeight: {{WG_VOLUME_H}}
-        color: "transparent"
-        exclusiveZone: 0
-        // Desktop widget: bottom layer. With the default WlrLayer.Top the
-        // window would stay above every app (see the note at the top of the file).
-        WlrLayershell.layer: {{WIDGET_LAYER_QML}}
-        focusable: false
+    WidgetWindow {
+        id: volWin
+        atTop: {{WG_VOLUME_TOP}}; atBottom: {{WG_VOLUME_BOTTOM}}; atLeft: {{WG_VOLUME_LEFT}}; atRight: {{WG_VOLUME_RIGHT}}
+        mx: {{WG_VOLUME_X}}; my: {{WG_VOLUME_Y}}; boxW: {{WG_VOLUME_W}}; boxH: {{WG_VOLUME_H}}
+        // PipeWire through Quickshell: live, and no pamixer needed (without
+        // pamixer the old widget showed a bare "%").
+        readonly property var sink: Pipewire.defaultAudioSink
+        hasData: sink !== null
+        PwObjectTracker { objects: [Pipewire.defaultAudioSink] }
 
-        Rectangle {
+        Meter {
             anchors.fill: parent
-            color: "{{WIDGET_BG_QML}}"
-            radius: {{WIDGET_RADIUS_VALUE}}
-            border.color: "{{HEX_ACCENT}}"
-            border.width: 2
-
-            Text {
-                id: volumeLabel
-                anchors.centerIn: parent
-                scale: {{WIDGET_SCALE_VALUE}}
-                text: "🔊 --%"
-                color: "{{HEX_FG}}"
-                font.pixelSize: 15
-                font.family: "{{FONT_FAMILY}}"
-            }
-        }
-
-        Timer {
-            interval: 3000
-            running: true
-            repeat: true
-            triggeredOnStart: true
-            onTriggered: volumeProc.running = true
-        }
-
-        Process {
-            id: volumeProc
-            command: ["bash", "-c",
-                "m=$(pamixer --get-mute 2>/dev/null); v=$(pamixer --get-volume 2>/dev/null); " +
-                "[ \"$m\" = \"true\" ] && echo \"🔇 muted\" || echo \"🔊 ${v}%\""]
-            stdout: SplitParser {
-                onRead: data => volumeLabel.text = data
-            }
+            readonly property var audio: volWin.sink ? volWin.sink.audio : null
+            readonly property bool muted: audio !== null && audio.muted
+            icon: muted ? "󰝟" : value > 0.6 ? "󰕾" : value > 0.2 ? "󰖀" : "󰕿"
+            label: muted ? "Muted" : "Volume"
+            value: audio ? audio.volume : 0
         }
     }
 {{/if}}
 {{#if HAS_QS_WIDGET_BRIGHTNESS}}
-    // brightnessctl (brightness component) — field 4 of the machine-readable
-    // "-m" output is already a percentage, no manual division needed.
-    PanelWindow {
-        visible: shellRoot.widgetsShown
-        anchors { top: {{WG_BRIGHTNESS_TOP}}; bottom: {{WG_BRIGHTNESS_BOTTOM}}; left: {{WG_BRIGHTNESS_LEFT}}; right: {{WG_BRIGHTNESS_RIGHT}} }
-        margins { top: {{WG_BRIGHTNESS_Y}}; bottom: {{WG_BRIGHTNESS_Y}}; left: {{WG_BRIGHTNESS_X}}; right: {{WG_BRIGHTNESS_X}} }
-        implicitWidth: {{WG_BRIGHTNESS_W}}
-        implicitHeight: {{WG_BRIGHTNESS_H}}
-        color: "transparent"
-        exclusiveZone: 0
-        // Desktop widget: bottom layer. With the default WlrLayer.Top the
-        // window would stay above every app (see the note at the top of the file).
-        WlrLayershell.layer: {{WIDGET_LAYER_QML}}
-        focusable: false
+    WidgetWindow {
+        id: brightWin
+        atTop: {{WG_BRIGHTNESS_TOP}}; atBottom: {{WG_BRIGHTNESS_BOTTOM}}; atLeft: {{WG_BRIGHTNESS_LEFT}}; atRight: {{WG_BRIGHTNESS_RIGHT}}
+        mx: {{WG_BRIGHTNESS_X}}; my: {{WG_BRIGHTNESS_Y}}; boxW: {{WG_BRIGHTNESS_W}}; boxH: {{WG_BRIGHTNESS_H}}
+        // Read straight from /sys/class/backlight; hidden when there is none
+        // (an external monitor without DDC used to show an empty box).
+        property real level: -1
+        hasData: level >= 0
 
-        Rectangle {
-            anchors.fill: parent
-            color: "{{WIDGET_BG_QML}}"
-            radius: {{WIDGET_RADIUS_VALUE}}
-            border.color: "{{HEX_ACCENT}}"
-            border.width: 2
-
-            Text {
-                id: brightnessLabel
-                anchors.centerIn: parent
-                scale: {{WIDGET_SCALE_VALUE}}
-                text: "☀ --%"
-                color: "{{HEX_FG}}"
-                font.pixelSize: 15
-                font.family: "{{FONT_FAMILY}}"
-            }
-        }
-
+        Meter { anchors.fill: parent; icon: "󰃠"; label: "Brightness"; value: Math.max(0, brightWin.level) }
         Timer {
-            interval: 3000
-            running: true
-            repeat: true
-            triggeredOnStart: true
-            onTriggered: brightnessProc.running = true
+            interval: 3000; running: true; repeat: true; triggeredOnStart: true
+            onTriggered: brightProc.running = true
         }
-
         Process {
-            id: brightnessProc
+            id: brightProc
             command: ["bash", "-c",
-                "brightnessctl -m 2>/dev/null | cut -d, -f4 | tr -d '%'"]
-            stdout: SplitParser {
-                onRead: data => brightnessLabel.text = "☀ " + data + "%"
+                "d=$(ls -d /sys/class/backlight/* 2>/dev/null | head -1); " +
+                "[ -n \"$d\" ] && echo $(cat $d/brightness) $(cat $d/max_brightness)"]
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    const f = text.trim().split(/\s+/).map(Number)
+                    brightWin.level = f.length === 2 && f[1] > 0 ? f[0] / f[1] : -1
+                }
             }
         }
     }
 {{/if}}
 {{#if HAS_QS_WIDGET_UPTIME}}
-    PanelWindow {
-        visible: shellRoot.widgetsShown
-        anchors { top: {{WG_UPTIME_TOP}}; bottom: {{WG_UPTIME_BOTTOM}}; left: {{WG_UPTIME_LEFT}}; right: {{WG_UPTIME_RIGHT}} }
-        margins { top: {{WG_UPTIME_Y}}; bottom: {{WG_UPTIME_Y}}; left: {{WG_UPTIME_X}}; right: {{WG_UPTIME_X}} }
-        implicitWidth: {{WG_UPTIME_W}}
-        implicitHeight: {{WG_UPTIME_H}}
-        color: "transparent"
-        exclusiveZone: 0
-        // Desktop widget: bottom layer. With the default WlrLayer.Top the
-        // window would stay above every app (see the note at the top of the file).
-        WlrLayershell.layer: {{WIDGET_LAYER_QML}}
-        focusable: false
+    WidgetWindow {
+        atTop: {{WG_UPTIME_TOP}}; atBottom: {{WG_UPTIME_BOTTOM}}; atLeft: {{WG_UPTIME_LEFT}}; atRight: {{WG_UPTIME_RIGHT}}
+        mx: {{WG_UPTIME_X}}; my: {{WG_UPTIME_Y}}; boxW: {{WG_UPTIME_W}}; boxH: {{WG_UPTIME_H}}
 
-        Rectangle {
+        RowLayout {
             anchors.fill: parent
-            color: "{{WIDGET_BG_QML}}"
-            radius: {{WIDGET_RADIUS_VALUE}}
-            border.color: "{{HEX_ACCENT}}"
-            border.width: 2
-
-            Text {
-                id: uptimeLabel
-                anchors.centerIn: parent
-                scale: {{WIDGET_SCALE_VALUE}}
-                anchors.margins: 8
-                text: "⏱ --"
-                color: "{{HEX_FG}}"
-                font.pixelSize: 13
-                font.family: "{{FONT_FAMILY}}"
-                elide: Text.ElideRight
-            }
+            spacing: ws.px(8)
+            WIcon { text: "󰔟"; font.pixelSize: ws.px(16) }
+            WText { id: uptimeLabel; text: "--"; Layout.fillWidth: true }
         }
-
         Timer {
-            interval: 60000
-            running: true
-            repeat: true
-            triggeredOnStart: true
+            interval: 60000; running: true; repeat: true; triggeredOnStart: true
             onTriggered: uptimeProc.running = true
         }
-
         Process {
             id: uptimeProc
-            command: ["bash", "-c", "uptime -p"]
-            stdout: SplitParser {
-                onRead: data => uptimeLabel.text = "⏱ " + data
+            command: ["cat", "/proc/uptime"]
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    const sec = Math.floor(Number(text.split(" ")[0]))
+                    const d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600),
+                          m = Math.floor(sec % 3600 / 60)
+                    uptimeLabel.text = (d ? d + "d " : "") + (h ? h + "h " : "") + m + "m"
+                }
             }
         }
     }
 {{/if}}
 {{#if HAS_QS_WIDGET_DISK}}
-    PanelWindow {
-        visible: shellRoot.widgetsShown
-        anchors { top: {{WG_DISK_TOP}}; bottom: {{WG_DISK_BOTTOM}}; left: {{WG_DISK_LEFT}}; right: {{WG_DISK_RIGHT}} }
-        margins { top: {{WG_DISK_Y}}; bottom: {{WG_DISK_Y}}; left: {{WG_DISK_X}}; right: {{WG_DISK_X}} }
-        implicitWidth: {{WG_DISK_W}}
-        implicitHeight: {{WG_DISK_H}}
-        color: "transparent"
-        exclusiveZone: 0
-        // Desktop widget: bottom layer. With the default WlrLayer.Top the
-        // window would stay above every app (see the note at the top of the file).
-        WlrLayershell.layer: {{WIDGET_LAYER_QML}}
-        focusable: false
+    WidgetWindow {
+        atTop: {{WG_DISK_TOP}}; atBottom: {{WG_DISK_BOTTOM}}; atLeft: {{WG_DISK_LEFT}}; atRight: {{WG_DISK_RIGHT}}
+        mx: {{WG_DISK_X}}; my: {{WG_DISK_Y}}; boxW: {{WG_DISK_W}}; boxH: {{WG_DISK_H}}
 
-        Rectangle {
-            anchors.fill: parent
-            color: "{{WIDGET_BG_QML}}"
-            radius: {{WIDGET_RADIUS_VALUE}}
-            border.color: "{{HEX_ACCENT}}"
-            border.width: 2
-
-            Text {
-                id: diskLabel
-                anchors.centerIn: parent
-                scale: {{WIDGET_SCALE_VALUE}}
-                text: "󰋊 --%"
-                color: "{{HEX_FG}}"
-                font.pixelSize: 15
-                font.family: "{{FONT_FAMILY}}"
-            }
-        }
-
+        Meter { id: diskMeter; anchors.fill: parent; icon: "󰋊"; label: "Disk /" }
         Timer {
-            interval: 60000
-            running: true
-            repeat: true
-            triggeredOnStart: true
+            interval: 60000; running: true; repeat: true; triggeredOnStart: true
             onTriggered: diskProc.running = true
         }
-
         Process {
             id: diskProc
-            command: ["bash", "-c",
-                "df -h --output=pcent / 2>/dev/null | tail -1 | tr -d '% '"]
-            stdout: SplitParser {
-                onRead: data => diskLabel.text = "󰋊 " + data + "%"
+            command: ["bash", "-c", "df --output=pcent / 2>/dev/null | tail -1 | tr -d '% '"]
+            stdout: StdioCollector {
+                onStreamFinished: diskMeter.value = Number(text.trim()) / 100
             }
         }
     }
 {{/if}}
 {{#if HAS_QS_WIDGET_TEMPERATURE}}
-    // /sys/class/thermal/thermal_zone0 maps to the CPU package on most systems
-    // but not guaranteed — it is the most portable way that needs no extra
-    // dependency like lm_sensors (same reasoning as the "no external
-    // dependencies" philosophy in wallpaper.py).
-    PanelWindow {
-        visible: shellRoot.widgetsShown
-        anchors { top: {{WG_TEMPERATURE_TOP}}; bottom: {{WG_TEMPERATURE_BOTTOM}}; left: {{WG_TEMPERATURE_LEFT}}; right: {{WG_TEMPERATURE_RIGHT}} }
-        margins { top: {{WG_TEMPERATURE_Y}}; bottom: {{WG_TEMPERATURE_Y}}; left: {{WG_TEMPERATURE_X}}; right: {{WG_TEMPERATURE_X}} }
-        implicitWidth: {{WG_TEMPERATURE_W}}
-        implicitHeight: {{WG_TEMPERATURE_H}}
-        color: "transparent"
-        exclusiveZone: 0
-        // Desktop widget: bottom layer. With the default WlrLayer.Top the
-        // window would stay above every app (see the note at the top of the file).
-        WlrLayershell.layer: {{WIDGET_LAYER_QML}}
-        focusable: false
+    WidgetWindow {
+        id: tempWin
+        atTop: {{WG_TEMPERATURE_TOP}}; atBottom: {{WG_TEMPERATURE_BOTTOM}}; atLeft: {{WG_TEMPERATURE_LEFT}}; atRight: {{WG_TEMPERATURE_RIGHT}}
+        mx: {{WG_TEMPERATURE_X}}; my: {{WG_TEMPERATURE_Y}}; boxW: {{WG_TEMPERATURE_W}}; boxH: {{WG_TEMPERATURE_H}}
+        property real celsius: -1
+        hasData: celsius >= 0
 
-        Rectangle {
+        // 100 °C = full ring/bar.
+        Meter {
             anchors.fill: parent
-            color: "{{WIDGET_BG_QML}}"
-            radius: {{WIDGET_RADIUS_VALUE}}
-            border.color: "{{HEX_ACCENT}}"
-            border.width: 2
-
-            Text {
-                id: temperatureLabel
-                anchors.centerIn: parent
-                scale: {{WIDGET_SCALE_VALUE}}
-                text: "🌡 --°C"
-                color: "{{HEX_FG}}"
-                font.pixelSize: 15
-                font.family: "{{FONT_FAMILY}}"
-            }
+            icon: tempWin.celsius >= 80 ? "󰸁" : "󰔏"
+            label: "CPU temp"
+            value: Math.max(0, tempWin.celsius) / 100
+            valueText: Math.round(tempWin.celsius) + "°C"
         }
-
         Timer {
-            interval: 5000
-            running: true
-            repeat: true
-            triggeredOnStart: true
-            onTriggered: temperatureProc.running = true
+            interval: 5000; running: true; repeat: true; triggeredOnStart: true
+            onTriggered: tempProc.running = true
         }
-
+        // The CPU sensor by hwmon name (AMD k10temp / zenpower, Intel
+        // coretemp), then the thermal zones. Desktop AMD systems often have no
+        // usable thermal zone at all, so reading only /sys/class/thermal gave
+        // "--°C" there.
         Process {
-            id: temperatureProc
+            id: tempProc
             command: ["bash", "-c",
-                "$HOME/.config/hyprsetup/cpu-temp.sh"]
-            stdout: SplitParser {
-                onRead: data => temperatureLabel.text = "🌡 " + data + "°C"
+                "for h in /sys/class/hwmon/hwmon*; do " +
+                "case $(cat $h/name 2>/dev/null) in k10temp|zenpower|coretemp|cpu_thermal) " +
+                "cat $h/temp1_input 2>/dev/null && exit;; esac; done; " +
+                "for z in /sys/class/thermal/thermal_zone*; do " +
+                "case $(cat $z/type 2>/dev/null) in x86_pkg_temp|cpu*|soc*|acpitz) " +
+                "cat $z/temp 2>/dev/null && exit;; esac; done"]
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    const v = Number(text.trim().split("\n")[0])
+                    tempWin.celsius = v > 0 ? v / 1000 : -1
+                }
             }
         }
     }
 {{/if}}
 {{#if HAS_QS_WIDGET_WORLDCLOCK}}
-    // Time zone math is left to the system's own tzdata (`date` with the TZ
-    // environment variable) — QML's plain JS Date cannot reliably give the
-    // time of an arbitrary zone, it only knows the local/UTC offset.
-    PanelWindow {
-        visible: shellRoot.widgetsShown
-        anchors { top: {{WG_WORLDCLOCK_TOP}}; bottom: {{WG_WORLDCLOCK_BOTTOM}}; left: {{WG_WORLDCLOCK_LEFT}}; right: {{WG_WORLDCLOCK_RIGHT}} }
-        margins { top: {{WG_WORLDCLOCK_Y}}; bottom: {{WG_WORLDCLOCK_Y}}; left: {{WG_WORLDCLOCK_X}}; right: {{WG_WORLDCLOCK_X}} }
-        implicitWidth: {{WG_WORLDCLOCK_W}}
-        implicitHeight: {{WG_WORLDCLOCK_H}}
-        color: "transparent"
-        exclusiveZone: 0
-        // Desktop widget: bottom layer. With the default WlrLayer.Top the
-        // window would stay above every app (see the note at the top of the file).
-        WlrLayershell.layer: {{WIDGET_LAYER_QML}}
-        focusable: false
+    WidgetWindow {
+        atTop: {{WG_WORLDCLOCK_TOP}}; atBottom: {{WG_WORLDCLOCK_BOTTOM}}; atLeft: {{WG_WORLDCLOCK_LEFT}}; atRight: {{WG_WORLDCLOCK_RIGHT}}
+        mx: {{WG_WORLDCLOCK_X}}; my: {{WG_WORLDCLOCK_Y}}; boxW: {{WG_WORLDCLOCK_W}}; boxH: {{WG_WORLDCLOCK_H}}
 
-        Rectangle {
+        ColumnLayout {
+            id: world
             anchors.fill: parent
-            color: "{{WIDGET_BG_QML}}"
-            radius: {{WIDGET_RADIUS_VALUE}}
-            border.color: "{{HEX_ACCENT}}"
-            border.width: 2
-
-            Column {
-                anchors.centerIn: parent
-                scale: {{WIDGET_SCALE_VALUE}}
-                spacing: 4
-
-                Text {
-                    id: wcLondon
-                    text: "London  --:--"
-                    color: "{{HEX_FG}}"
-                    font.pixelSize: 13
-                    font.family: "{{FONT_FAMILY}}"
-                }
-                Text {
-                    id: wcTokyo
-                    text: "Tokyo   --:--"
-                    color: "{{HEX_FG}}"
-                    font.pixelSize: 13
-                    font.family: "{{FONT_FAMILY}}"
-                }
-                Text {
-                    id: wcNewYork
-                    text: "New York  --:--"
-                    color: "{{HEX_FG}}"
-                    font.pixelSize: 13
-                    font.family: "{{FONT_FAMILY}}"
+            spacing: ws.px(2)
+            property var times: ({})
+            Repeater {
+                model: [ { city: "London", tz: "Europe/London" },
+                         { city: "Tokyo", tz: "Asia/Tokyo" },
+                         { city: "New York", tz: "America/New_York" } ]
+                RowLayout {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    WText { text: modelData.city; color: ws.sub; Layout.fillWidth: true }
+                    WText { text: world.times[modelData.tz] || "--:--"; font.bold: true }
                 }
             }
         }
-
         Timer {
-            interval: 30000
-            running: true
-            repeat: true
-            triggeredOnStart: true
-            onTriggered: {
-                wcLondonProc.running = true
-                wcTokyoProc.running = true
-                wcNewYorkProc.running = true
+            interval: 30000; running: true; repeat: true; triggeredOnStart: true
+            onTriggered: worldProc.running = true
+        }
+        Process {
+            id: worldProc
+            command: ["bash", "-c",
+                "for z in Europe/London Asia/Tokyo America/New_York; do echo \"$z $(TZ=$z date +%H:%M)\"; done"]
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    const out = {}
+                    for (const line of text.trim().split("\n")) {
+                        const p = line.split(" ")
+                        out[p[0]] = p[1]
+                    }
+                    world.times = out
+                }
             }
-        }
-
-        Process {
-            id: wcLondonProc
-            command: ["bash", "-c", "TZ=Europe/London date +%H:%M"]
-            stdout: SplitParser { onRead: data => wcLondon.text = "London  " + data }
-        }
-        Process {
-            id: wcTokyoProc
-            command: ["bash", "-c", "TZ=Asia/Tokyo date +%H:%M"]
-            stdout: SplitParser { onRead: data => wcTokyo.text = "Tokyo   " + data }
-        }
-        Process {
-            id: wcNewYorkProc
-            command: ["bash", "-c", "TZ=America/New_York date +%H:%M"]
-            stdout: SplitParser { onRead: data => wcNewYork.text = "New York  " + data }
         }
     }
 {{/if}}
 {{#if HAS_QS_WIDGET_KBLAYOUT}}
-    // The active keyboard layout from hyprctl's own device list — this project
-    // already depends on jq everywhere (see install.sh/lib/*.sh), so it does
-    // not count as an extra dependency.
-    PanelWindow {
-        visible: shellRoot.widgetsShown
-        anchors { top: {{WG_KBLAYOUT_TOP}}; bottom: {{WG_KBLAYOUT_BOTTOM}}; left: {{WG_KBLAYOUT_LEFT}}; right: {{WG_KBLAYOUT_RIGHT}} }
-        margins { top: {{WG_KBLAYOUT_Y}}; bottom: {{WG_KBLAYOUT_Y}}; left: {{WG_KBLAYOUT_X}}; right: {{WG_KBLAYOUT_X}} }
-        implicitWidth: {{WG_KBLAYOUT_W}}
-        implicitHeight: {{WG_KBLAYOUT_H}}
-        color: "transparent"
-        exclusiveZone: 0
-        // Desktop widget: bottom layer. With the default WlrLayer.Top the
-        // window would stay above every app (see the note at the top of the file).
-        WlrLayershell.layer: {{WIDGET_LAYER_QML}}
-        focusable: false
+    WidgetWindow {
+        atTop: {{WG_KBLAYOUT_TOP}}; atBottom: {{WG_KBLAYOUT_BOTTOM}}; atLeft: {{WG_KBLAYOUT_LEFT}}; atRight: {{WG_KBLAYOUT_RIGHT}}
+        mx: {{WG_KBLAYOUT_X}}; my: {{WG_KBLAYOUT_Y}}; boxW: {{WG_KBLAYOUT_W}}; boxH: {{WG_KBLAYOUT_H}}
 
-        Rectangle {
+        RowLayout {
             anchors.fill: parent
-            color: "{{WIDGET_BG_QML}}"
-            radius: {{WIDGET_RADIUS_VALUE}}
-            border.color: "{{HEX_ACCENT}}"
-            border.width: 2
-
-            Text {
-                id: kblayoutLabel
-                anchors.centerIn: parent
-                scale: {{WIDGET_SCALE_VALUE}}
-                text: "⌨ --"
-                color: "{{HEX_FG}}"
-                font.pixelSize: 14
-                font.family: "{{FONT_FAMILY}}"
-            }
+            spacing: ws.px(8)
+            WIcon { text: "󰌌"; font.pixelSize: ws.px(16) }
+            WText { id: kbLabel; text: "--"; Layout.fillWidth: true }
         }
-
         Timer {
-            interval: 2000
-            running: true
-            repeat: true
-            triggeredOnStart: true
-            onTriggered: kblayoutProc.running = true
+            interval: 2000; running: true; repeat: true; triggeredOnStart: true
+            onTriggered: kbProc.running = true
         }
-
         Process {
-            id: kblayoutProc
+            id: kbProc
             command: ["bash", "-c",
-                "hyprctl devices -j 2>/dev/null | jq -r '.keyboards[0].active_keymap // \"?\"'"]
-            stdout: SplitParser {
-                onRead: data => kblayoutLabel.text = "⌨ " + data
+                "hyprctl devices -j 2>/dev/null | jq -r '[.keyboards[] | select(.main)][0].active_keymap // empty'"]
+            stdout: StdioCollector {
+                onStreamFinished: kbLabel.text = text.trim().replace(/\s*\(.*\)$/, "") || "--"
             }
         }
     }
 {{/if}}
 {{#if HAS_QS_WIDGET_FETCH_MINI}}
-    PanelWindow {
-        visible: shellRoot.widgetsShown
-        anchors { top: {{WG_FETCH_MINI_TOP}}; bottom: {{WG_FETCH_MINI_BOTTOM}}; left: {{WG_FETCH_MINI_LEFT}}; right: {{WG_FETCH_MINI_RIGHT}} }
-        margins { top: {{WG_FETCH_MINI_Y}}; bottom: {{WG_FETCH_MINI_Y}}; left: {{WG_FETCH_MINI_X}}; right: {{WG_FETCH_MINI_X}} }
-        implicitWidth: {{WG_FETCH_MINI_W}}
-        implicitHeight: {{WG_FETCH_MINI_H}}
-        color: "transparent"
-        exclusiveZone: 0
-        // Desktop widget: bottom layer. With the default WlrLayer.Top the
-        // window would stay above every app (see the note at the top of the file).
-        WlrLayershell.layer: {{WIDGET_LAYER_QML}}
-        focusable: false
+    WidgetWindow {
+        atTop: {{WG_FETCH_MINI_TOP}}; atBottom: {{WG_FETCH_MINI_BOTTOM}}; atLeft: {{WG_FETCH_MINI_LEFT}}; atRight: {{WG_FETCH_MINI_RIGHT}}
+        mx: {{WG_FETCH_MINI_X}}; my: {{WG_FETCH_MINI_Y}}; boxW: {{WG_FETCH_MINI_W}}; boxH: {{WG_FETCH_MINI_H}}
 
-        Rectangle {
+        RowLayout {
             anchors.fill: parent
-            color: "{{WIDGET_BG_QML}}"
-            radius: {{WIDGET_RADIUS_VALUE}}
-            border.color: "{{HEX_ACCENT}}"
-            border.width: 2
-
-            Column {
-                anchors.centerIn: parent
-                scale: {{WIDGET_SCALE_VALUE}}
-                spacing: 3
-
-                Text {
-                    id: fetchHost
-                    text: "--"
-                    color: "{{HEX_ACCENT}}"
-                    font.pixelSize: 14
-                    font.bold: true
-                    font.family: "{{FONT_FAMILY}}"
-                }
-                Text {
-                    id: fetchKernel
-                    text: "--"
-                    color: "{{HEX_SUBTEXT}}"
-                    font.pixelSize: 12
-                    font.family: "{{FONT_FAMILY}}"
-                }
-                Text {
-                    id: fetchShell
-                    text: "--"
-                    color: "{{HEX_SUBTEXT}}"
-                    font.pixelSize: 12
-                    font.family: "{{FONT_FAMILY}}"
-                }
+            spacing: ws.px(12)
+            WIcon { text: "󰣇"; font.pixelSize: ws.px(34) }
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 0
+                WText { id: fetchHost; text: "--"; color: ws.accent; font.bold: true; Layout.fillWidth: true }
+                WText { id: fetchKernel; text: "--"; font.pixelSize: ws.px(12); Layout.fillWidth: true }
+                WText { id: fetchShell; text: "--"; color: ws.sub; font.pixelSize: ws.px(12); Layout.fillWidth: true }
             }
         }
-
-        Timer {
-            interval: 60000
+        Process {
             running: true
-            repeat: true
-            triggeredOnStart: true
-            onTriggered: {
-                fetchHostProc.running = true
-                fetchKernelProc.running = true
-                fetchShellProc.running = true
+            command: ["bash", "-c", "hostname; uname -r; basename \"${SHELL:-sh}\""]
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    const l = text.trim().split("\n")
+                    fetchHost.text = l[0] || "--"
+                    fetchKernel.text = l[1] || "--"
+                    fetchShell.text = l[2] || "--"
+                }
             }
-        }
-
-        Process {
-            id: fetchHostProc
-            command: ["bash", "-c", "hostname"]
-            stdout: SplitParser { onRead: data => fetchHost.text = data }
-        }
-        Process {
-            id: fetchKernelProc
-            command: ["bash", "-c", "uname -sr"]
-            stdout: SplitParser { onRead: data => fetchKernel.text = data }
-        }
-        Process {
-            id: fetchShellProc
-            command: ["bash", "-c", "basename \"${SHELL:-sh}\""]
-            stdout: SplitParser { onRead: data => fetchShell.text = data }
         }
     }
 {{/if}}
 {{#if HAS_QS_WIDGET_WORKSPACE}}
-    // Hyprland's own current workspace name — if waybar is still the main bar
-    // this widget does not clash with it, it is just an extra reminder corner.
-    PanelWindow {
-        visible: shellRoot.widgetsShown
-        anchors { top: {{WG_WORKSPACE_TOP}}; bottom: {{WG_WORKSPACE_BOTTOM}}; left: {{WG_WORKSPACE_LEFT}}; right: {{WG_WORKSPACE_RIGHT}} }
-        margins { top: {{WG_WORKSPACE_Y}}; bottom: {{WG_WORKSPACE_Y}}; left: {{WG_WORKSPACE_X}}; right: {{WG_WORKSPACE_X}} }
-        implicitWidth: {{WG_WORKSPACE_W}}
-        implicitHeight: {{WG_WORKSPACE_H}}
-        color: "transparent"
-        exclusiveZone: 0
-        // Desktop widget: bottom layer. With the default WlrLayer.Top the
-        // window would stay above every app (see the note at the top of the file).
-        WlrLayershell.layer: {{WIDGET_LAYER_QML}}
-        focusable: false
+    WidgetWindow {
+        atTop: {{WG_WORKSPACE_TOP}}; atBottom: {{WG_WORKSPACE_BOTTOM}}; atLeft: {{WG_WORKSPACE_LEFT}}; atRight: {{WG_WORKSPACE_RIGHT}}
+        mx: {{WG_WORKSPACE_X}}; my: {{WG_WORKSPACE_Y}}; boxW: {{WG_WORKSPACE_W}}; boxH: {{WG_WORKSPACE_H}}
 
-        Rectangle {
+        // Hyprland's own state instead of polling hyprctl every second.
+        ColumnLayout {
             anchors.fill: parent
-            color: "{{WIDGET_BG_QML}}"
-            radius: {{WIDGET_RADIUS_VALUE}}
-            border.color: "{{HEX_ACCENT}}"
-            border.width: 2
-
-            Text {
-                id: workspaceLabel
-                anchors.centerIn: parent
-                scale: {{WIDGET_SCALE_VALUE}}
-                text: "--"
-                color: "{{HEX_ACCENT}}"
-                font.pixelSize: 16
+            spacing: 0
+            WText { text: "Workspace"; color: ws.sub; font.pixelSize: ws.px(11); Layout.alignment: Qt.AlignHCenter }
+            WText {
+                Layout.alignment: Qt.AlignHCenter
+                text: Hyprland.focusedWorkspace ? Hyprland.focusedWorkspace.name : "?"
+                color: ws.accent
                 font.bold: true
-                font.family: "{{FONT_FAMILY}}"
-            }
-        }
-
-        Timer {
-            interval: 1000
-            running: true
-            repeat: true
-            triggeredOnStart: true
-            onTriggered: workspaceProc.running = true
-        }
-
-        Process {
-            id: workspaceProc
-            command: ["bash", "-c",
-                "hyprctl activeworkspace -j 2>/dev/null | jq -r '.name // \"?\"'"]
-            stdout: SplitParser {
-                onRead: data => workspaceLabel.text = data
+                font.pixelSize: ws.px(24)
             }
         }
     }

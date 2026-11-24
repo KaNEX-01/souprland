@@ -157,6 +157,13 @@ layerrule = ignore_alpha 0.3, match:namespace ^(hyprsetup-panel)$
 # Hyprland's from stacking on top.
 layerrule = no_anim on, match:namespace ^(hyprsetup-panel)$
 {{/if}}
+{{#if HAS_QUICKSHELL}}
+# Desktop widgets with WIDGET_BLUR (the "glass" style): Quickshell puts them in
+# the "hyprsetup-widget-blur" namespace. ignore_alpha keeps the soft drop
+# shadow around the box from being blurred into a grey frame.
+layerrule = blur on, match:namespace ^(hyprsetup-widget-blur)$
+layerrule = ignore_alpha 0.2, match:namespace ^(hyprsetup-widget-blur)$
+{{/if}}
 {{#if HAS_SWAYNC}}
 # swaync layers (notifications and notification center) are not blurred:
 # the layers open larger than their content, and blur left a blurry

@@ -21,8 +21,11 @@
 .network-box, .volume-box, .brightness-box, .uptime-box, .disk-box,
 .temperature-box, .worldclock-box, .kblayout-box, .fetch-mini-box,
 .workspace-box {
-  background-color: {{WIDGET_BG_CSS}};
-  border: 2px solid {{HEX_ACCENT}};
+  /* Plate, border and surface come from the widget style (WS_* in
+   * render.py:_widget_look_vars); gauges, clock and music layouts are
+   * Quickshell-only. */
+  background-color: {{WS_BG_CSS}};
+  border: {{WS_BORDER_CSS}};
   border-radius: {{WIDGET_RADIUS_VALUE}}px;
   padding: {{WIDGET_PAD_V}}px {{WIDGET_PAD_H}}px;
 }

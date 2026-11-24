@@ -1179,6 +1179,47 @@ WSETEOF
         pass "widget set presets consistent ($(find presets/widget-set -name '*.conf' | wc -l) sets)"
     fi
 
+    # Are the widget STYLE presets (presets/widget-style/) consistent? A style
+    # owns exactly the look keys (presets.WIDGET_STYLE_KEYS): a missing key
+    # would leak the previous style's value, an unknown choice would silently
+    # fall back to the default, and a set must not write look keys any more.
+    wstyle_out=$(PYTHONPATH="$SETUP_ROOT/python" python3 - <<'WSTYLEEOF'
+from pathlib import Path
+
+from hyprsetup import presets as presets_mod
+from hyprsetup.render import WIDGET_LOOK_CHOICES, WIDGET_LOOK_DEFAULTS
+
+problems = []
+keys = set(presets_mod.WIDGET_STYLE_KEYS)
+if keys != set(WIDGET_LOOK_DEFAULTS):
+    problems.append("presets.WIDGET_STYLE_KEYS != render.WIDGET_LOOK_DEFAULTS")
+styles = presets_mod.load_all(presets_mod.default_dir(Path("."), "widget-style"))
+if not styles:
+    problems.append("presets/widget-style/ is empty")
+for preset in styles:
+    given = set(preset.values)
+    if given != keys:
+        problems.append(f"{preset.name}: missing {sorted(keys - given)}, "
+                        f"extra {sorted(given - keys)}")
+    for key, choices in WIDGET_LOOK_CHOICES.items():
+        if preset.values.get(key) not in choices:
+            problems.append(f"{preset.name}: {key}={preset.values.get(key)!r} "
+                            f"not in {choices}")
+    if not (preset.title and preset.desc):
+        problems.append(f"{preset.name}: title/desc header missing")
+for preset in presets_mod.load_all(presets_mod.default_dir(Path("."), "widget-set")):
+    leaked = sorted(keys & set(preset.values))
+    if leaked:
+        problems.append(f"widget-set {preset.name}: look keys belong to a style: {leaked}")
+print("\n".join(problems))
+WSTYLEEOF
+)
+    if [[ -n "$wstyle_out" ]]; then
+        fail "widget style presets consistent" "$wstyle_out"$'\n'
+    else
+        pass "widget style presets consistent ($(find presets/widget-style -name '*.conf' | wc -l) styles)"
+    fi
+
     # Writing/reading settings.conf. Values used to be written unescaped as
     # KEY="value" and the file was sourced: a value containing quotes/$ (a
     # custom module command) was EXECUTED on read. The Python writer + bash

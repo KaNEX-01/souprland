@@ -32,6 +32,7 @@ EXTRA_DEFAULTS = {
     "MANAGE_HYPR_CONFIGS": "1",
     "MANAGE_MONITORS": "1",
     "WIDGET_SET": "",
+    "WIDGET_STYLE": "",
     "GLOBAL_OPACITY": "",
     "EXTRA_ENV": "",
     "EXTRA_EXEC_ONCE": "",
@@ -46,7 +47,7 @@ HEADER_KEYS = ("THEME", "CUSTOM_COLORS", "COLOR_SCHEME", "CURSOR_THEME",
                "CURSOR_SIZE", "FONT_FAMILY", "FONT_SIZE", "MOD_KEY")
 BAR_MODULE_KEYS = ("BAR_MODULES_LEFT", "BAR_MODULES_CENTER",
                    "BAR_MODULES_RIGHT")
-SCOPE_KEYS = ("WIDGET_SET", "MANAGE_HYPR_CONFIGS", "MANAGE_MONITORS", "MONITOR_SPEC",
+SCOPE_KEYS = ("WIDGET_SET", "WIDGET_STYLE", "MANAGE_HYPR_CONFIGS", "MANAGE_MONITORS", "MONITOR_SPEC",
               "WORKSPACE_MONITOR_MAP", "GLOBAL_OPACITY", "EXTRA_ENV",
               "EXTRA_EXEC_ONCE", "BROWSER")
 KEYBIND_KEYS = ("KEYBINDS",)
@@ -390,6 +391,28 @@ class SetupState:
         # The set writes the widget list, but if no engine is selected nothing
         # is generated; that was the source of "I applied it, it doesn't work".
         self._ensure_widget_engine(root)
+        self._notify()
+
+    def apply_widget_style(self, root, name: str) -> None:
+        """Apply a widget look preset (presets/widget-style/<name>.conf).
+
+        Only WIDGET_STYLE_KEYS are reset and rewritten: which widgets are on
+        and where (the widget set) stay as they are. Every key can then be
+        changed one by one on the Widgets page.
+        """
+        values = presets_mod.resolve_chain(
+            root, profile=self.preset, variant=self.variant, bar=self.pinned_bar,
+            widget_style=name)
+        merged = presets_mod.reset_values(presets_mod.WIDGET_STYLE_KEYS,
+                                          self._base_defaults())
+        merged.update({k: v for k, v in values.items()
+                       if k in presets_mod.WIDGET_STYLE_KEYS})
+        merged["WIDGET_STYLE"] = name
+        known = self._conf_keys()
+        for key, value in merged.items():
+            self.values[key] = str(value)
+            if key not in known:
+                self.extra_values[key] = str(value)
         self._notify()
 
     def apply_axis_preset(self, root, kind: str, name: str,

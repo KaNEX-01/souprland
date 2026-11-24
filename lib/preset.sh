@@ -50,7 +50,16 @@ PRESET_BAR_KEYS=(
 PRESET_WIDGET_KEYS=(
     WIDGETS WIDGET_ZONE_TL WIDGET_ZONE_TC WIDGET_ZONE_TR
     WIDGET_ZONE_BL WIDGET_ZONE_BC WIDGET_ZONE_BR WIDGET_OFFSETS
-    WIDGET_MARGIN WIDGET_GAP WIDGET_SCALE WIDGET_RADIUS WIDGET_OPACITY
+    WIDGET_MARGIN WIDGET_GAP WIDGET_SCALE
+)
+
+# Keys owned by a widget STYLE (presets/widget-style/): how the widgets look,
+# independent of the set's layout (same as presets.py:WIDGET_STYLE_KEYS).
+# shellcheck disable=SC2034  # read in another file (a sourced library)
+PRESET_WIDGET_STYLE_KEYS=(
+    WIDGET_RADIUS WIDGET_OPACITY WIDGET_BOX WIDGET_SURFACE
+    WIDGET_BORDER WIDGET_BORDER_TONE WIDGET_SHADOW WIDGET_BLUR
+    WIDGET_METER WIDGET_MUSIC WIDGET_CLOCK
 )
 
 # Keys owned by a terminal preset (same as presets.py:TERM_KEYS).
@@ -112,7 +121,7 @@ preset_canonical() {
     printf '%s' "${PRESET_ALIAS[${2:-profile}:$1]:-$1}"
 }
 
-# preset_dir <kind> — profile | bar | terminal | launcher | widget | widget-set
+# preset_dir <kind> — profile | bar | terminal | launcher | widget | widget-set | widget-style
 preset_dir() {
     case "$1" in
         profile|"")  printf '%s' "$PRESET_DIR" ;;
@@ -124,6 +133,8 @@ preset_dir() {
         # Not to be confused with presets/widget/ — that is one definition
         # file PER widget (name, description), this is the whole layout.
         widget-set)  printf '%s' "$PRESET_ROOT/widget-set" ;;
+        # Widget STYLE: how the widgets look (plate, border, gauges, clock).
+        widget-style) printf '%s' "$PRESET_ROOT/widget-style" ;;
         # Look variants of the selected profile (same as python/hyprsetup/presets.py:
         # variants_dir): <profile>.variants/<name>.conf. The profile name is
         # validated as a file name, so it is safe to append to the path.
@@ -142,6 +153,7 @@ preset_kind_label() {
         launcher) printf 'Launcher preset' ;;
         widget)     printf 'Widget' ;;
         widget-set) printf 'Widget set' ;;
+        widget-style) printf 'Widget style' ;;
         variant)    printf 'Profile variant' ;;
         *)          printf 'Profile' ;;
     esac
@@ -155,6 +167,7 @@ preset_kind_title() {
         launcher) printf 'Launcher Presets' ;;
         widget)     printf 'Widgets' ;;
         widget-set) printf 'Widget Sets' ;;
+        widget-style) printf 'Widget Styles' ;;
         *)          printf 'Profiles' ;;
     esac
 }
@@ -366,7 +379,7 @@ preset_apply_chain() {
     # change the bar" flow in the GUI/TUI would break), so they are put back
     # after the profile is applied.
     local pinned_bar="${BAR_PRESET:-}" pinned_widgets="${WIDGETS:-}"
-    local pinned_widget_set="${WIDGET_SET:-}"
+    local pinned_widget_set="${WIDGET_SET:-}" pinned_widget_style="${WIDGET_STYLE:-}"
     local pinned_term="${TERM_PRESET:-}" pinned_launcher="${LAUNCHER_PRESET:-}"
 
     # Every key defined before entering the chain is the user's own value
@@ -448,6 +461,8 @@ preset_apply_chain() {
     # override it: no "I picked the set but my own list disappeared".
     _preset_apply_axis "$pinned_widget_set" "${WIDGET_SET:-}" widget-set \
         PRESET_WIDGET_KEYS
+    _preset_apply_axis "$pinned_widget_style" "${WIDGET_STYLE:-}" widget-style \
+        PRESET_WIDGET_STYLE_KEYS
 
     if [[ -n "${WIDGETS:-}" ]]; then
         # "calendar,cava" → applied one by one; an unknown name does not stop the install.

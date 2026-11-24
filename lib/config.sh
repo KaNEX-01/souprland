@@ -40,10 +40,12 @@ CONFIG_VARS=(
     BAR_CUSTOM3_CMD BAR_CUSTOM3_FORMAT BAR_CUSTOM3_INTERVAL BAR_CUSTOM3_CLICK
     # widgets
     WIDGET_ENGINE WIDGETS
-    WIDGET_SET
+    WIDGET_SET WIDGET_STYLE
     WIDGET_ZONE_TL WIDGET_ZONE_TC WIDGET_ZONE_TR
     WIDGET_ZONE_BL WIDGET_ZONE_BC WIDGET_ZONE_BR WIDGET_OFFSETS
     WIDGET_MARGIN WIDGET_GAP WIDGET_SCALE WIDGET_RADIUS WIDGET_OPACITY
+    WIDGET_BOX WIDGET_SURFACE WIDGET_BORDER WIDGET_BORDER_TONE WIDGET_SHADOW
+    WIDGET_BLUR WIDGET_METER WIDGET_MUSIC WIDGET_CLOCK
     WIDGET_LAYER WIDGET_MONITOR WIDGET_AUTOSTART
     VIS_ENABLE VIS_MODE VIS_COLOR VIS_BRIGHTNESS VIS_HEIGHT VIS_WIDTH VIS_MONITOR
     DOCK_ENABLE DOCK_POSITION DOCK_AUTOHIDE DOCK_ICON_SIZE DOCK_MARGIN
@@ -340,6 +342,9 @@ config_defaults() {
     # which widgets are on and which corner each goes to.
     # Empty = the user's own list applies.
     : "${WIDGET_SET:=}"
+    # Widget look preset (presets/widget-style/<name>.conf): box | capsule |
+    # bare | glass | material. Writes the look settings below together.
+    : "${WIDGET_STYLE:=}"
     # Which layer are widgets drawn on?
     #   bottom  above the wallpaper, BELOW WINDOWS. On a tiling desktop the
     #           screen is almost always covered by windows, so in practice
@@ -396,6 +401,15 @@ config_defaults() {
     : "${WIDGET_SCALE:=1.0}"             # box + text scale
     : "${WIDGET_RADIUS:=12}"             # corner rounding (px)
     : "${WIDGET_OPACITY:=0.85}"          # opacity of the box background
+    : "${WIDGET_BOX:=true}"              # false: no plate, text on the wallpaper
+    : "${WIDGET_SURFACE:=bg}"            # bg | surface
+    : "${WIDGET_BORDER:=2}"              # border width (px)
+    : "${WIDGET_BORDER_TONE:=accent}"    # accent | soft | light
+    : "${WIDGET_SHADOW:=false}"          # drop shadow (Quickshell)
+    : "${WIDGET_BLUR:=false}"            # Hyprland blur behind the box
+    : "${WIDGET_METER:=text}"            # text | bar | ring (Quickshell)
+    : "${WIDGET_MUSIC:=line}"            # line | card (Quickshell)
+    : "${WIDGET_CLOCK:=compact}"         # compact | large | stacked (Quickshell)
     # Modules: names from the BAR_MODULES section, comma-separated.
     # Modules depending on an unselected component (e.g. bluetooth) are dropped automatically.
     # Note: '=' is used here, not ':='. ':=' also treats an empty string as
