@@ -1126,6 +1126,13 @@ BAR_WS_STYLES = (
 #: the default background via BAR_QS_PLAIN.
 QS_BAR_STYLES = ("caelestia", "illogical-impulse")
 
+#: Bar sets that draw the centred one-piece player capsule (custom/media +
+#: three buttons). The track-change animation in style.css (BAR_MEDIA_CAPSULE)
+#: ends on this capsule's resting padding/colours, which must be written out
+#: because GTK3 does not play keyframes without "to". Other sets (a user who
+#: adds the module themselves) get a plain fade via BAR_MEDIA_PLAIN.
+MEDIA_CAPSULE_STYLES = ("st-gozcu", "st-kule")
+
 #: On a vertical bar Waybar wants "width" instead of "height".
 BAR_VERTICAL = ("left", "right")
 
@@ -1341,6 +1348,8 @@ def _bar_vars(variables: dict[str, str], selected: list[str]) -> dict[str, str]:
     # others) but the template engine has no {{else}}: "others" needs its own
     # flag, otherwise the two special presets draw OVER the default background.
     out["BAR_QS_PLAIN"] = ("" if bar_style in QS_BAR_STYLES else "1")
+    out["BAR_MEDIA_CAPSULE"] = "1" if bar_style in MEDIA_CAPSULE_STYLES else ""
+    out["BAR_MEDIA_PLAIN"] = "" if bar_style in MEDIA_CAPSULE_STYLES else "1"
 
     # The "dock" preset wants a second, thin bottom taskbar (an icon row of
     # open windows) — it cannot be expressed with a single Waybar bar object,

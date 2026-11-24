@@ -48,8 +48,9 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
 gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("Gtk4LayerShell", "1.0")
+gi.require_version("Graphene", "1.0")
 
-from gi.repository import Gdk, GdkPixbuf, GLib, Gtk  # noqa: E402
+from gi.repository import Gdk, GdkPixbuf, GLib, Graphene, Gtk  # noqa: E402
 from gi.repository import Gtk4LayerShell as Layer  # noqa: E402
 
 NAMESPACE = "hyprsetup-panel"
@@ -74,6 +75,81 @@ NOTIFYLOG = Path.home() / ".config/hypr/scripts/notifylog.py"
 WIDTH = 380
 #: Open/close slide (s): the card slides out of the bar edge like a drawer.
 SLIDE = 0.22
+#: Tab → the Waybar modules that open it. If the module sits in the bar's
+#: CENTER group the panel opens in the middle of the screen (the center group
+#: is always centred); otherwise at the click, but later clicks on the same
+#: item "stick" to the first spot (see Panel._anchor_x): the panel always
+#: opens in the same place for each item.
+TAB_MODULES = {
+    "medya": ("custom/media", "custom/media-prev", "custom/media-play",
+              "custom/media-next", "mpris"),
+    "ses": ("pulseaudio", "custom/mic"),
+    "ag": ("network",),
+    "bluetooth": ("bluetooth",),
+    "sistem": ("cpu", "memory", "temperature", "disk"),
+    "pil": ("battery",),
+    "parlaklik": ("backlight",),
+    "takvim": ("clock",),
+    "bildirim": ("custom/notifications",),
+    "kayit": ("custom/record",),
+}
+#: Snap radius (px) to an item's remembered position.
+ANCHOR_SNAP = 90
+_ANCHORS = _RUN / "hyprsetup-barpanel.anchors.json"
+_WAYBAR_CONFIG = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") \
+    / "waybar" / "config.jsonc"
+
+
+def _center_modules() -> set[str]:
+    """Union of every "modules-center" list in the Waybar config."""
+    try:
+        text = _WAYBAR_CONFIG.read_text(encoding="utf-8")
+    except OSError:
+        return set()
+    found: set[str] = set()
+    for block in re.findall(r'"modules-center"\s*:\s*\[([^\]]*)\]', text):
+        found.update(re.findall(r'"([^"]+)"', block))
+    return found
+
+
+class _SlideBin(Gtk.Widget):
+    """Single-child container that draws its child shifted and faded.
+
+    The open slide used to reload the WHOLE display's CSS on every frame
+    (translateY + opacity written into a CssProvider): each frame meant a
+    full style recalculation and the slide stuttered. Here the transform is
+    applied only at draw time; measuring and layout stay the child's own.
+    """
+
+    def __init__(self, child: Gtk.Widget) -> None:
+        super().__init__()
+        self.child = child
+        self.offset = 0.0
+        self.alpha = 1.0
+        child.set_parent(self)
+
+    def set_slide(self, offset: float, alpha: float) -> None:
+        self.offset, self.alpha = offset, alpha
+        self.queue_draw()
+
+    def do_measure(self, orientation, for_size):
+        return self.child.measure(orientation, for_size)
+
+    def do_size_allocate(self, width: int, height: int, baseline: int) -> None:
+        self.child.allocate(width, height, baseline, None)
+
+    def do_snapshot(self, snapshot) -> None:
+        snapshot.save()
+        snapshot.translate(Graphene.Point().init(0, self.offset))
+        snapshot.push_opacity(self.alpha)
+        self.snapshot_child(self.child, snapshot)
+        snapshot.pop()
+        snapshot.restore()
+
+    def do_dispose(self) -> None:
+        if self.child is not None:
+            self.child.unparent()
+            self.child = None
 
 
 # ------------------------------------------------------------ helpers -----
@@ -341,6 +417,14 @@ class Panel:
             background: alpha({v.get('HEX_SURFACE', '#313244')}, 0.9);
         }}
         .hs-card .media-title {{ font-size: 1.15em; font-weight: 700; }}
+        .hs-card .tnum {{ font-feature-settings: "tnum"; }}
+        .hs-card button.media {{ transition: background 160ms ease-out, color 160ms ease-out; }}
+        .hs-card button.media:active {{
+            background: alpha({v.get('HEX_ACCENT', '#89b4fa')}, 0.35);
+        }}
+        .hs-card button.media.main:active {{
+            background: alpha({v.get('HEX_ACCENT', '#89b4fa')}, 0.7);
+        }}
         .hs-card button.media {{
             background: alpha({v.get('HEX_SURFACE', '#313244')}, 0.7);
             color: {v.get('HEX_FG', '#cdd6f4')}; border: none; box-shadow: none;
@@ -422,7 +506,8 @@ class Panel:
             width = int(mon["width"] / scale)
             if mon.get("transform", 0) in (1, 3, 5, 7):
                 width = int(mon["height"] / scale)
-            x = int(cursor.get("x", 0)) - int(mon["x"]) - WIDTH // 2
+            x = self._anchor_x(int(cursor.get("x", 0)) - int(mon["x"]),
+                               width, str(mon.get("name", ""))) - WIDTH // 2
             left = max(8, min(x, width - WIDTH - 8))
             Layer.set_margin(window, Layer.Edge.LEFT, left)
             # Also anchored to the right edge: width = screen − two margins = WIDTH.
@@ -430,6 +515,27 @@ class Panel:
             # instead of 380 on pages with wrapping labels (notification bodies).
             Layer.set_anchor(window, Layer.Edge.RIGHT, True)
             Layer.set_margin(window, Layer.Edge.RIGHT, max(0, width - left - WIDTH))
+
+    def _anchor_x(self, cursor_x: int, width: int, monitor: str) -> int:
+        """The x the panel centres on: fixed per item (see TAB_MODULES)."""
+        if self.values.get("BAR_POSITION", "top") not in ("top", "bottom"):
+            return cursor_x
+        if _center_modules() & set(TAB_MODULES.get(self.tab, ())):
+            return width // 2
+        key = f"{monitor}:{self.tab}"
+        try:
+            anchors = json.loads(_ANCHORS.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            anchors = {}
+        known = anchors.get(key)
+        if isinstance(known, int) and abs(known - cursor_x) <= ANCHOR_SNAP:
+            return known
+        anchors[key] = cursor_x
+        try:
+            _ANCHORS.write_text(json.dumps(anchors), encoding="utf-8")
+        except OSError:
+            pass
+        return cursor_x
 
     def _build(self, tabs) -> None:
         window = Gtk.Window(application=self.app)
@@ -474,15 +580,11 @@ class Panel:
             self.stack.add_named(getattr(self, f"_page_{tab_id}")(), tab_id)
         card.append(bar)
         card.append(self.stack)
-        card.add_css_class("hs-slide")
         self.card = card
-        window.set_child(card)
+        self.slider = _SlideBin(card)
+        window.set_child(self.slider)
         self.buttons[self.tab].set_active(True)
         self.stack.set_visible_child_name(self.tab)
-        self._slide_css = Gtk.CssProvider()
-        Gtk.StyleContext.add_provider_for_display(
-            Gdk.Display.get_default(), self._slide_css,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1)
         self._set_slide(1.0)
         window.present()
         self.windows.append(window)
@@ -495,10 +597,7 @@ class Panel:
         """hidden 1 → card fully behind the bar, 0 → in place."""
         height = self.card.get_height() or 400
         sign = 1 if self.values.get("BAR_POSITION", "top") == "bottom" else -1
-        offset = sign * hidden * (height + 12)
-        self._slide_css.load_from_string(
-            f".hs-slide {{ transform: translateY({offset:.1f}px); "
-            f"opacity: {1 - hidden * 0.6:.3f}; }}")
+        self.slider.set_slide(sign * hidden * (height + 12), 1 - hidden * 0.6)
 
     def _animate(self, opening: bool, then=None) -> None:
         start = time.monotonic()
@@ -512,7 +611,7 @@ class Panel:
                     then()
                 return GLib.SOURCE_REMOVE
             return GLib.SOURCE_CONTINUE
-        self.card.add_tick_callback(tick)
+        self.slider.add_tick_callback(tick)
 
     def close(self) -> None:
         """The card slides back into the bar edge, then the process ends."""
@@ -1531,42 +1630,71 @@ class Panel:
         top; the chosen player is targeted with ``-p``. The ``mpris:artUrl``
         cover is shown directly if it is a local file, or downloaded under
         ~/.cache first if it is http.
+
+        Fixed layout: no row is hidden or shown when data arrives — every
+        item always stays in its own place and is only dimmed when there is
+        no player. The artist/album rows, the player chooser and the "nothing
+        playing" text used to toggle, so everything shifted after the panel
+        opened. On a track change the title block and the cover cross-fade;
+        between polls the seek bar advances smoothly on a local clock.
         """
         page = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         if not shutil.which("playerctl"):
             page.append(self._dim("playerctl is not installed (pacman -S playerctl)."))
             return page
-        players_box = Gtk.Box(spacing=4)
+        # Player chooser: shown (by name) even with one player; the row stays put.
+        players_box = Gtk.Box(spacing=4, height_request=28)
         page.append(players_box)
 
         top = Gtk.Box(spacing=12)
-        cover = Gtk.Picture(content_fit=Gtk.ContentFit.COVER, can_shrink=True,
-                            width_request=96, height_request=96,
-                            hexpand=False, vexpand=False, overflow=Gtk.Overflow.HIDDEN)
-        cover.add_css_class("cover")
+        cover_stack = Gtk.Stack(hhomogeneous=True, vhomogeneous=True,
+                                valign=Gtk.Align.CENTER,
+                                transition_type=Gtk.StackTransitionType.CROSSFADE,
+                                transition_duration=260)
         # No cover (live stream, local file): an icon instead of an empty square.
         placeholder = Gtk.Image.new_from_icon_name("audio-x-generic-symbolic")
         placeholder.set_pixel_size(40)
         placeholder.add_css_class("cover")
         placeholder.add_css_class("dim")
         placeholder.set_size_request(96, 96)
-        cover_stack = Gtk.Stack(hhomogeneous=True, vhomogeneous=True,
-                                valign=Gtk.Align.CENTER)
         cover_stack.add_named(placeholder, "none")
-        cover_stack.add_named(cover, "art")
+        # Two pictures take turns: the new cover loads into the hidden one and
+        # cross-fades to the front, never dropping to the empty icon between.
+        covers = []
+        for name in ("art0", "art1"):
+            picture = Gtk.Picture(content_fit=Gtk.ContentFit.COVER, can_shrink=True,
+                                  width_request=96, height_request=96,
+                                  hexpand=False, vexpand=False,
+                                  overflow=Gtk.Overflow.HIDDEN)
+            picture.add_css_class("cover")
+            cover_stack.add_named(picture, name)
+            covers.append(picture)
         top.append(cover_stack)
-        texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2,
-                        valign=Gtk.Align.CENTER, hexpand=True)
-        title = Gtk.Label(xalign=0, ellipsize=3, max_width_chars=1, hexpand=True)
-        title.add_css_class("media-title")
-        artist = Gtk.Label(xalign=0, ellipsize=3, max_width_chars=1, hexpand=True)
-        album = self._dim("")
-        album.set_ellipsize(3)
-        album.set_wrap(False)
-        player_name = self._dim("")
-        for widget in (title, artist, album, player_name):
-            texts.append(widget)
-        top.append(texts)
+
+        # Title block: two identical pages; on a track change the idle page is
+        # filled and slides to the front. Labels are never hidden (an empty
+        # one still takes a line), so the block's height is fixed.
+        text_stack = Gtk.Stack(hhomogeneous=True, vhomogeneous=True, hexpand=True,
+                               valign=Gtk.Align.CENTER,
+                               transition_type=Gtk.StackTransitionType.SLIDE_LEFT,
+                               transition_duration=280)
+        text_pages = []
+        for name in ("t0", "t1"):
+            texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2,
+                            valign=Gtk.Align.CENTER, hexpand=True)
+            title = Gtk.Label(xalign=0, ellipsize=3, max_width_chars=1, hexpand=True)
+            title.add_css_class("media-title")
+            artist = Gtk.Label(xalign=0, ellipsize=3, max_width_chars=1, hexpand=True)
+            album = Gtk.Label(xalign=0, ellipsize=3, max_width_chars=1, hexpand=True)
+            album.add_css_class("dim")
+            player_name = Gtk.Label(xalign=0, ellipsize=3, max_width_chars=1, hexpand=True)
+            player_name.add_css_class("dim")
+            for widget in (title, artist, album, player_name):
+                texts.append(widget)
+            text_stack.add_named(texts, name)
+            text_pages.append({"name": name, "title": title, "artist": artist,
+                               "album": album, "player": player_name})
+        top.append(text_stack)
         page.append(top)
 
         seek = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 1, 1)
@@ -1578,6 +1706,7 @@ class Panel:
         len_label = Gtk.Label(xalign=1)
         for label in (pos_label, len_label):
             label.add_css_class("dim")
+            label.add_css_class("tnum")
             times.append(label)
         page.append(times)
 
@@ -1603,8 +1732,6 @@ class Panel:
             "audio-volume-high-symbolic", 1.0,
             lambda v: _bg("playerctl", *target(), "volume", f"{v:.2f}"))
         page.append(vol_line)
-        empty = self._dim("Nothing is playing right now.")
-        page.append(empty)
 
         # Recognize song (songrec): independent of the playing player, it listens
         # to any audio (video, stream, game). The result arrives as a
@@ -1625,19 +1752,34 @@ class Panel:
                 song.append(button)
             page.append(song)
 
-        state = {"player": "", "players": [], "length": 0.0, "art": "",
-                 "quiet": False, "loop": "None", "dragging_until": 0.0}
-        widgets = (top, seek, times, controls, vol_line)
+        state = {"player": "", "players": None, "length": 0.0, "art": "",
+                 "loop": "None", "dragging_until": 0.0, "key": None, "text": 0,
+                 "cover": -1, "pos": 0.0, "pos_at": 0.0, "playing": False,
+                 "shown_second": -1, "ignore_until": 0.0}
+        live = (seek, controls, vol_line)
 
         def target() -> list[str]:
             return ["-p", state["player"]] if state["player"] else []
 
         def ctl(*args: str) -> None:
             _bg("playerctl", *target(), *args)
-            GLib.timeout_add(200, lambda: (refresh(), False)[1])
+            # Browser players report the new track 300-600 ms later.
+            for delay in (200, 650):
+                GLib.timeout_add(delay, lambda: (refresh(), False)[1])
+
+        def toggle_play(_b) -> None:
+            # Optimistic: icon and progress change at once, a poll confirms
+            # later. A poll still reporting the old state is briefly ignored.
+            state["pos"] = predicted()
+            state["pos_at"] = time.monotonic()
+            state["playing"] = not state["playing"]
+            state["ignore_until"] = time.monotonic() + 0.6
+            play.set_icon_name("media-playback-pause-symbolic" if state["playing"]
+                               else "media-playback-start-symbolic")
+            ctl("play-pause")
 
         prev.connect("clicked", lambda _b: ctl("previous"))
-        play.connect("clicked", lambda _b: ctl("play-pause"))
+        play.connect("clicked", toggle_play)
         nxt.connect("clicked", lambda _b: ctl("next"))
         shuffle.connect("clicked", lambda _b: ctl("shuffle", "toggle"))
         loop.connect("clicked", lambda _b: ctl(
@@ -1647,6 +1789,8 @@ class Panel:
             # change-value only fires when the user drags; updates pause briefly
             # so the tick does not pull the position back.
             state["dragging_until"] = time.monotonic() + 1.2
+            state["pos"] = max(0.0, value)
+            state["pos_at"] = time.monotonic() + 1.2
             _bg("playerctl", *target(), "position", f"{max(0.0, value):.1f}")
             return False
         seek.connect("change-value", on_seek)
@@ -1657,12 +1801,33 @@ class Panel:
             return (f"{hours}:{rest // 60:02d}:{rest % 60:02d}" if hours
                     else f"{rest // 60}:{rest % 60:02d}")
 
+        def predicted() -> float:
+            pos = state["pos"]
+            if state["playing"]:
+                pos += max(0.0, time.monotonic() - state["pos_at"])
+            return min(pos, state["length"]) if state["length"] else pos
+
+        def tick(_widget, _clock) -> bool:
+            # Every frame: while playing the bar advances on a local clock
+            # (polls are once a second; the bar no longer jumps each second).
+            if state["length"] and time.monotonic() > state["dragging_until"]:
+                value = predicted()
+                if abs(seek.get_value() - value) > 0.01:
+                    seek.set_value(value)
+                second = int(value)
+                if second != state["shown_second"]:
+                    state["shown_second"] = second
+                    pos_label.set_label(clock(value))
+            return GLib.SOURCE_CONTINUE
+        seek.add_tick_callback(tick)
+
         def fill_players(players: list[str]) -> None:
             child = players_box.get_first_child()
             while child:
                 players_box.remove(child)
                 child = players_box.get_first_child()
-            players_box.set_visible(len(players) > 1)
+            if not players:
+                players_box.append(self._dim("No player"))
             for name in players:
                 button = Gtk.Button(label=name.split(".")[0].capitalize())
                 button.add_css_class("text")
@@ -1673,11 +1838,10 @@ class Panel:
 
         def choose(name: str) -> None:
             state["player"] = name
-            state["art"] = ""
-            fill_players(state["players"])
+            fill_players(state["players"] or [])
             refresh()
 
-        def set_cover(path: str) -> None:
+        def set_cover(picture: Gtk.Picture, path: str) -> None:
             # Picture takes its natural size from the image: a 300 px video
             # thumbnail squeezed the title in the fixed-width panel. A square
             # crop scaled down to 96 px is shown instead.
@@ -1687,23 +1851,27 @@ class Panel:
                 pix = pix.new_subpixbuf((pix.get_width() - side) // 2,
                                         (pix.get_height() - side) // 2, side, side)
                 pix = pix.scale_simple(96, 96, GdkPixbuf.InterpType.BILINEAR)
-                cover.set_paintable(Gdk.Texture.new_for_pixbuf(pix))
+                picture.set_paintable(Gdk.Texture.new_for_pixbuf(pix))
             except GLib.Error:
-                cover.set_filename(path)
+                picture.set_filename(path)
+
+        def present_cover(path: str) -> None:
+            # Load into the hidden picture, then cross-fade it to the front.
+            index = 1 - max(0, state["cover"])
+            set_cover(covers[index], path)
+            state["cover"] = index
+            cover_stack.set_visible_child_name(f"art{index}")
 
         def show_art(url: str) -> None:
             if url == state["art"]:
                 return
             state["art"] = url
-            cover_stack.set_visible_child_name("none")
-            if not url:
-                cover.set_paintable(None)
+            if not url.startswith(("file://", "http://", "https://")):
+                state["cover"] = -1
+                cover_stack.set_visible_child_name("none")
                 return
             if url.startswith("file://"):
-                set_cover(urllib.parse.unquote(url[7:]))
-                cover_stack.set_visible_child_name("art")
-                return
-            if not url.startswith(("http://", "https://")):
+                present_cover(urllib.parse.unquote(url[7:]))
                 return
             cache = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") \
                 / "hyprsetup" / "cover"
@@ -1718,11 +1886,40 @@ class Panel:
                     except (OSError, ValueError):
                         return ""
                 return str(path)
+
             def shown(f: str) -> None:
-                if f and state["art"] == url:
-                    set_cover(f)
-                    cover_stack.set_visible_child_name("art")
+                if state["art"] != url:
+                    return
+                if f:
+                    present_cover(f)
+                else:
+                    state["cover"] = -1
+                    cover_stack.set_visible_child_name("none")
             _later(fetch, shown)
+
+        def show_text(title: str, artist: str, album: str, player: str) -> None:
+            key = (title, artist, album, player)
+            if key == state["key"]:
+                return
+            first = state["key"] is None
+            # If only the player name changed: no slide, written in place.
+            same_track = state["key"] is not None and state["key"][:3] == key[:3]
+            state["key"] = key
+            if first or same_track:
+                current = text_pages[state["text"]]
+            else:
+                state["text"] = 1 - state["text"]
+                current = text_pages[state["text"]]
+            current["title"].set_label(title)
+            current["title"].set_tooltip_text(title)
+            current["artist"].set_label(artist)
+            current["album"].set_label(album)
+            current["player"].set_label(player)
+            if first:
+                text_stack.set_visible_child_full(
+                    current["name"], Gtk.StackTransitionType.NONE)
+            else:
+                text_stack.set_visible_child_name(current["name"])
 
         fields = ("status", "title", "artist", "album", "mpris:artUrl",
                   "mpris:length", "position", "shuffle", "loop", "volume",
@@ -1732,7 +1929,7 @@ class Panel:
         def load():
             players = [p for p in _out("playerctl", "-l").split() if p]
             if not players:
-                return players, {}
+                return players, {}, time.monotonic()
             if state["player"] not in players:
                 # The SAME choice as the bar's player module (media.sh player):
                 # the playing one, else the last one played. Without the script:
@@ -1746,30 +1943,32 @@ class Panel:
                     chosen = (playing or players)[0]
                 state["player"] = chosen
             raw = _out("playerctl", "-p", state["player"], "metadata", "--format", fmt)
+            stamp = time.monotonic()
             parts = (raw.rstrip("\n").split("\x1f") + [""] * len(fields))[:len(fields)]
-            return players, dict(zip(fields, parts, strict=False))
+            return players, dict(zip(fields, parts, strict=False)), stamp
 
         def fill(data) -> None:
-            players, meta = data
+            players, meta, stamp = data
             if players != state["players"]:
                 state["players"] = players
                 fill_players(players)
-            has = bool(meta)
-            for widget in widgets:
-                widget.set_visible(has)
-            empty.set_visible(not has)
+            has = bool(meta) and meta.get("status") in ("Playing", "Paused")
+            for widget in live:
+                widget.set_sensitive(has)
             if not has:
+                state.update(length=0.0, playing=False, pos=0.0)
+                show_text("Nothing is playing right now", "", "", "")
+                show_art("")
+                seek.set_value(0)
+                pos_label.set_label(clock(0))
+                len_label.set_label(clock(0))
                 return
-            title.set_label(meta["title"] or "Unknown track")
-            title.set_tooltip_text(meta["title"])
-            artist.set_label(meta["artist"])
-            artist.set_visible(bool(meta["artist"]))
-            album.set_label(meta["album"])
-            album.set_visible(bool(meta["album"]))
-            player_name.set_label(meta["playerName"] or state["player"])
-            playing = meta["status"] == "Playing"
-            play.set_icon_name("media-playback-pause-symbolic" if playing
-                               else "media-playback-start-symbolic")
+            show_text(meta["title"] or "Unknown track", meta["artist"],
+                      meta["album"], meta["playerName"] or state["player"])
+            if time.monotonic() > state["ignore_until"]:
+                state["playing"] = meta["status"] == "Playing"
+                play.set_icon_name("media-playback-pause-symbolic" if state["playing"]
+                                   else "media-playback-start-symbolic")
             for button, on in ((shuffle, meta["shuffle"] == "true"),
                                (loop, meta["loop"] in ("Track", "Playlist"))):
                 (button.add_css_class if on else button.remove_css_class)("on")
@@ -1783,7 +1982,7 @@ class Panel:
                 length = int(meta["mpris:length"] or 0) / 1e6
             except ValueError:
                 length = 0.0
-            # For live streams browsers report the int64 maximum.
+            # On live streams browsers report the int64 ceiling.
             if length > 100 * 3600:
                 length = 0.0
             try:
@@ -1791,11 +1990,17 @@ class Panel:
             except ValueError:
                 position = 0.0
             seek.set_sensitive(length > 0)
-            if length > 0:
+            if length > 0 and length != state["length"]:
                 seek.set_range(0, length)
-                if time.monotonic() > state["dragging_until"]:
-                    seek.set_value(min(position, length))
-            pos_label.set_label(clock(position))
+            state["length"] = length
+            # A prediction close to reality is left alone (no bounce back); on a
+            # new track, a seek or a pause the bar jumps to the new position.
+            if time.monotonic() > state["dragging_until"] and (
+                    abs(predicted() - position) > 0.75 or not state["playing"]):
+                state["pos"], state["pos_at"] = position, stamp
+            if not length:
+                seek.set_value(0)
+                pos_label.set_label(clock(position))
             len_label.set_label(clock(length) if length else "live")
             try:
                 vol_set(float(meta["volume"] or 1.0), False)

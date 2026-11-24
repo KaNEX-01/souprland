@@ -1622,3 +1622,66 @@ window#waybar {
 #custom-power { color: alpha(@red, 0.8); margin: 4px 8px 4px 2px; padding: 0 11px; }
 #custom-power:hover { background-color: alpha(@red, 0.18); color: @red; }
 {{/if}}
+
+/* ===================================================== press feedback ===
+ * At the END of the file: same specificity as the presets' :hover rules, so
+ * order wins. When pressed, media.sh gives the player buttons the "pressed"
+ * class (~320 ms); entry is a flash animation, exit fades back through the
+ * module's own transition. Workspace buttons are real GTK buttons and get
+ * :active (while the mouse is held) directly. */
+#custom-media-prev.pressed, #custom-media-play.pressed, #custom-media-next.pressed {
+    background-color: alpha(@accent, 0.30);
+    color: @accent;
+    box-shadow: inset 0 0 0 1px alpha(@accent, 0.55);
+    animation: hs-press 320ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+@keyframes hs-press {
+    from { background-color: alpha(@accent, 0.60); box-shadow: inset 0 0 0 1px @accent, inset 0 0 12px alpha(@accent, 0.55); }
+    to   { background-color: alpha(@accent, 0.30); box-shadow: inset 0 0 0 1px alpha(@accent, 0.55), inset 0 0 0 alpha(@accent, 0); }
+}
+#workspaces button:active {
+    background-color: alpha(@accent, 0.30);
+    color: @accent;
+    transition: all 60ms ease-out;
+}
+
+/* ===================================================== track change ===
+ * GTK3 cannot animate width: the box snapped wider/narrower as the text
+ * changed. The text fades out on a change (leaving) and the new one fades in
+ * (changed); media.sh sets both. NOTE: GTK3 does NOT play @keyframes that
+ * only have "from"; every keyframe must also spell out "to" with the
+ * module's resting values, hence one variant per bar style. */
+#custom-media.leaving {
+    color: alpha(@fg, 0.0);
+    transition: all 180ms cubic-bezier(0.55, 0, 1, 0.45);
+}
+{{#if BAR_MEDIA_CAPSULE}}
+/* Capsule sets (render.py MEDIA_CAPSULE_STYLES): a fixed minimum width stops
+ * the jumping (longer titles still grow the box). The text slides out to the
+ * left and in from the right: left/right padding trade places, their sum
+ * stays constant, so the box does not move. "to" values are the capsule's
+ * resting values. */
+#custom-media { min-width: 380px; }
+#custom-media.leaving { padding-left: 8px; padding-right: 20px; }
+#custom-media.changed { animation: hs-track-in 520ms cubic-bezier(0.23, 1, 0.32, 1); }
+#custom-media.paused.changed { animation-name: hs-track-in-paused; }
+@keyframes hs-track-in {
+    from { color: alpha(@fg, 0.0); padding-left: 28px; padding-right: 0; background-color: alpha(@accent, 0.22); }
+    to   { color: @fg; padding-left: 16px; padding-right: 12px; background-color: alpha(@surface, 0.55); }
+}
+@keyframes hs-track-in-paused {
+    from { color: alpha(@subtext, 0.0); padding-left: 28px; padding-right: 0; background-color: alpha(@accent, 0.22); }
+    to   { color: alpha(@subtext, 0.95); padding-left: 16px; padding-right: 12px; background-color: alpha(@surface, 0.55); }
+}
+{{/if}}
+{{#if BAR_MEDIA_PLAIN}}
+/* Sets without the capsule: the module's padding/background vary per set, so
+ * they are left alone; the text fades in and the box briefly glows in the
+ * accent colour (no set uses an inset shadow at rest, so ending at zero is
+ * safe). */
+#custom-media.changed { animation: hs-track-in-plain 520ms cubic-bezier(0.23, 1, 0.32, 1); }
+@keyframes hs-track-in-plain {
+    from { color: alpha(@fg, 0.0); box-shadow: inset 0 0 0 1px alpha(@accent, 0.70), inset 0 0 14px alpha(@accent, 0.35); }
+    to   { color: @fg; box-shadow: inset 0 0 0 1px alpha(@accent, 0.0), inset 0 0 0 alpha(@accent, 0.0); }
+}
+{{/if}}

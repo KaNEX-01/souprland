@@ -59,16 +59,71 @@ cut_to() {   # $1 text, $2 max characters
 
 empty() { printf '{"text":"","class":"stopped"}\n'; exit 0; }
 
+# Click feedback. Waybar gives custom modules no "pressed" state and the
+# buttons were only polled once a second: after a click nothing changed for
+# up to a second. Now "cmd" writes the pressed button with a timestamp to
+# PRESS and makes the modules refresh at once via RTMIN+SIGNAL; the button
+# carries the "pressed" class while PRESS is fresh (a flash in style.css),
+# and a second refresh shortly after drops the class so the CSS transition
+# fades it back.
+PRESS="${XDG_RUNTIME_DIR:-/tmp}/hyprsetup-media.press"
+SIGNAL=8
+PRESS_MS=320
+
+now_ms() { local t="${EPOCHREALTIME/[.,]/}"; printf '%s' "$(( t / 1000 ))"; }
+refresh() { pkill "-RTMIN+$SIGNAL" -x waybar 2>/dev/null || true; }
+pressed() {   # $1 button (prev|play|next), $2 window (ms) → 0 if freshly pressed
+    local b t win="${2:-$PRESS_MS}"
+    [[ -r "$PRESS" ]] || return 1
+    read -r b t < "$PRESS" || return 1
+    [[ "$b" == "$1" && "$t" =~ ^[0-9]+$ ]] && (( $(now_ms) - t < win ))
+}
+
+# Track changes. GTK3 cannot animate a box's width: the box snapped
+# wider/narrower whenever the text changed. style.css gives the box a fixed
+# minimum width and the text fades instead: on prev/next the info module
+# gets "leaving" (old text fades out), and for TRACK_MS after a new track
+# shows up it gets "changed" (new text fades in).
+TRACK="${XDG_RUNTIME_DIR:-/tmp}/hyprsetup-media.track"
+TRACK_MS=700
+# Longest time the old text stays faded: browser players report the new
+# title 300-600 ms later; if none arrives (e.g. "previous" restarted the same
+# track) the text fades back in at the end of this window.
+LEAVE_MS=800
+
 kind="${1:-info}"
 case "$kind" in
     player) pick; exit 0 ;;
     cmd)
         player="$(pick)" || exit 0
         shift
-        exec playerctl -p "$player" "$@"
+        case "${1:-}" in
+            previous)   btn=prev ;;
+            next)       btn=next ;;
+            play-pause) btn=play ;;
+            *)          btn="" ;;
+        esac
+        # Visual response first, then the command: a slow player (a browser
+        # tab) must not delay the button's flash.
+        [[ -n "$btn" ]] && { printf '%s %s\n' "$btn" "$(now_ms)" > "$PRESS"; refresh; }
+        playerctl -p "$player" "$@"
+        refresh
+        # The new track's title and the removal of "pressed" arrive a little
+        # after the player; two delayed refreshes catch them.
+        ( sleep 0.35; refresh; sleep 0.5; refresh ) >/dev/null 2>&1 &
+        disown 2>/dev/null || true
+        exit 0
         ;;
 esac
 
+# Check "pressed" BEFORE the playerctl calls: the script's own run time
+# (~150 ms) must not eat into the press window.
+was_pressed=""
+if [[ "$kind" == info ]]; then
+    pressed prev "$LEAVE_MS" || pressed next "$LEAVE_MS" && was_pressed=1
+else
+    pressed "$kind" && was_pressed=1
+fi
 player="$(pick)" || empty
 # playerctl's --format fields use double curly braces; hyprsetup's template
 # engine uses the same syntax (this file goes through it first), so the
@@ -85,11 +140,16 @@ case "${status:-}" in
 esac
 
 case "$kind" in
-    prev) printf '{"text":"󰒮","class":"%s"}\n' "$cls" ;;
-    next) printf '{"text":"󰒭","class":"%s"}\n' "$cls" ;;
-    play)
-        if [[ "$cls" == playing ]]; then icon="󰏤"; else icon="󰐊"; fi
-        printf '{"text":"%s","class":"%s"}\n' "$icon" "$cls"
+    prev|next|play)
+        # Waybar accepts an array for "class": state + "pressed" if any.
+        classes="\"$cls\""
+        [[ -n "$was_pressed" ]] && classes+=',"pressed"'
+        case "$kind" in
+            prev) icon="󰒮" ;;
+            next) icon="󰒭" ;;
+            play) if [[ "$cls" == playing ]]; then icon="󰏤"; else icon="󰐊"; fi ;;
+        esac
+        printf '{"text":"%s","class":[%s]}\n' "$icon" "$classes"
         ;;
     info)
         case "${player,,}" in
@@ -105,13 +165,26 @@ case "$kind" in
         # ("2562047788:00:54"); a three-digit hour is not a real track.
         [[ "${len:-}" =~ ^[0-9]{3,}: ]] && len=""
         if [[ -n "${len:-}" ]]; then
-            text+="  <span alpha='60%'>${pos:-0:00} / ${len}</span>"
+            text+="  <span alpha='60%' font_features='tnum'>${pos:-0:00} / ${len}</span>"
         elif [[ -n "${pos:-}" ]]; then
-            text+="  <span alpha='60%'>${pos} · live</span>"
+            text+="  <span alpha='60%' font_features='tnum'>${pos} · live</span>"
         fi
         tip="$(esc "${player%%.*}: ${title:-}${artist:+ — $artist}")"
         [[ -n "${album:-}" ]] && tip+="\n$(esc "$album")"
-        printf '{"text":"%s   %s","class":"%s","tooltip":"%s"}\n' \
-            "$icon" "$text" "$cls" "$tip"
+        # Did the track change? Key: player + title + artist.
+        key="$player|${title:-}|${artist:-}" last_key="" since=0
+        [[ -r "$TRACK" ]] && { IFS= read -r last_key; read -r since; } < "$TRACK"
+        if [[ "$key" != "$last_key" ]]; then
+            since="$(now_ms)"
+            printf '%s\n%s\n' "$key" "$since" > "$TRACK"
+        fi
+        classes="\"$cls\""
+        if [[ "$since" =~ ^[0-9]+$ ]] && (( $(now_ms) - since < TRACK_MS )); then
+            classes+=',"changed"'
+        elif [[ -n "$was_pressed" ]]; then
+            classes+=',"leaving"'
+        fi
+        printf '{"text":"%s   %s","class":[%s],"tooltip":"%s"}\n' \
+            "$icon" "$text" "$classes" "$tip"
         ;;
 esac

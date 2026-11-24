@@ -375,6 +375,7 @@
     // (see hypr/scripts/media.sh). Hidden when there is no player.
     "custom/media": {
         "exec": "$HOME/.config/hypr/scripts/media.sh info",
+        "signal": 8,
         "return-type": "json",
         "interval": 1,
         "escape": false,
@@ -385,6 +386,7 @@
     },
     "custom/media-prev": {
         "exec": "$HOME/.config/hypr/scripts/media.sh prev",
+        "signal": 8,
         "return-type": "json",
         "interval": 1,
         "on-click": "$HOME/.config/hypr/scripts/media.sh cmd previous",
@@ -392,6 +394,7 @@
     },
     "custom/media-play": {
         "exec": "$HOME/.config/hypr/scripts/media.sh play",
+        "signal": 8,
         "return-type": "json",
         "interval": 1,
         "on-click": "$HOME/.config/hypr/scripts/media.sh cmd play-pause",
@@ -400,6 +403,7 @@
     },
     "custom/media-next": {
         "exec": "$HOME/.config/hypr/scripts/media.sh next",
+        "signal": 8,
         "return-type": "json",
         "interval": 1,
         "on-click": "$HOME/.config/hypr/scripts/media.sh cmd next",
