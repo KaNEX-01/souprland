@@ -64,3 +64,26 @@ def pick_file(parent: Gtk.Window | None, title: str, on_path: Callable[[Path], N
             on_path(Path(file.get_path()))
 
     (dialog.save if save_as else dialog.open)(parent, None, done)
+
+
+def ensure_icon_theme() -> None:
+    """Switch to Adwaita if the configured icon theme is not installed.
+
+    GTK 4 takes the icon theme from the desktop setting
+    (org.gnome.desktop.interface icon-theme, via the portal). If that names a
+    theme that is not installed (e.g. Papirus-Dark without the
+    papirus-icon-theme package) GTK falls back to hicolor only: sidebar, tab
+    and button icons showed up as broken "missing image" icons. Adwaita
+    ships with GTK.
+    """
+    import os
+    settings = Gtk.Settings.get_default()
+    name = settings.props.gtk_icon_theme_name if settings else ""
+    if not name or name == "Adwaita":
+        return
+    data_dirs = [Path.home() / ".icons",
+                 Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share") / "icons"]
+    data_dirs += [Path(d) / "icons" for d in
+                  (os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share").split(":") if d]
+    if not any((d / name / "index.theme").is_file() for d in data_dirs):
+        settings.props.gtk_icon_theme_name = "Adwaita"

@@ -75,7 +75,7 @@ def _wallpaper_surface(theme: str, style: str, custom_path: str = "",
 
     if custom_path:
         path = Path(custom_path).expanduser()
-        if path.is_file() and path.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp"):
+        if path.is_file() and path.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp", ".gif"):
             key = ("__file__", str(path))
             if key not in _wp_cache:
                 _wp_cache[key] = _image_surface(path)
@@ -165,6 +165,29 @@ def _screen(cr, x: float, y: float, w: float, h: float, bg, bg_dark) -> None:
     rounded_path(cr, x, y, w, h, 6, 2)
     cr.fill()
 
+
+
+def _wpengine_preview(daemon: str, ident: str) -> str:
+    """Preview of a profile that uses Wallpaper Engine: the item's own image.
+
+    When a profile picks a Wallpaper Engine item (WALLPAPER_DAEMON=
+    wallpaperengine + WPENGINE_ID) that item plays on the desktop;
+    WALLPAPER_IMAGE is only the fallback used without the engine. The preview
+    always showed the fallback: a drawn image on the card, a completely
+    different wallpaper on the desktop. If the item is downloaded on this
+    machine (Steam Workshop) its preview.jpg/gif is shown; otherwise the
+    fallback is used.
+    """
+    if daemon != "wallpaperengine" or not ident:
+        return ""
+    try:
+        from .. import wpengine
+        for item in wpengine.items():
+            if item.ident == ident and item.preview is not None:
+                return str(item.preview)
+    except Exception:                                            # noqa: BLE001
+        return ""
+    return ""
 
 class _SettingsArea(Gtk.DrawingArea):
     """Common base for widgets that read settings and draw them."""
@@ -272,8 +295,9 @@ class DesktopPreview(_SettingsArea):
         # the palette gradient. The variable is deliberately named wp_surface:
         # `surface` is the palette's surface color above and is used for
         # drawing windows below.
-        custom_path = ""
-        if self._root:
+        custom_path = _wpengine_preview(self._get("WALLPAPER_DAEMON"),
+                                        self._get("WPENGINE_ID"))
+        if not custom_path and self._root:
             image = self._get("WALLPAPER_IMAGE")
             if image:
                 custom_path = str(self._root / image)

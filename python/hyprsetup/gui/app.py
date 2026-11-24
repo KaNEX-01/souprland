@@ -8655,6 +8655,9 @@ class HyprsetupApp(Adw.Application):
     def do_startup(self) -> None:
         Adw.Application.do_startup(self)
         GLib.set_application_name(APP_NAME)
+        # Icon theme not installed → Adwaita (sidebar icons rendered broken).
+        from .util import ensure_icon_theme
+        ensure_icon_theme()
         # When not installed (running from the repo) the icon isn't in the theme:
         # the repo's assets/ folder is added to the search path.
         display = Gdk.Display.get_default()
