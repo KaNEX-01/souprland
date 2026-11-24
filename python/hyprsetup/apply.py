@@ -1105,7 +1105,13 @@ class Applier:
         except OSError:
             return False
         data = None
-        for candidate in (self.root / "wallpapers").glob("*.png"):
+        # Üretilmiş görseller (*.png) ve CC0 fotoğraflar (photo/*.jpg): bir
+        # fotoğraflı temadan sonra başka temaya geçince duvar kağıdı "senin
+        # resmin" sanılıp hiç değişmiyordu. / Generated images and the CC0
+        # photos: after a photo theme the wallpaper was taken for the user's
+        # own image and never changed again.
+        wallpapers = self.root / "wallpapers"
+        for candidate in [*wallpapers.glob("*.png"), *wallpapers.glob("photo/*.jpg")]:
             try:
                 if candidate.stat().st_size != size:
                     continue

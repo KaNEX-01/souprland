@@ -280,7 +280,7 @@ _wallpaper_is_ours() {
     have md5sum || return 1
     size=$(stat -c %s -- "$existing" 2>/dev/null) || return 1
     # Size first: only the candidates matching in size among the repo's ~75 MB are read.
-    for candidate in "$SETUP_ROOT"/wallpapers/*.png; do
+    for candidate in "$SETUP_ROOT"/wallpapers/*.png "$SETUP_ROOT"/wallpapers/photo/*.jpg; do
         [[ -f "$candidate" && "$(stat -c %s -- "$candidate")" == "$size" ]] || continue
         [[ -n "$sum" ]] || sum=$(md5sum < "$existing" | cut -d' ' -f1)
         [[ "$(md5sum < "$candidate" | cut -d' ' -f1)" == "$sum" ]] && return 0
