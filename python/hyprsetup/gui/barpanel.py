@@ -50,7 +50,7 @@ gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("Gtk4LayerShell", "1.0")
 gi.require_version("Graphene", "1.0")
 
-from gi.repository import Gdk, GdkPixbuf, GLib, Graphene, Gtk  # noqa: E402
+from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Graphene, Gtk  # noqa: E402
 from gi.repository import Gtk4LayerShell as Layer  # noqa: E402
 
 NAMESPACE = "hyprsetup-panel"
@@ -563,7 +563,7 @@ class Panel:
         for tab_id, title, icon in tabs:
             button = Gtk.ToggleButton(hexpand=True)
             inner = Gtk.Box(spacing=4, halign=Gtk.Align.CENTER)
-            inner.append(Gtk.Image.new_from_icon_name(icon))
+            inner.append(_icon(icon))
             # Label only on the selected tab, so six or seven tabs fit side by side.
             label = Gtk.Label(label=title, visible=False)
             inner.append(label)
@@ -721,7 +721,7 @@ class Panel:
         box.add_css_class("row")
         if active:
             box.add_css_class("active")
-        box.append(Gtk.Image.new_from_icon_name(icon))
+        box.append(_icon(icon))
         texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True)
         name = Gtk.Label(label=title, xalign=0, ellipsize=3, max_width_chars=1,
                          hexpand=True)
@@ -2036,6 +2036,44 @@ def _running() -> int:
         return 0
 
 
+#: Fallback icons: names Adwaita lacks, tried in order.
+_ICON_FALLBACKS = {
+    "utilities-system-monitor-symbolic": ("utilities-system-monitor-symbolic",
+                                          "org.gnome.SystemMonitor-symbolic",
+                                          "computer-symbolic"),
+}
+
+
+def _icon(name: str) -> Gtk.Image:
+    """An icon, with fallbacks for names Adwaita lacks (_ICON_FALLBACKS)."""
+    names = _ICON_FALLBACKS.get(name)
+    if names:
+        return Gtk.Image.new_from_gicon(Gio.ThemedIcon.new_from_names(list(names)))
+    return Gtk.Image.new_from_icon_name(name)
+
+
+def _ensure_icon_theme() -> None:
+    """Switch to Adwaita if the configured icon theme is not installed.
+
+    GTK 4 takes the icon theme from the desktop setting
+    (org.gnome.desktop.interface icon-theme, via the portal). If that names
+    a theme that is not installed (e.g. Papirus-Dark without the
+    papirus-icon-theme package) GTK falls back to hicolor only: the
+    calendar/network/system tab icons and the player buttons showed up as
+    broken "missing image" icons. Adwaita ships with GTK and has all of them.
+    """
+    settings = Gtk.Settings.get_default()
+    name = settings.props.gtk_icon_theme_name if settings else ""
+    if not name or name == "Adwaita":
+        return
+    data_dirs = [Path.home() / ".icons",
+                 Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share") / "icons"]
+    data_dirs += [Path(d) / "icons" for d in
+                  (os.environ.get("XDG_DATA_DIRS") or "/usr/local/share:/usr/share").split(":") if d]
+    if not any((d / name / "index.theme").is_file() for d in data_dirs):
+        settings.props.gtk_icon_theme_name = "Adwaita"
+
+
 def run_with(values: dict[str, str], tab: str) -> int:
     pid = _running()
     if pid:
@@ -2048,6 +2086,7 @@ def run_with(values: dict[str, str], tab: str) -> int:
     holder: dict[str, Panel] = {}
 
     def activate(_app) -> None:
+        _ensure_icon_theme()
         holder["panel"] = Panel(app, values, tab)
 
     def on_signal() -> bool:
