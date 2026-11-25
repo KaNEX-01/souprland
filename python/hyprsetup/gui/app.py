@@ -2307,6 +2307,9 @@ class MainWindow(Adw.ApplicationWindow):
             if rice_mod.is_rice(self.root, profile):
                 variant = rice_mod.load(self.root, profile).default_variant
             path = shots / f"{profile}.variants" / f"{variant}.jpg"
+            if mix_mod.is_own(self._mix_parts, profile):
+                # Our profiles have no screenshot set; their photo stands in.
+                path = mix_mod.thumbnail_path(self.root, profile, mix_mod.OWN_VARIANT)
             # The bar card shows the screen's top strip (bars are at the top).
             return ShotPreview(path, width=size[0], height=size[1],
                                top=0.2 if slot == "bar" else 1.0)

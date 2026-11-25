@@ -20,7 +20,9 @@ installed:
 
 The parts catalog lives in ``presets/mix/parts.json`` and is generated from the
 authors' files with ``python -m hyprsetup mix scan`` (committed to the repo so
-every machine gets the same result). The selection and saved mixes live in
+every machine gets the same result). This project's own profiles are parts too: their
+photo, palette and window look are read from ``presets/profile`` when the
+catalog is loaded (``own_parts``), so they are never written to parts.json. The selection and saved mixes live in
 ``~/.config/hyprsetup/mix.json``; when a slot is first filled, the previous
 values of the settings it changes are written there too, and come back when
 the slot is cleared.
@@ -135,6 +137,10 @@ def user_parts_path() -> Path:
 def thumbnail_path(root: Path, profile: str, variant: str) -> Path:
     """Small preview of the wallpaper (the UI's cards): shipped ones live in the
     repo, imported ones in the user's folder."""
+    if variant == OWN_VARIANT and not rice_mod.is_rice(Path(root), profile):
+        image = _own_image(root, presets_mod.resolve_chain(Path(root), profile=profile))
+        if image is not None:
+            return image
     if rice_mod.is_imported(root, profile):
         return rice_mod.imported_dir() / "thumbs" / f"{profile}-{variant}.jpg"
     return Path(root) / "presets" / "mix" / "thumbs" / f"{profile}-{variant}.jpg"
@@ -152,11 +158,67 @@ def _make_thumbnail(image: Path, dest: Path) -> bool:
     return out.returncode == 0 and dest.is_file()
 
 
+#: Variant name of an own profile's part (its photo / palette).
+OWN_VARIANT = "own"
+
+
+def _own_image(root: Path, values: dict[str, str]) -> Path | None:
+    image = (values.get("WALLPAPER_IMAGE") or "").strip()
+    if not image:
+        return None
+    path = Path(root).resolve() / image
+    if not path.is_file():
+        from . import photos
+        path = photos.resolve(Path(root).resolve(), image) or path
+    return Path(path) if Path(path).is_file() else None
+
+
+def own_parts(root: Path) -> dict[str, dict]:
+    """This project's profiles as mix parts: wallpaper (the profile's photo),
+    colors (its palette) and window look (its corners, gaps, blur, animations).
+
+    Built from presets/profile each time, so a new or edited profile shows up
+    without ``mix scan``; profiles with no image file only give colors and look.
+    """
+    out: dict[str, dict] = {}
+    for preset in presets_mod.load_profiles(Path(root)):
+        name = preset.name
+        if rice_mod.is_rice(Path(root), name):
+            continue
+        try:
+            values = presets_mod.resolve_chain(Path(root), profile=name)
+        except (OSError, ValueError, KeyError):
+            continue
+        owner, _, rest = (preset.label or name).partition(" — ")
+        variant: dict = {"title": rest or owner}
+        image = _own_image(root, values)
+        if image is not None:
+            variant["wallpaper"] = str(image.relative_to(Path(root).resolve())
+                                       if image.is_relative_to(Path(root).resolve()) else image)
+        theme = (values.get("THEME") or "").strip()
+        if theme and theme != "auto" and themes.resolve(theme):
+            variant["colors"] = {"theme": theme}
+        look = {key: (values.get(key) or default) for key, default in LOOK_DEFAULTS.items()}
+        look["ANIMATION_PRESET"] = values.get("ANIMATION_PRESET", "") or ""
+        look["ANIMATION_CUSTOM"] = values.get("ANIMATION_CUSTOM", "") or ""
+        out[name] = {"title": preset.label or name, "own": True,
+                     "variants": {OWN_VARIANT: variant},
+                     "look": {"values": look, "source": "profile"}}
+    return out
+
+
+def is_own(parts: dict, profile: str) -> bool:
+    return bool(parts.get("profiles", {}).get(profile, {}).get("own"))
+
+
 def load_parts(root: Path) -> dict:
     try:
         data = json.loads(parts_path(root).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         data = {"profiles": {}}
+    # Our own profiles come first in every slot, then the authors' rices.
+    shipped = data.get("profiles") or {}
+    data["profiles"] = {**own_parts(root), **shipped}
     # Imported ones (importer.py) live in a separate file; they do not take
     # precedence over the shipped ones.
     try:
@@ -553,6 +615,8 @@ def fetch_wallpaper(root: Path, profile: str, variant: str,
     by a package, or among the author's files (``~/...``); for the last one
     the rice is unpacked into a temporary home (``staged`` is used if given).
     """
+    if variant == OWN_VARIANT and not rice_mod.is_rice(Path(root), profile):
+        return _own_image(root, presets_mod.resolve_chain(Path(root), profile=profile)), False
     manifest = rice_mod.load(root, profile)
     chosen = manifest.variants.get(variant)
     if chosen is None or not chosen.wallpaper:
@@ -642,7 +706,8 @@ def scan(root: Path, profiles: list[str] | None = None,
     updated, the others stay as they are."""
     data = load_parts(root)
     data.pop("root", None)
-    data.setdefault("profiles", {})
+    data["profiles"] = {k: v for k, v in data.get("profiles", {}).items()
+                        if not v.get("own")}
     names = profiles or [n for n in rice_mod.all_profiles(root)
                          if not rice_mod.is_imported(root, n)]
     for name in names:
@@ -680,14 +745,16 @@ def options(parts: dict, slot: str) -> list[tuple[str, str]]:
                 out.append((name, entry["title"]))
             continue
         for variant, info in entry.get("variants", {}).items():
+            label = (entry["title"] if entry.get("own")
+                     else f"{entry['title']} — {info['title']}")
             if slot == "wallpaper" and info.get("wallpaper"):
                 source = sources.get(variant) or variant
                 if source in seen:
                     continue
                 seen.add(source)
-                out.append((f"{name}/{variant}", f"{entry['title']} — {info['title']}"))
+                out.append((f"{name}/{variant}", label))
             elif slot == "colors" and info.get("colors"):
-                out.append((f"{name}/{variant}", f"{entry['title']} — {info['title']}"))
+                out.append((f"{name}/{variant}", label))
     return out
 
 

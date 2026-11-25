@@ -1880,6 +1880,16 @@ missing = set(manifests) - set(parts["profiles"])
 if missing:
     problems.append(f"profiles missing from parts.json (mix scan): {sorted(missing)}")
 for name, entry in parts["profiles"].items():
+    if entry.get("own"):
+        # Our own profiles: built from presets/profile, no rice manifest.
+        for variant, info in entry["variants"].items():
+            if info.get("wallpaper") and not mix.thumbnail_path(root, name, variant).is_file():
+                problems.append(f"{name}: own part photo missing")
+            if info.get("colors") and not mix.palette_of(parts, f"{name}/{variant}"):
+                problems.append(f"{name}: own part palette does not resolve")
+        if not all(k in entry["look"]["values"] for k in mix.LOOK_DEFAULTS):
+            problems.append(f"{name}: own part look incomplete")
+        continue
     m = rice.load(root, name)
     for variant, info in entry["variants"].items():
         if variant not in m.variants:
