@@ -2350,6 +2350,14 @@ class MainWindow(Adw.ApplicationWindow):
                 if look.get("ANIMATION_CUSTOM"):
                     bits.append("author's animations")
                 yield value, entry.get("title", profile), " · ".join(bits), shot(profile)
+        if slot in mix_mod.APP_SLOT_IDS:
+            # Our profiles first: their bar/launcher/… are settings, not files.
+            for name, entry in profiles.items():
+                if not entry.get("own"):
+                    continue
+                summary = mix_mod.own_app_summary(self.root, name, slot)
+                if summary:
+                    yield name, entry.get("title", name), summary, shot(name)
         for value, part in self._mix_apps.get(slot, []):
             profile, _part_id = mix_mod.split_ref(value)
             owner = profiles.get(profile, {}).get("title", profile).split(" — ")[0]
@@ -2411,7 +2419,7 @@ class MainWindow(Adw.ApplicationWindow):
         if slot in ("wallpaper", "colors"):
             title = entry.get("variants", {}).get(rest, {}).get("title", rest)
             return f"{owner} · {title.split(' — ')[0]}"
-        if slot == "look":
+        if slot == "look" or mix_mod.is_own_ref(self._mix_parts, slot, value):
             return owner
         try:
             _profile, part = mix_mod.find_part(self.root, value)
@@ -2614,7 +2622,8 @@ class MainWindow(Adw.ApplicationWindow):
         # the mix when, e.g., a wallpaper's package was not installed.
         try:
             changes, state = mix_mod.plan(
-                self.root, {k: pending.get(k, "") for k in mix_mod.SLOT_IDS},
+                self.root, {k: pending.get(k, "") for k in (*mix_mod.SLOT_IDS,
+                                                            *mix_mod.APP_SLOT_IDS)},
                 self.state.values)
         except (RuntimeError, KeyError, OSError, ValueError) as exc:
             self._toast(f"Could not apply mix: {exc}")
@@ -2626,8 +2635,17 @@ class MainWindow(Adw.ApplicationWindow):
             self._toast(f"Profile removed ({len(restored)} files restored)")
         for key, value in changes.items():
             self.state.set(key, value)
+        # Our profiles' bar/launcher/… pick programs: select them like a profile does.
+        for var in ("TERMINAL", "LAUNCHER", "NOTIFIER", "WIDGET_ENGINE"):
+            want = changes.get(var, "")
+            if (want and self.catalog.component(want) and not self.state.is_selected(want)
+                    and self.applier.component_installed(want)):
+                self.state.toggle(want, True)
+        if changes.get("BAR"):
+            self._sync_bar_backend(changes["BAR"])
         state["parts"] = {k: v for k in mix_mod.APP_SLOT_IDS
-                          if (v := pending.get(k, ""))}
+                          if (v := pending.get(k, ""))
+                          and not mix_mod.is_own_ref(self._mix_parts, k, v)}
         self.state.preset, self.state.variant = mix_mod.profile_marker(
             state, self.state.preset, self.state.variant)
         mix_mod.write_state(state)

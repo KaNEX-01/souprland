@@ -211,6 +211,78 @@ def is_own(parts: dict, profile: str) -> bool:
     return bool(parts.get("profiles", {}).get(profile, {}).get("own"))
 
 
+def own_app_keys(slot: str) -> tuple[str, ...]:
+    """Settings an own profile writes in an app slot (bar, launcher, …).
+
+    The authors' parts install files; our profiles describe the same pieces
+    with settings, so picking one copies the profile's values for that piece.
+    """
+    from . import settings as settings_mod
+
+    def group(gid: str) -> list[str]:
+        return [s.key for s in settings_mod.group(gid).settings]
+
+    keys = {
+        "bar": ["BAR", "BAR_PRESET", *presets_mod.BAR_KEYS],
+        "launcher": ["LAUNCHER", "LAUNCHER_PRESET", *presets_mod.LAUNCHER_KEYS,
+                     *group("launcher")],
+        "terminal": ["TERMINAL", "TERM_PRESET", *presets_mod.TERM_KEYS,
+                     *group("terminal_look")],
+        "notify": ["NOTIFIER", *group("notify")],
+        "lock": group("lock"),
+        "widget": ["WIDGET_ENGINE", "WIDGET_SET", *presets_mod.WIDGET_SET_KEYS,
+                   *group("widget")],
+    }.get(slot, [])
+    return tuple(dict.fromkeys(keys))
+
+
+_OWN_VALUES: dict[tuple[str, str], dict[str, str]] = {}
+
+
+def _own_values(root: Path, profile: str) -> dict[str, str]:
+    key = (str(Path(root).resolve()), profile)
+    if key not in _OWN_VALUES:
+        _OWN_VALUES[key] = presets_mod.resolve_chain(Path(root), profile=profile)
+    return _OWN_VALUES[key]
+
+
+def own_app_values(root: Path, profile: str, slot: str) -> dict[str, str]:
+    """The profile's values for one app slot; keys it leaves out get their defaults."""
+    from . import settings as settings_mod
+    defaults = {s.key: s.default for s in settings_mod.all_settings()}
+    values = _own_values(root, profile)
+    return {k: str(values.get(k, defaults.get(k, ""))) for k in own_app_keys(slot)
+            if k in values or k in defaults}
+
+
+def own_app_summary(root: Path, profile: str, slot: str) -> str | None:
+    """Card subtitle of an own profile in an app slot; None = nothing to offer."""
+    values = _own_values(root, profile)
+    if slot == "bar":
+        return " · ".join(v for v in (values.get("BAR", "waybar"), values.get("BAR_PRESET", "")) if v)
+    if slot == "launcher":
+        return values.get("LAUNCHER") or None
+    if slot == "notify":
+        return values.get("NOTIFIER") or None
+    if slot == "terminal":
+        return values.get("TERMINAL") or None
+    if slot == "lock":
+        return "hyprlock"
+    if slot == "widget":
+        widgets = presets_mod.split_widgets(values.get("WIDGETS", ""))
+        return ", ".join(widgets[:4]) if widgets else None
+    return None
+
+
+def is_own_ref(parts: dict, slot: str, value: str) -> bool:
+    """An app-slot value that names one of our profiles (not an author's part)."""
+    return slot in APP_SLOT_IDS and bool(value) and "/" not in value and is_own(parts, value)
+
+
+def slot_keys(slot: str) -> tuple[str, ...]:
+    return SLOT_KEYS.get(slot) or own_app_keys(slot)
+
+
 def load_parts(root: Path) -> dict:
     try:
         data = json.loads(parts_path(root).read_text(encoding="utf-8"))
@@ -826,6 +898,8 @@ def slot_values(root: Path, parts: dict, slot: str, value: str,
         if not look:
             raise RuntimeError(f"no window look: {value}")
         return dict(look["values"])
+    if is_own_ref(parts, slot, value):
+        return own_app_values(root, value, slot)
     raise ValueError(f"unknown slot: {slot}")
 
 
@@ -840,12 +914,19 @@ def plan(root: Path, slots: dict[str, str], current: dict[str, str],
     parts = load_parts(root)
     state = read_state(home)
     changes: dict[str, str] = {}
-    for slot in SLOT_IDS:
+    for slot in (*SLOT_IDS, *APP_SLOT_IDS):
         old = state["slots"].get(slot, "")
         new = (slots.get(slot, old) or "").strip()
+        if slot in APP_SLOT_IDS:
+            # Only our profiles are settings here; an author's part is
+            # installed as files by install_parts (and replaces ours).
+            if new and not is_own_ref(parts, slot, new):
+                new = ""
+            if not new and not old:
+                continue
         if new:
             if not old:
-                state["before"][slot] = {k: current.get(k, "") for k in SLOT_KEYS[slot]}
+                state["before"][slot] = {k: current.get(k, "") for k in slot_keys(slot)}
             changes.update(slot_values(root, parts, slot, new, home))
             state["slots"][slot] = new
         elif old:
@@ -866,8 +947,12 @@ def preview_values(root: Path, parts: dict, pending: dict[str, str],
     """
     state = read_state(home)
     values = dict(current)
-    for slot in SLOT_IDS:
+    for slot in (*SLOT_IDS, *APP_SLOT_IDS):
         new = (pending.get(slot, "") or "").strip()
+        if slot in APP_SLOT_IDS and not is_own_ref(parts, slot, new):
+            if not new and state["slots"].get(slot):
+                values.update(state["before"].get(slot, {}))
+            continue
         if new:
             if slot == "wallpaper":
                 profile, variant = split_ref(new)
@@ -1285,7 +1370,7 @@ def remove_parts(home: Path | None = None, stop: bool = True) -> list[str]:
 def validate_parts(root: Path, chosen: dict[str, str]) -> None:
     """Can the selection be installed: does each part fit its slot, are its
     requirements selected. If not, ValueError — called BEFORE the state is written."""
-    chosen = {slot: ref for slot, ref in chosen.items() if ref}
+    chosen = {slot: ref for slot, ref in chosen.items() if ref and "/" in ref}
     for slot, ref in chosen.items():
         try:
             _profile, part = find_part(root, ref)
@@ -1724,14 +1809,19 @@ def apply(root: Path, slots: dict[str, str], log=print) -> dict[str, str]:
     path = config_path()
     if path.is_file():
         setup.load_conf(path)
-    changes, state = plan(root, {k: v for k, v in slots.items() if k in SLOT_IDS},
-                          setup.values)
+    changes, state = plan(root, dict(slots), setup.values)
     changed = {k: v for k, v in changes.items() if setup.get(k) != v}
     for key, value in changed.items():
         setup.set(key, value)
+    catalog_parts = load_parts(root)
     parts = dict(state.get("parts", {}))
     parts.update({k: v for k, v in slots.items() if k in APP_SLOT_IDS})
-    state["parts"] = {k: v for k, v in parts.items() if v}
+    state["parts"] = {k: v for k, v in parts.items()
+                      if v and not is_own_ref(catalog_parts, k, v)}
+    for var in ("TERMINAL", "LAUNCHER", "NOTIFIER", "WIDGET_ENGINE", "BAR"):
+        want = changes.get(var, "")
+        if want and setup.catalog.component(want) and shutil.which(want.split("-")[0]):
+            setup.toggle(want, True)
     validate_parts(root, state["parts"])
     setup.preset, setup.variant = profile_marker(state, setup.preset, setup.variant)
     setup.save_conf(path)
