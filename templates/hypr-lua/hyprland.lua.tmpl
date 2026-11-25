@@ -25,9 +25,17 @@
 {{#if MANAGE_MONITORS}}
 require("hyprland.monitors")
 {{/if}}
+{{#unless MANAGE_MONITORS}}
+-- Monitors are left to a tool like nwg-displays (MANAGE_MONITORS=0); load its
+-- ~/.config/hypr/monitors.lua like the conf mode sources monitors.conf.
+pcall(require, "monitors")
+{{/unless}}
 {{#if WORKSPACE_MONITOR_MAP}}
 require("hyprland.workspaces")
 {{/if}}
+{{#unless WORKSPACE_MONITOR_MAP}}
+pcall(require, "workspaces")
+{{/unless}}
 require("hyprland.env")
 require("hyprland.autostart")
 require("hyprland.keybinds")
