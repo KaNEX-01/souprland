@@ -211,7 +211,7 @@ GROUPS: list[Group] = [
                       minimum=0, maximum=80, unit="px", affects_preview=True,
                       help="How far the shadow extends past the window edge."),
               Setting("SHADOW_RENDER_POWER", "Shadow sharpness", kind="int",
-                      default="3", minimum=1, maximum=10, affects_preview=True,
+                      default="3", minimum=1, maximum=4, affects_preview=True,
                       help="Higher values make the shadow fade faster from the edge."),
               Setting("SHADOW_OFFSET", "Shadow offset", kind="text",
                       default="0 4",

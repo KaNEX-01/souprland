@@ -828,6 +828,9 @@ def _finish_derived(out: dict[str, str], variables: dict[str, str],
     out.update(_groupbar_vars(out))
     out.update(_plugin_vars(variables))
     out.update(_screenshot_dir_vars(variables))
+    # Hyprland rejects decoration:shadow:render_power outside 1–4 and then
+    # shows a config error; rices often use 5 or 10, so clamp it here.
+    out["SHADOW_RENDER_POWER"] = str(max(1, min(4, _int(variables.get("SHADOW_RENDER_POWER"), 3))))
     out.update(_record_vars(variables))
     out.update(_rule_vars(variables))
 
