@@ -1266,12 +1266,12 @@ GROUPS: list[Group] = [
     # NIGHT_SHADER/RECORD_* only changed by editing settings.conf by hand)
     # but they left no trace in the settings app — so for the user they
     # effectively did not exist.
-    Group("switcher", "Window switcher", "view-paged-symbolic",
+    Group("switcher", "Window switcher (experimental)", "view-paged-symbolic",
           "Window selection with ALT+Tab. If the selected window is on "
           "another workspace, Hyprland switches there; the list opens in the "
           "dmenu mode of the selected launcher (wofi/rofi/fuzzel/tofi/walker).",
           [
-              Setting("SWITCHER_ENABLED", "Our ALT+Tab", kind="bool",
+              Setting("SWITCHER_ENABLED", "Our ALT+Tab (experimental)", kind="bool",
                       default="true",
                       help="When off, the ALT+Tab and ALT+` bindings are not "
                            "generated at all and the profile's (theme's) own "

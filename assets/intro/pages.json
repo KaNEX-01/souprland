@@ -10,7 +10,7 @@
         "An installer that sets up a Hyprland desktop from scratch, and a settings app that takes over after installation.",
         "- Theme, bar, terminal, launcher, keybinds: all from this window, applied instantly.",
         "- Ready-made desktops install in one click and can be rolled back.",
-        "- Your keybinds and ALT+Tab stay the same on every theme."
+        "- Your keybinds stay the same on every theme."
       ]
     },
     {

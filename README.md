@@ -34,7 +34,7 @@ cd souprland
 Then open the settings app anytime with **`SUPER + I`** (or `souprland`). Everything is backed up automatically — roll back with `./restore.sh`.
 
 - **Live GTK4 control** — One config file (`~/.config/hyprsetup/settings.conf`), instant reload, no root prompts.
-- **Profiles & Soup Maker** — Pick from 49 profiles (31 native + 18 community rices), import any dotfiles repo by URL, or mix parts across setups while keeping your keybinds and `ALT+Tab`.
+- **Profiles & Soup Maker** — Pick from 49 profiles (31 native + 18 community rices), import any dotfiles repo by URL, or mix parts across setups while keeping your keybinds.
 
 ---
 
@@ -48,7 +48,7 @@ An installer that sets up a Hyprland desktop from scratch, and a settings app th
 
 - Theme, bar, terminal, launcher, keybinds: all from this window, applied instantly.
 - Ready-made desktops install in one click and can be rolled back.
-- Your keybinds and ALT+Tab stay the same on every theme.
+- Your keybinds stay the same on every theme.
 
 ### This Project Is Made With AI And Can Be Buggy As Hell
 
