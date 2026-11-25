@@ -35,50 +35,8 @@ Then open the settings app anytime with **`SUPER + I`** (or `souprland`). Everyt
 
 - **Live GTK4 control** — One config file (`~/.config/hyprsetup/settings.conf`), instant reload, no root prompts.
 - **Profiles & Soup Maker** — Pick from 49 profiles (31 native + 18 community rices), import any dotfiles repo by URL, or mix parts across setups while keeping your keybinds and `ALT+Tab`.
-- **Minimal & reversible** — Installs only the Hyprland core by default (no AUR, no bloat). Optional apps, personal locks, checkpoints, and diagnostics live inside the app.
 
 ---
-
-<details>
-<summary><strong>Shortcuts, CLI &amp; installer options</strong></summary>
-
-### Key shortcuts
-| Shortcut | Action |
-|---|---|
-| `SUPER + I` | Settings app (floating panel) |
-| `SUPER + SHIFT + W` | Quick Look (wallpaper strip + settings ring) |
-| `SUPER + /` | Searchable keybinding cheatsheet |
-| `SUPER + Return` / `SUPER` (tap) | Terminal / Launcher |
-| `SUPER + A` / `SUPER + J` / `SUPER + F12` | Quick actions / Toggle bar / Game Mode |
-
-### Installer & CLI
-```bash
-./install.sh --dry-run          # preview without changing anything
-./install.sh --doctor           # read-only health check
-./install.sh --update           # update while keeping settings.conf
-./restore.sh --first            # restore to pre-Souprland state
-./hyprsetup-gui                 # preview the settings app before installing
-
-python3 -m hyprsetup rice list  # community rices (install / variant / import / uninstall)
-python3 -m hyprsetup mix list   # Soup Maker CLI (set / save / load / clear)
-souprland share export          # export look + wallpaper to .tar.gz
-```
-
-Static script-free configs for native profiles also live in [`dotfiles/`](dotfiles/) (`./dotfiles/install-dotfiles.sh --list`).
-
-</details>
-
-<details>
-<summary><strong>Requirements, docs &amp; development</strong></summary>
-
-- **Requires:** Arch Linux or CachyOS (run as a regular user, not root), `bash`, `python3`, `jq`, `gtk4`, `libadwaita`, `python-gobject`, `python-cairo`.
-- **Tests:** `./tools/test.sh` (or `--quick`) · `./tools/build-dotfiles.sh --check`
-- **Docs:** [Settings Guide](docs/settings-guide.md) · [Preset Sources](docs/preset-sources.md) · [Gallery Catalog](docs/gallery-catalog.md) · [Roadmap & Limits](docs/roadmap.md) · [VM Testing](docs/vm-testing.md)
-
-</details>
-
-<details>
-<summary><strong>Intro tour, security &amp; credits</strong></summary>
 
 <!-- intro:start — generated from assets/intro/pages.json, do not edit by hand -->
 
@@ -156,6 +114,44 @@ Thanks to the authors whose dotfiles and scripts are used in this project:
 - [zephardev/hyprcraft](https://github.com/zephardev/hyprcraft) – dotfiles for the HyprCraft profile (MIT)
 
 <!-- intro:end -->
+
+---
+
+<details>
+<summary><strong>Shortcuts, CLI &amp; installer options</strong></summary>
+
+### Key shortcuts
+| Shortcut | Action |
+|---|---|
+| `SUPER + I` | Settings app (floating panel) |
+| `SUPER + SHIFT + W` | Quick Look (wallpaper strip + settings ring) |
+| `SUPER + /` | Searchable keybinding cheatsheet |
+| `SUPER + Return` / `SUPER` (tap) | Terminal / Launcher |
+| `SUPER + A` / `SUPER + J` / `SUPER + F12` | Quick actions / Toggle bar / Game Mode |
+
+### Installer & CLI
+```bash
+./install.sh --dry-run          # preview without changing anything
+./install.sh --doctor           # read-only health check
+./install.sh --update           # update while keeping settings.conf
+./restore.sh --first            # restore to pre-Souprland state
+./hyprsetup-gui                 # preview the settings app before installing
+
+python3 -m hyprsetup rice list  # community rices (install / variant / import / uninstall)
+python3 -m hyprsetup mix list   # Soup Maker CLI (set / save / load / clear)
+souprland share export          # export look + wallpaper to .tar.gz
+```
+
+Static script-free configs for native profiles also live in [`dotfiles/`](dotfiles/) (`./dotfiles/install-dotfiles.sh --list`).
+
+</details>
+
+<details>
+<summary><strong>Requirements, docs &amp; development</strong></summary>
+
+- **Requires:** Arch Linux or CachyOS (run as a regular user, not root), `bash`, `python3`, `jq`, `gtk4`, `libadwaita`, `python-gobject`, `python-cairo`.
+- **Tests:** `./tools/test.sh` (or `--quick`) · `./tools/build-dotfiles.sh --check`
+- **Docs:** [Settings Guide](docs/settings-guide.md) · [Preset Sources](docs/preset-sources.md) · [Gallery Catalog](docs/gallery-catalog.md) · [Roadmap & Limits](docs/roadmap.md) · [VM Testing](docs/vm-testing.md)
 
 </details>
 
