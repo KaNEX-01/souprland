@@ -108,7 +108,7 @@ _LOOK_MAP: dict[str, tuple[str, str]] = {
 
 #: Settings a slot writes (their previous values are saved and restored).
 SLOT_KEYS: dict[str, tuple[str, ...]] = {
-    "wallpaper": ("WALLPAPER_PATH", "WALLPAPER_IMAGE", "WALLPAPER_STYLE"),
+    "wallpaper": ("WALLPAPER_PATH", "WALLPAPER_IMAGE", "WALLPAPER_STYLE", "WALLPAPER_DAEMON"),
     "colors": ("THEME", "CUSTOM_COLORS"),
     "look": (*LOOK_DEFAULTS, "ANIMATION_PRESET", "ANIMATION_CUSTOM"),
 }
@@ -903,6 +903,18 @@ def slot_values(root: Path, parts: dict, slot: str, value: str,
     raise ValueError(f"unknown slot: {slot}")
 
 
+def with_daemon(values: dict[str, str], is_selected) -> dict[str, str]:
+    """``values`` plus WALLPAPER_DAEMON, which is derived from the component
+    selection (not stored as a setting); plan() needs it to see a live
+    Wallpaper Engine scene."""
+    out = dict(values)
+    for daemon in ("wallpaperengine", "hyprpaper", "swww", "waypaper"):
+        if is_selected(daemon):
+            out["WALLPAPER_DAEMON"] = daemon
+            break
+    return out
+
+
 def plan(root: Path, slots: dict[str, str], current: dict[str, str],
          home: Path | None = None) -> tuple[dict[str, str], dict]:
     """Setting changes for a new slot selection, and the updated state.
@@ -928,6 +940,11 @@ def plan(root: Path, slots: dict[str, str], current: dict[str, str],
             if not old:
                 state["before"][slot] = {k: current.get(k, "") for k in slot_keys(slot)}
             changes.update(slot_values(root, parts, slot, new, home))
+            if slot == "wallpaper" and current.get("WALLPAPER_DAEMON") == "wallpaperengine":
+                # A live Wallpaper Engine scene covers any image: show the
+                # picked wallpaper with an image daemon (back on mix off).
+                changes["WALLPAPER_DAEMON"] = next(
+                    (d for d in ("hyprpaper", "swww") if shutil.which(d)), "hyprpaper")
             state["slots"][slot] = new
         elif old:
             changes.update(state["before"].pop(slot, {}))
@@ -1809,7 +1826,7 @@ def apply(root: Path, slots: dict[str, str], log=print) -> dict[str, str]:
     path = config_path()
     if path.is_file():
         setup.load_conf(path)
-    changes, state = plan(root, dict(slots), setup.values)
+    changes, state = plan(root, dict(slots), with_daemon(setup.values, setup.is_selected))
     changed = {k: v for k, v in changes.items() if setup.get(k) != v}
     for key, value in changed.items():
         setup.set(key, value)
@@ -1818,7 +1835,7 @@ def apply(root: Path, slots: dict[str, str], log=print) -> dict[str, str]:
     parts.update({k: v for k, v in slots.items() if k in APP_SLOT_IDS})
     state["parts"] = {k: v for k, v in parts.items()
                       if v and not is_own_ref(catalog_parts, k, v)}
-    for var in ("TERMINAL", "LAUNCHER", "NOTIFIER", "WIDGET_ENGINE", "BAR"):
+    for var in ("TERMINAL", "LAUNCHER", "NOTIFIER", "WIDGET_ENGINE", "BAR", "WALLPAPER_DAEMON"):
         want = changes.get(var, "")
         if want and setup.catalog.component(want) and shutil.which(want.split("-")[0]):
             setup.toggle(want, True)

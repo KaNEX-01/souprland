@@ -2624,7 +2624,7 @@ class MainWindow(Adw.ApplicationWindow):
             changes, state = mix_mod.plan(
                 self.root, {k: pending.get(k, "") for k in (*mix_mod.SLOT_IDS,
                                                             *mix_mod.APP_SLOT_IDS)},
-                self.state.values)
+                mix_mod.with_daemon(self.state.values, self.state.is_selected))
         except (RuntimeError, KeyError, OSError, ValueError) as exc:
             self._toast(f"Could not apply mix: {exc}")
             return
@@ -2635,8 +2635,9 @@ class MainWindow(Adw.ApplicationWindow):
             self._toast(f"Profile removed ({len(restored)} files restored)")
         for key, value in changes.items():
             self.state.set(key, value)
-        # Our profiles' bar/launcher/… pick programs: select them like a profile does.
-        for var in ("TERMINAL", "LAUNCHER", "NOTIFIER", "WIDGET_ENGINE"):
+        # Our profiles' bar/launcher/… and the wallpaper slot pick programs:
+        # select them like a profile does.
+        for var in ("TERMINAL", "LAUNCHER", "NOTIFIER", "WIDGET_ENGINE", "WALLPAPER_DAEMON"):
             want = changes.get(var, "")
             if (want and self.catalog.component(want) and not self.state.is_selected(want)
                     and self.applier.component_installed(want)):
@@ -2737,7 +2738,7 @@ class MainWindow(Adw.ApplicationWindow):
         title.add_css_class("title-1")
         titles.append(title)
         count = Gtk.Label(
-            label=f"{len(resolved)} profiles · {own_count} ours, "
+            label=f"{len(resolved)} profiles · {own_count} Souprland, "
                   f"{len(resolved) - own_count} authors' own setups",
             xalign=0)
         count.add_css_class("dim-label")
@@ -2759,7 +2760,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._profile_chip = "all"
         first: Gtk.ToggleButton | None = None
         for chip_id, label in (("all", f"All {len(resolved)}"),
-                               ("own", f"Ours {own_count}"),
+                               ("own", f"Souprland {own_count}"),
                                ("author", f"Authors' {len(resolved) - own_count}"),
                                ("light", "Light theme"),
                                ("noaur", "No AUR needed"),
@@ -2866,7 +2867,7 @@ class MainWindow(Adw.ApplicationWindow):
             if manifest.packages_aur:
                 pills.append(aur_mod.badge(manifest.packages_aur))
         else:
-            pill("Ours")
+            pill("Souprland")
             aur = self._values_aur(values)
             if aur:
                 pills.append(aur_mod.badge(aur))
