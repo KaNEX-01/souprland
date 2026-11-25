@@ -149,7 +149,7 @@ Static script-free configs for native profiles also live in [`dotfiles/`](dotfil
 <details>
 <summary><strong>Requirements, docs &amp; development</strong></summary>
 
-- **Requires:** Arch Linux or CachyOS (run as a regular user, not root), `bash`, `python3`, `jq`, `gtk4`, `libadwaita`, `python-gobject`, `python-cairo`.
+- **Requires:** Arch Linux (**CachyOS recommended**; run as a regular user, not root), `bash`, `python3`, `jq`, `gtk4`, `libadwaita`, `python-gobject`, `python-cairo`.
 - **Tests:** `./tools/test.sh` (or `--quick`) · `./tools/build-dotfiles.sh --check`
 - **Docs:** [Settings Guide](docs/settings-guide.md) · [Preset Sources](docs/preset-sources.md) · [Gallery Catalog](docs/gallery-catalog.md) · [Roadmap & Limits](docs/roadmap.md) · [VM Testing](docs/vm-testing.md)
 
