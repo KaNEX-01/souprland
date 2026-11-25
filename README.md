@@ -60,7 +60,7 @@ Souprland is basically a script that controls Hyprland with a GUI.
 - make your own with the setup wizard,
 - or mix dotfiles together with Soup Maker.
 
-If you see any bug, please open an issue on GitHub. I'll do my best to fix it.
+If you see any bug (and you probably will), please open an issue on GitHub. I'll do my best to fix it.
 
 ### No bloat
 
