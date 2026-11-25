@@ -54,7 +54,7 @@ An installer that sets up a Hyprland desktop from scratch, and a settings app th
 
 ![This Project Is Made With AI And Can Be Buggy As Hell](assets/intro/merhaba.gif)
 
-Souprland is basically a script that controls Hyprland with a GUI.
+Sloprland (Souprland) is basically a script that controls Hyprland with a GUI.
 
 - You can use ready-made dotfiles,
 - make your own with the setup wizard,
