@@ -124,7 +124,6 @@ Thanks to the authors whose dotfiles and scripts are used in this project:
 | Shortcut | Action |
 |---|---|
 | `SUPER + I` | Settings app (floating panel) |
-| `SUPER + SHIFT + W` | Quick Look (wallpaper strip + settings ring) |
 | `SUPER + /` | Searchable keybinding cheatsheet |
 | `SUPER + Return` / `SUPER` (tap) | Terminal / Launcher |
 | `SUPER + A` / `SUPER + J` / `SUPER + F12` | Quick actions / Toggle bar / Game Mode |
@@ -142,7 +141,6 @@ python3 -m hyprsetup mix list   # Soup Maker CLI (set / save / load / clear)
 souprland share export          # export look + wallpaper to .tar.gz
 ```
 
-Static script-free configs for native profiles also live in [`dotfiles/`](dotfiles/) (`./dotfiles/install-dotfiles.sh --list`).
 
 </details>
 
@@ -151,7 +149,7 @@ Static script-free configs for native profiles also live in [`dotfiles/`](dotfil
 
 - **Requires:** Arch Linux (**CachyOS recommended**; run as a regular user, not root), `bash`, `python3`, `jq`, `gtk4`, `libadwaita`, `python-gobject`, `python-cairo`.
 - **Tests:** `./tools/test.sh` (or `--quick`) · `./tools/build-dotfiles.sh --check`
-- **Docs:** [Settings Guide](docs/settings-guide.md) · [Preset Sources](docs/preset-sources.md) · [Gallery Catalog](docs/gallery-catalog.md) · [Roadmap & Limits](docs/roadmap.md) · [VM Testing](docs/vm-testing.md)
+- **Docs:** [Settings Guide](docs/settings-guide.md) · [Preset Sources](docs/preset-sources.md) · [Gallery Catalog](docs/gallery-catalog.md)
 
 </details>
 

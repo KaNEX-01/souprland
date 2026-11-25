@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
-  - name: Development status & known limitations
-    url: https://github.com/KaNEX-01/souprland/blob/master/docs/roadmap.md
-    about: Check current limitations and planned work before opening an issue.
   - name: Settings guide
     url: https://github.com/KaNEX-01/souprland/blob/master/docs/settings-guide.md
     about: See where each feature is configured in Souprland.
+  - name: Preset & rice sources
+    url: https://github.com/KaNEX-01/souprland/blob/master/docs/preset-sources.md
+    about: Upstream repositories, pinned commits, and credits for bundled profiles.
