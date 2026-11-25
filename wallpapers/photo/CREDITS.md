@@ -14,7 +14,7 @@ The machine-readable list is `sources.json` (python/hyprsetup/photos.py).
 | `st-ay` | [LunaReflejo1](https://commons.wikimedia.org/wiki/File:LunaReflejo1.jpg) | Roquex | CC0 |
 | `st-cam` | [Highway Bokeh (49256321736)](https://commons.wikimedia.org/wiki/File:Highway_Bokeh_(49256321736).jpg) | Jonas Salcedo | CC0 |
 | `st-crt` | [Tube and beam control knobs of Dual-beam Cathode Ray Oscillograph 322-A, DuMont Laboratories, c. 1950s](https://commons.wikimedia.org/wiki/File:Tube_and_beam_control_knobs_of_Dual-beam_Cathode_Ray_Oscillograph_322-A,_DuMont_Laboratories,_c._1950s.jpg) | Daderot | CC0 |
-| `st-doom` | [Sam Sy 2017 (Unsplash)](https://commons.wikimedia.org/wiki/File:Sam_Sy_2017_(Unsplash).jpg) | Sam Sy samsy96 | CC0 |
+| `st-doom` | [Kilauea Lava Lake](https://commons.wikimedia.org/wiki/File:Kilauea_Lava_Lake_(12792432484).jpg) | U.S. Geological Survey | Public domain |
 | `st-galaksi` | [The Great Andromeda Galaxy and Companions - Flickr - astrophotography andy](https://commons.wikimedia.org/wiki/File:The_Great_Andromeda_Galaxy_and_Companions_-_Flickr_-_astrophotography_andy.jpg) | Andy Weeks | CC0 |
 | `st-gecegolu` | [Stars in a lake (Unsplash)](https://commons.wikimedia.org/wiki/File:Stars_in_a_lake_(Unsplash).jpg) | Wil Stewart wilstewart3 | CC0 |
 | `st-gunbatimi` | [Sunset with smoky filter](https://commons.wikimedia.org/wiki/File:Sunset_with_smoky_filter.jpg) | LoggaWiggler | CC0 |
