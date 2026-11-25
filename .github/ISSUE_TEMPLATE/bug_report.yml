@@ -1,0 +1,40 @@
+name: Bug report
+description: Report a bug or unexpected behavior in Souprland
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Fill in what you can below — even a short description helps.
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug clearly and what you expected to happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Souprland (`SUPER + I`)
+        2. Go to ...
+        3. Click ...
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Distro, Hyprland version (`hyprctl version`), and active profile/rice if any.
+      placeholder: "CachyOS, Hyprland 0.57.2, profile: st-lavender"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Diagnostics (optional)
+      description: Output from `./install.sh --doctor` or the Support Summary from the System page (review for personal info before pasting).
+      render: shell
