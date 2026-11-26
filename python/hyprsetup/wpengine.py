@@ -90,6 +90,55 @@ def items(home: Path | None = None) -> list[Item]:
     return sorted(found.values(), key=lambda i: i.title.casefold())
 
 
+def workshop_url(ident: str) -> str:
+    """Steam Workshop page for a Wallpaper Engine item."""
+    return f"https://steamcommunity.com/sharedfiles/filedetails/?id={ident.strip()}"
+
+
+_PREVIEW_CACHE: dict[tuple[str, str], Path | None] = {}
+
+
+def find_item(ident: str, home: Path | None = None) -> Item | None:
+    """Installed Workshop item with this ID; None if not downloaded locally."""
+    ident = (ident or "").strip()
+    if not ident:
+        return None
+    home = home or Path.home()
+    edited_base = home / ".local/share/hyprsetup-wallpapers"
+    for root in library_roots(home):
+        folder = root / "steamapps/workshop/content" / APP_ID / ident
+        project = folder / "project.json"
+        if not project.is_file():
+            continue
+        try:
+            meta = json.loads(project.read_text(encoding="utf-8", errors="ignore"))
+        except ValueError:
+            meta = {}
+        preview = folder / str(meta.get("preview") or "")
+        if not preview.is_file():
+            preview = next((folder / p for p in _PREVIEWS if (folder / p).is_file()), None)
+        return Item(
+            ident=ident,
+            title=str(meta.get("title") or ident).strip(),
+            kind=str(meta.get("type") or "").lower(),
+            folder=folder,
+            preview=preview,
+            edited=(edited_base / ident / "project.json").is_file())
+    return None
+
+
+def preview_path(ident: str, home: Path | None = None) -> Path | None:
+    """Cached local preview.jpg/gif path of a Workshop item; None if not installed."""
+    ident = (ident or "").strip()
+    if not ident:
+        return None
+    key = (str(home or Path.home()), ident)
+    if key not in _PREVIEW_CACHE:
+        item = find_item(ident, home)
+        _PREVIEW_CACHE[key] = item.preview if item is not None else None
+    return _PREVIEW_CACHE[key]
+
+
 def parse_per_screen(text: str) -> dict[str, str]:
     """"DP-1=123;HDMI-A-2=456" → {"DP-1": "123", "HDMI-A-2": "456"}."""
     mapping: dict[str, str] = {}

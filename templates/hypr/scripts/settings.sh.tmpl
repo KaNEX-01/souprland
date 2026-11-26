@@ -30,6 +30,13 @@
 #   floats and slides but opens on the Home page, and Esc does not close it.
 set -uo pipefail
 
+# Toggle: if the MOD+I panel is already open, close it instead of opening a second one.
+if command -v hyprctl >/dev/null 2>&1 \
+        && hyprctl clients -j 2>/dev/null | grep -q '"class": "dev.hyprsetup.Quick"'; then
+    hyprctl dispatch closewindow 'class:^(dev\.hyprsetup\.Quick)$' >/dev/null 2>&1
+    exit 0
+fi
+
 if [[ -x "$HOME/.local/bin/hyprsetup" ]]; then
     exec "$HOME/.local/bin/hyprsetup" --quick
 fi

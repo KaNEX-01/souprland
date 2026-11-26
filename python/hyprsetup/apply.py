@@ -193,6 +193,10 @@ _ACTION_RULES: tuple[tuple[str, str], ...] = (
     # Wallpaper Engine: WPENGINE_* values are inside the script; when the scene
     # id or scaling changes, linux-wallpaperengine must be restarted.
     ("hypr/scripts/wallpaperengine.sh", "wallpaper"),
+    (f"hypr/{keybinds_mod.RICE_SCRIPTS}/wallpaperengine.sh", "wallpaper"),
+    # Resident bar detail panel: colors and bar height live in the script.
+    ("hypr/scripts/barpanel.py", "barpanel"),
+    (f"hypr/{keybinds_mod.RICE_SCRIPTS}/barpanel.py", "barpanel"),
     ("hypr/scripts/", ""),
     ("hypr/shaders/", ""),
     # Everything else (hyprland.conf and the files it sources).
@@ -282,13 +286,14 @@ ACTION_LABELS: dict[str, str] = {
     "notifylog": "Notification history logger refreshed",
     "dock": "Dock restarted",
     "actions": "Actions added to the launcher",
+    "barpanel": "Bar panel updated",
 }
 
 #: Order in which actions run. Hyprland comes first (window geometry
 #: changes), daemons after (so they draw for the new geometry), the visual
 #: theme last (restarting open apps is the most disruptive step).
 _ACTION_ORDER: tuple[str, ...] = (
-    "hypr", "systemd", "bar", "notifier", "wallpaper", "eww", "idle",
+    "hypr", "systemd", "bar", "barpanel", "notifier", "wallpaper", "eww", "idle",
     "night", "visualizer", "gamemode", "notifylog", "dock", "actions", "cursor", "gtk", "desktop-db", "kde",
     "firefox",
 )
@@ -1176,10 +1181,67 @@ class Applier:
     _PRIMARY_CATEGORIES = {"bar": "BAR", "notify": "NOTIFIER",
                            "wallpaper": "WALLPAPER_DAEMON"}
 
+    def seed_state(self, values: dict[str, str],
+                   selected: Iterable[str]) -> None:
+        """Seeds previous-apply tracking from the state loaded at startup.
+
+        Without this, switching a primary backend (e.g. hyprpaper →
+        wallpaperengine when applying st-gozcu / st-kule) on the very first
+        apply after opening the GUI sees ``previous is None``: if the target's
+        config/script on disk already matches, the daemon switch never runs.
+        """
+        selected = list(selected)
+        primaries = self.catalog.primary_vars(selected)
+        merged = {**values, **{k: primaries[k] for k in self._PRIMARY_CATEGORIES.values()
+                               if primaries.get(k)}}
+        self._remember_primaries(merged)
+        self._last_eww = self._eww_wanted(merged, selected)
+
     def _remember_primaries(self, values: dict[str, str]) -> None:
         for cat, var in self._PRIMARY_CATEGORIES.items():
             self._last_primaries[cat] = values.get(var, "")
         self._last_rotate = (values.get("WALLPAPER_ROTATE") or "0").strip()
+
+    def _wallpaperengine_script(self) -> Path | None:
+        for rel in ("hypr/scripts/wallpaperengine.sh",
+                    f"hypr/{keybinds_mod.RICE_SCRIPTS}/wallpaperengine.sh"):
+            path = self.config_home / rel
+            if path.is_file():
+                return path
+        return None
+
+    def _wallpaper_out_of_sync(self, values: dict[str, str]) -> bool:
+        """True if the running wallpaper daemon disagrees with WALLPAPER_DAEMON.
+
+        When switching to a Wallpaper Engine profile (st-gozcu / st-kule) whose
+        wallpaperengine.sh on disk already has the same scene ID, write_changed()
+        reports no file diff. If another wallpaper daemon is still running — or
+        linux-wallpaperengine is not running at all — the wallpaper action must
+        still run so the old daemon stops and the scene starts.
+        """
+        if "wallpaper" in rice_mod.provided_categories(self.home):
+            return False
+        daemon = values.get("WALLPAPER_DAEMON", "")
+        if not daemon:
+            return False
+        category = next((c for c in self.catalog.categories if c.id == "wallpaper"), None)
+        for comp in (category.components if category else []):
+            if comp.id == daemon or not comp.exec:
+                continue
+            if _process_running(comp.exec.split()[0]):
+                return True
+        if daemon != "wallpaperengine" and _process_running(_WPENGINE_PROCESS):
+            return True
+        if daemon == "wallpaperengine":
+            from . import wpengine
+            main_id = (values.get("WPENGINE_ID") or "").strip()
+            per_screen = wpengine.parse_per_screen(values.get("WPENGINE_PER_SCREEN", ""))
+            if ((main_id or per_screen)
+                    and self._wallpaperengine_script() is not None
+                    and self.component_installed("wallpaperengine")
+                    and not _process_running(_WPENGINE_PROCESS)):
+                return True
+        return False
 
     def _actions_for(self, written: Iterable[str],
                      values: dict[str, str]) -> list[str]:
@@ -1199,6 +1261,14 @@ class Applier:
             if previous is not None and previous != values.get(var, ""):
                 actions.add({"bar": "bar", "notify": "notifier",
                              "wallpaper": "wallpaper"}[cat])
+
+        # Reconcile the live wallpaper daemon when no config file changed on
+        # disk (e.g. re-applying st-gozcu/st-kule with an unchanged
+        # wallpaperengine.sh while hyprpaper is still running).
+        if (self._live_home and not self.dry_run and self._session_live()
+                and "wallpaper" not in actions
+                and self._wallpaper_out_of_sync(values)):
+            actions.add("wallpaper")
 
         # When wallpaper rotation is TURNED OFF no file changes; the action
         # that stops the timer only comes from the previous value.
@@ -1323,6 +1393,8 @@ class Applier:
             self._sync_dock()
         elif action == "actions":
             self._sync_actions()
+        elif action == "barpanel":
+            self._restart_barpanel()
         elif action == "desktop-db":
             target = Path.home() / ".local/share/applications"
             if target.is_dir():
@@ -1342,6 +1414,26 @@ class Applier:
                        hypr / keybinds_mod.RICE_SCRIPTS / "actions.py"):
             if script.is_file():
                 _run([str(script), "desktop"])
+                break
+
+    def _restart_barpanel(self) -> None:
+        """Restarts the resident bar detail panel with updated theme colors."""
+        import signal as signal_mod
+        run_dir = Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp")
+        pid_file = run_dir / "hyprsetup-barpanel.pid"
+        try:
+            pid = int(pid_file.read_text().strip())
+            cmdline = Path(f"/proc/{pid}/cmdline").read_bytes()
+            if b"barpanel" in cmdline:
+                os.kill(pid, signal_mod.SIGTERM)
+                time.sleep(0.1)
+        except (OSError, ValueError):
+            pass
+        hypr = self.config_home / "hypr"
+        for script in (hypr / "scripts/barpanel.py",
+                       hypr / keybinds_mod.RICE_SCRIPTS / "barpanel.py"):
+            if script.is_file() and os.access(script, os.X_OK):
+                _spawn(f"{shlex.quote(str(script))} --daemon")
                 break
 
     # --- systemd user units -----------------------------------------------
@@ -1522,8 +1614,8 @@ class Applier:
                 continue
             if (cat.id == "wallpaper" and "wallpaperengine" in selected
                     and self.component_installed("wallpaperengine")):
-                script = self.config_home / "hypr/scripts/wallpaperengine.sh"
-                if script.is_file() and not _process_running(_WPENGINE_PROCESS):
+                script = self._wallpaperengine_script()
+                if script is not None and not _process_running(_WPENGINE_PROCESS):
                     _spawn(f"{shlex.quote(str(script))} start")
                     started.append("Wallpaper Engine")
                 continue
@@ -1580,11 +1672,11 @@ class Applier:
             _run(["pkill", "-x", _WPENGINE_PROCESS])
             stopped = True
         if daemon == "wallpaperengine":
-            script = self.config_home / "hypr/scripts/wallpaperengine.sh"
+            script = self._wallpaperengine_script()
             from . import wpengine
             per_screen = wpengine.parse_per_screen(values.get("WPENGINE_PER_SCREEN", ""))
             main_id = (values.get("WPENGINE_ID") or "").strip()
-            if script.is_file() and (main_id or per_screen):
+            if script is not None and (main_id or per_screen):
                 # If the profile has an edit recipe for this scene (wpedit.py,
                 # e.g. st-gozcu) the copy is prepared first; the script plays it
                 # instead of the Workshop original. Without (or failing) a recipe

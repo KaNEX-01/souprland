@@ -13,8 +13,10 @@ Usage:  barpanel.py ses|ag|bluetooth|pil|parlaklik|takvim|medya|sistem|kayit
 
 import os
 import shutil
+import signal
 import subprocess
 import sys
+from pathlib import Path
 
 VALUES = {
     "HEX_BG": "{{HEX_BG}}",
@@ -68,8 +70,53 @@ def fallback(tab: str) -> int:
     return 0
 
 
+_RUN = Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp")
+_PID = _RUN / "hyprsetup-barpanel.pid"
+_REQUEST = _RUN / "hyprsetup-barpanel.request"
+_MTIME = _RUN / "hyprsetup-barpanel.mtime"
+
+
+def _running_pid() -> int:
+    try:
+        pid = int(_PID.read_text().strip())
+        os.kill(pid, 0)
+        cmdline = Path(f"/proc/{pid}/cmdline").read_bytes()
+        return pid if b"barpanel" in cmdline else 0
+    except (OSError, ValueError):
+        return 0
+
+
+def _fast_signal(tab: str, cur_mtime: str) -> bool:
+    """Fast path (~8 ms): signal the resident panel before LD_PRELOAD execve or GTK import."""
+    pid = _running_pid()
+    if not pid:
+        return False
+    if tab == "--daemon":
+        return True
+    try:
+        if _MTIME.is_file() and _MTIME.read_text().strip() != cur_mtime:
+            os.kill(pid, signal.SIGTERM)
+            return False
+    except OSError:
+        pass
+    try:
+        _REQUEST.write_text(tab)
+        os.kill(pid, signal.SIGUSR1)
+        return True
+    except OSError:
+        return False
+
+
 def main() -> int:
     tab = sys.argv[1] if len(sys.argv) > 1 else "ses"
+    try:
+        cur_mtime = str(int(os.path.getmtime(__file__)))
+    except OSError:
+        cur_mtime = ""
+    if _fast_signal(tab, cur_mtime):
+        return 0
+    if cur_mtime:
+        os.environ["HYPRSETUP_BARPANEL_MTIME"] = cur_mtime
     if os.path.isfile(LAYER_LIB) and LAYER_LIB not in os.environ.get("LD_PRELOAD", ""):
         env = dict(os.environ, LD_PRELOAD=":".join(
             filter(None, (LAYER_LIB, os.environ.get("LD_PRELOAD")))))
@@ -84,7 +131,7 @@ def main() -> int:
             sys.path.remove(path)
             continue
         return barpanel.run_with(VALUES, tab)
-    return fallback(tab)
+    return 0 if tab == "--daemon" else fallback(tab)
 
 
 if __name__ == "__main__":

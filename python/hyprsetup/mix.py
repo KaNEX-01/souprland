@@ -75,6 +75,7 @@ LOOK_DEFAULTS: dict[str, str] = {
     "SHADOW": "true", "SHADOW_RANGE": "4", "SHADOW_RENDER_POWER": "3",
     "SHADOW_OFFSET": "0 0",
     "ANIMATIONS": "true",
+    "VIS_ENABLE": "false",
 }
 
 #: Hyprland key → (setting, type). Type: int · float · bool · offset.
@@ -108,7 +109,8 @@ _LOOK_MAP: dict[str, tuple[str, str]] = {
 
 #: Settings a slot writes (their previous values are saved and restored).
 SLOT_KEYS: dict[str, tuple[str, ...]] = {
-    "wallpaper": ("WALLPAPER_PATH", "WALLPAPER_IMAGE", "WALLPAPER_STYLE", "WALLPAPER_DAEMON"),
+    "wallpaper": ("WALLPAPER_PATH", "WALLPAPER_IMAGE", "WALLPAPER_STYLE",
+                  "WALLPAPER_DAEMON", "WPENGINE_ID"),
     "colors": ("THEME", "CUSTOM_COLORS"),
     "look": (*LOOK_DEFAULTS, "ANIMATION_PRESET", "ANIMATION_CUSTOM"),
 }
@@ -138,7 +140,14 @@ def thumbnail_path(root: Path, profile: str, variant: str) -> Path:
     """Small preview of the wallpaper (the UI's cards): shipped ones live in the
     repo, imported ones in the user's folder."""
     if variant == OWN_VARIANT and not rice_mod.is_rice(Path(root), profile):
-        image = _own_image(root, presets_mod.resolve_chain(Path(root), profile=profile))
+        values = presets_mod.resolve_chain(Path(root), profile=profile)
+        if values.get("WALLPAPER_DAEMON") == "wallpaperengine" and values.get("WPENGINE_ID"):
+            from . import wpengine
+            preview = wpengine.preview_path(values["WPENGINE_ID"])
+            if preview is not None:
+                return preview
+            return Path(root) / "presets" / "mix" / "thumbs" / f"{profile}-wpengine-missing.jpg"
+        image = _own_image(root, values)
         if image is not None:
             return image
     if rice_mod.is_imported(root, profile):
@@ -191,10 +200,16 @@ def own_parts(root: Path) -> dict[str, dict]:
             continue
         owner, _, rest = (preset.label or name).partition(" — ")
         variant: dict = {"title": rest or owner}
-        image = _own_image(root, values)
-        if image is not None:
-            variant["wallpaper"] = str(image.relative_to(Path(root).resolve())
-                                       if image.is_relative_to(Path(root).resolve()) else image)
+        wp_daemon = (values.get("WALLPAPER_DAEMON") or "").strip()
+        wp_id = (values.get("WPENGINE_ID") or "").strip()
+        if wp_daemon == "wallpaperengine" and wp_id:
+            variant["wpengine"] = wp_id
+            variant["wallpaper"] = f"wpengine:{wp_id}"
+        else:
+            image = _own_image(root, values)
+            if image is not None:
+                variant["wallpaper"] = str(image.relative_to(Path(root).resolve())
+                                           if image.is_relative_to(Path(root).resolve()) else image)
         theme = (values.get("THEME") or "").strip()
         if theme and theme != "auto" and themes.resolve(theme):
             variant["colors"] = {"theme": theme}
@@ -231,7 +246,7 @@ def own_app_keys(slot: str) -> tuple[str, ...]:
         "notify": ["NOTIFIER", *group("notify")],
         "lock": group("lock"),
         "widget": ["WIDGET_ENGINE", "WIDGET_SET", *presets_mod.WIDGET_SET_KEYS,
-                   *group("widget")],
+                   *group("widget"), *group("visualizer")],
     }.get(slot, [])
     return tuple(dict.fromkeys(keys))
 
@@ -870,6 +885,11 @@ def slot_values(root: Path, parts: dict, slot: str, value: str,
     home_dir = Path(home) if home else Path.home()
     if slot == "wallpaper":
         profile, variant = split_ref(value)
+        info = parts.get("profiles", {}).get(profile, {}).get("variants", {}).get(variant, {})
+        wp_id = (info.get("wpengine") or "").strip()
+        if wp_id:
+            return {"WALLPAPER_DAEMON": "wallpaperengine", "WPENGINE_ID": wp_id,
+                    "WALLPAPER_IMAGE": "", "WALLPAPER_STYLE": ""}
         image, _video = fetch_wallpaper(root, profile, variant, home)
         if image is None:
             raise RuntimeError(f"could not fetch wallpaper: {value}"
@@ -939,8 +959,15 @@ def plan(root: Path, slots: dict[str, str], current: dict[str, str],
         if new:
             if not old:
                 state["before"][slot] = {k: current.get(k, "") for k in slot_keys(slot)}
-            changes.update(slot_values(root, parts, slot, new, home))
-            if slot == "wallpaper" and current.get("WALLPAPER_DAEMON") == "wallpaperengine":
+            else:
+                before = state["before"].setdefault(slot, {})
+                for k in slot_keys(slot):
+                    before.setdefault(k, current.get(k, ""))
+            slot_ch = slot_values(root, parts, slot, new, home)
+            changes.update(slot_ch)
+            if (slot == "wallpaper"
+                    and slot_ch.get("WALLPAPER_DAEMON") != "wallpaperengine"
+                    and current.get("WALLPAPER_DAEMON") == "wallpaperengine"):
                 # A live Wallpaper Engine scene covers any image: show the
                 # picked wallpaper with an image daemon (back on mix off).
                 changes["WALLPAPER_DAEMON"] = next(
@@ -973,8 +1000,15 @@ def preview_values(root: Path, parts: dict, pending: dict[str, str],
         if new:
             if slot == "wallpaper":
                 profile, variant = split_ref(new)
-                values.update({"WALLPAPER_PATH": str(thumbnail_path(root, profile, variant)),
-                               "WALLPAPER_IMAGE": "", "WALLPAPER_STYLE": ""})
+                info = parts.get("profiles", {}).get(profile, {}).get("variants", {}).get(variant, {})
+                wp_id = (info.get("wpengine") or "").strip()
+                if wp_id:
+                    values.update({"WALLPAPER_DAEMON": "wallpaperengine", "WPENGINE_ID": wp_id,
+                                   "WALLPAPER_PATH": "", "WALLPAPER_IMAGE": "", "WALLPAPER_STYLE": ""})
+                else:
+                    values.update({"WALLPAPER_DAEMON": "hyprpaper", "WPENGINE_ID": "",
+                                   "WALLPAPER_PATH": str(thumbnail_path(root, profile, variant)),
+                                   "WALLPAPER_IMAGE": "", "WALLPAPER_STYLE": ""})
                 continue
             try:
                 values.update(slot_values(root, parts, slot, new, home))

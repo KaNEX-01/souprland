@@ -171,23 +171,17 @@ def _wpengine_preview(daemon: str, ident: str) -> str:
     """Preview of a profile that uses Wallpaper Engine: the item's own image.
 
     When a profile picks a Wallpaper Engine item (WALLPAPER_DAEMON=
-    wallpaperengine + WPENGINE_ID) that item plays on the desktop;
-    WALLPAPER_IMAGE is only the fallback used without the engine. The preview
-    always showed the fallback: a drawn image on the card, a completely
-    different wallpaper on the desktop. If the item is downloaded on this
-    machine (Steam Workshop) its preview.jpg/gif is shown; otherwise the
-    fallback is used.
+    wallpaperengine + WPENGINE_ID) that item plays on the desktop; if the item
+    is downloaded on this machine (Steam Workshop) its preview.jpg/gif is shown.
     """
     if daemon != "wallpaperengine" or not ident:
         return ""
     try:
         from .. import wpengine
-        for item in wpengine.items():
-            if item.ident == ident and item.preview is not None:
-                return str(item.preview)
+        preview = wpengine.preview_path(ident)
+        return str(preview) if preview is not None else ""
     except Exception:                                            # noqa: BLE001
         return ""
-    return ""
 
 class _SettingsArea(Gtk.DrawingArea):
     """Common base for widgets that read settings and draw them."""
@@ -741,9 +735,10 @@ class ShotPreview(Gtk.DrawingArea):
     _cache: dict[str, "GdkPixbuf.Pixbuf | None"] = {}
 
     def __init__(self, path: Path, width: int = 300, height: int = 170,
-                 top: float = 1.0):
+                 top: float = 1.0, fallback_label: str = ""):
         super().__init__()
         self._path = str(path)
+        self._fallback_label = fallback_label
         #: How much of the image to show from the top (1 = all of it). Bar
         #: part cards enlarge the top strip of the screen; in a full-screen
         #: shot the bar was just a line a few pixels tall.
@@ -765,8 +760,19 @@ class ShotPreview(Gtk.DrawingArea):
     def _draw(self, _area, cr, width, height) -> None:
         pixbuf = self._pixbuf()
         if pixbuf is None:
-            cr.set_source_rgb(0.1, 0.1, 0.1)
+            cr.set_source_rgb(0.11, 0.13, 0.16)
             cr.paint()
+            if self._fallback_label:
+                cr.set_source_rgba(0.85, 0.90, 0.96, 0.82)
+                cr.select_font_face("sans-serif", 0, 1)
+                cr.set_font_size(11)
+                lines = self._fallback_label.splitlines()
+                line_h = 16
+                y0 = (height - len(lines) * line_h) / 2 + 11
+                for i, line in enumerate(lines):
+                    ext = cr.text_extents(line)
+                    cr.move_to(max(6, (width - ext.width) / 2), y0 + i * line_h)
+                    cr.show_text(line)
             return
         if self._top < 1.0:
             scale = max(width / pixbuf.get_width(),

@@ -627,6 +627,12 @@ def scroll_guarded(widget) -> bool:
 def on_activate(application):
     try:
         window = gui.MainWindow(application, Path("."), catalog)
+        # Lazy startup check: only the opening page is built on launch.
+        if len(window._built_pages) > 2:
+            result["error"] = f"too many pages built eagerly at startup: {sorted(window._built_pages)}"
+            application.quit()
+            return
+        window.build_all_pages()
         result["pages"] = [page_id for page_id, _title, _icon in window.pages]
         # The mouse wheel must NOT CHANGE settings: pages are long, users
         # scroll the list with the wheel, and when the pointer passed over a
@@ -1883,7 +1889,7 @@ for name, entry in parts["profiles"].items():
     if entry.get("own"):
         # Our own profiles: built from presets/profile, no rice manifest.
         for variant, info in entry["variants"].items():
-            if info.get("wallpaper") and not mix.thumbnail_path(root, name, variant).is_file():
+            if info.get("wallpaper") and not info.get("wpengine") and not mix.thumbnail_path(root, name, variant).is_file():
                 problems.append(f"{name}: own part photo missing")
             if info.get("colors") and not mix.palette_of(parts, f"{name}/{variant}"):
                 problems.append(f"{name}: own part palette does not resolve")
@@ -1951,21 +1957,59 @@ if rice.vendor_archive(rice.vendor_dir(root), "https://github.com/ad1822/hyprdot
                 or (home / ".config/kitty").exists() or (home / ".config/hypr/mix.conf").exists():
             problems.append("removing parts did not restore the old state")
 
-# Fill slot → clear: settings return to their previous values.
+# Fill slot → clear: settings return to their previous values (including VIS_ENABLE & WPENGINE_ID).
 with tempfile.TemporaryDirectory() as tmp:
     home = Path(tmp)
     current = {"GAPS_IN": "9", "ROUNDING": "3", "ANIMATION_PRESET": "fluid",
-               "THEME": "tokyo-night", "CUSTOM_COLORS": ""}
-    changes, state = mix.plan(root, {"look": "nothingos", "colors": "r4ppz19/kiz"},
+               "THEME": "tokyo-night", "CUSTOM_COLORS": "", "VIS_ENABLE": "true",
+               "WALLPAPER_DAEMON": "hyprpaper", "WPENGINE_ID": ""}
+    changes, state = mix.plan(root, {"look": "nothingos", "colors": "r4ppz19/kiz",
+                                     "wallpaper": "st-kule/own"},
                               current, home=home)
     if changes.get("ROUNDING") != "18" or changes.get("THEME") != "gruvbox-dark":
         problems.append(f"wrong slot values: {changes}")
+    if changes.get("VIS_ENABLE") != "false":
+        problems.append(f"mixing look did not turn off VIS_ENABLE: {changes.get('VIS_ENABLE')!r}")
+    if (changes.get("WALLPAPER_DAEMON"), changes.get("WPENGINE_ID")) != ("wallpaperengine", "2579315681"):
+        problems.append(f"st-kule wallpaper did not select Wallpaper Engine: {changes}")
     mix.write_state(state, home)
     current.update(changes)
-    back, state = mix.plan(root, {"look": "", "colors": ""}, current, home=home)
+    back, state = mix.plan(root, {"look": "", "colors": "", "wallpaper": ""}, current, home=home)
     if (back.get("GAPS_IN"), back.get("ROUNDING"), back.get("ANIMATION_PRESET"),
-            back.get("THEME")) != ("9", "3", "fluid", "tokyo-night"):
+            back.get("THEME"), back.get("VIS_ENABLE"), back.get("WALLPAPER_DAEMON"),
+            back.get("WPENGINE_ID")) != ("9", "3", "fluid", "tokyo-night", "true", "hyprpaper", ""):
         problems.append(f"clearing the slot did not restore the old values: {back}")
+
+# Switching from hyprpaper to st-gozcu / st-kule on the FIRST apply after startup
+# must still trigger the wallpaper action even if wallpaperengine.sh on disk is
+# already identical (seed_state).
+with tempfile.TemporaryDirectory() as tmp:
+    from hyprsetup import apply as apply_mod, catalog as cat_mod
+    from hyprsetup.gui import state as state_mod
+    cat = cat_mod.Catalog.load(root / "config/components.json")
+    cfg = Path(tmp) / ".config"
+    # Pre-seed wallpaperengine.sh on disk with st-gozcu's scene ID.
+    st_pre = state_mod.SetupState(cat)
+    st_pre.apply_profile_preset(root, "st-gozcu")
+    st_pre.sync_profile_components(root, "st-gozcu")
+    ap_pre = apply_mod.Applier(root, cat, config_home=cfg)
+    ap_pre.apply(st_pre.values, sorted(st_pre.selected))
+    # Fresh Applier seeded with a hyprpaper profile (simulates reopening the GUI).
+    st_run = state_mod.SetupState(cat)
+    st_run.apply_profile_preset(root, "st-crt")
+    st_run.sync_profile_components(root, "st-crt")
+    ap_fresh = apply_mod.Applier(root, cat, config_home=cfg)
+    ap_fresh.seed_state(st_run.values, sorted(st_run.selected))
+    st_run.apply_profile_preset(root, "st-gozcu")
+    st_run.sync_profile_components(root, "st-gozcu")
+    res_gozcu = ap_fresh.apply(st_run.values, sorted(st_run.selected))
+    if "Wallpaper daemon restarted" not in res_gozcu.actions:
+        problems.append(f"first apply to st-gozcu did not restart wallpaper: {res_gozcu.actions}")
+    st_run.apply_profile_preset(root, "st-kule")
+    st_run.sync_profile_components(root, "st-kule")
+    res_kule = ap_fresh.apply(st_run.values, sorted(st_run.selected))
+    if "Wallpaper daemon restarted" not in res_kule.actions:
+        problems.append(f"switch to st-kule did not restart wallpaper: {res_kule.actions}")
 # The profile overlay must carry this project's window rules: otherwise
 # under the author's hypr config ALT+Tab becomes a tiled window.
 from hyprsetup import keybinds as K

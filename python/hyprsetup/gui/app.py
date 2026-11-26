@@ -35,15 +35,11 @@ from .. import settings as schema  # noqa: E402
 from ..apply import Applier  # noqa: E402
 from .. import render as render_mod  # noqa: E402
 from .. import themes  # noqa: E402
-from .login_page import LoginPage  # noqa: E402
 from .tone import WallpaperSwatches  # noqa: E402
 from . import aur as aur_mod  # noqa: E402
 from . import behavior_diagrams  # noqa: E402
-from .mix_preview import MixPreview  # noqa: E402
 from . import welcome as welcome_mod  # noqa: E402
 from .util import PICTURES, ensure_css, pick_file  # noqa: E402
-from .wallcolors_page import WallColorsPage  # noqa: E402
-from .wizard_page import WizardPage  # noqa: E402
 from .preview import (AnimationDiagram, BarPreview, CursorSizeDiagram,  # noqa: E402
                       DesktopPreview, LauncherLayoutPreview,
                       LayoutDiagram, MouseInputDiagram, PaletteStrip, ShotPreview,
@@ -1075,6 +1071,7 @@ class MainWindow(Adw.ApplicationWindow):
         # last applied bar/notification/wallpaper backend (when the backend changes,
         # the OLD one must be stopped too, see apply.py).
         self.applier = Applier(root, catalog, self.keybinds)
+        self.applier.seed_state(self.state.values, self.state.selected)
         # Setting rows call this before writing a value that needs a program
         # (see build_setting_row.commit, deps.py).
         self.state.require = self._require
@@ -1115,6 +1112,8 @@ class MainWindow(Adw.ApplicationWindow):
 
         self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE)
         self.pages: list[tuple[str, str, str]] = []   # (id, title, icon)
+        self._page_builders: dict[str, object] = {}
+        self._built_pages: set[str] = set()
 
         sidebar = self._build_sidebar()
         content = Adw.ToolbarView()
@@ -1330,21 +1329,55 @@ class MainWindow(Adw.ApplicationWindow):
     def _add_page(self, page_id: str, title: str, icon: str,
                   child: Gtk.Widget) -> None:
         self.stack.add_named(child, page_id)
+        self._built_pages.add(page_id)
         self.pages.append((page_id, title, icon))
         row = Adw.ActionRow(title=title)
         row.add_prefix(Gtk.Image.new_from_icon_name(icon))
         row.set_activatable(True)
         self.listbox.append(row)
 
+    def _register_page(self, page_id: str, title: str, icon: str,
+                       builder) -> None:
+        """Register a page without building its widgets until first opened."""
+        self._page_builders[page_id] = builder
+        self.stack.add_named(Gtk.Box(), page_id)
+        self.pages.append((page_id, title, icon))
+        row = Adw.ActionRow(title=title)
+        row.add_prefix(Gtk.Image.new_from_icon_name(icon))
+        row.set_activatable(True)
+        self.listbox.append(row)
+
+    def _ensure_page(self, page_id: str) -> Gtk.Widget | None:
+        """Build a lazily-registered page on first visit."""
+        if page_id in self._built_pages:
+            return self.stack.get_child_by_name(page_id)
+        builder = self._page_builders.get(page_id)
+        if builder is None:
+            return self.stack.get_child_by_name(page_id)
+        child = builder()
+        old = self.stack.get_child_by_name(page_id)
+        if old is not None:
+            self.stack.remove(old)
+        self.stack.add_named(child, page_id)
+        self._built_pages.add(page_id)
+        self._apply_level(child)
+        return child
+
+    def build_all_pages(self) -> None:
+        """Force-build every registered page (used by automated tests)."""
+        for page_id, _title, _icon in self.pages:
+            self._ensure_page(page_id)
+
     def _on_page_selected(self, _box, row) -> None:
         if row is None:
             return
         index = row.get_index()
         page_id, title, _icon = self.pages[index]
+        self._ensure_page(page_id)
         if page_id == "bar" and hasattr(self, "_rice_bar_group"):
             self._refresh_rice_bar()
         self._resync_rows()
-        if page_id == "wizard":
+        if page_id == "wizard" and getattr(self, "wizard", None) is not None:
             self.wizard.on_shown()
         self.stack.set_visible_child_name(page_id)
         self.title_widget.set_title(title)
@@ -1365,7 +1398,7 @@ class MainWindow(Adw.ApplicationWindow):
         """Change the mode from outside (the search result's "show in advanced")."""
         (self.advanced_button if advanced else self.simple_button).set_active(True)
 
-    def _apply_level(self) -> None:
+    def _apply_level(self, root: Gtk.Widget | None = None) -> None:
         """Show/hide advanced rows, groups and pages according to the selected mode.
 
         Marked widgets (ADVANCED_CSS) are found by walking the tree: since pages
@@ -1373,7 +1406,7 @@ class MainWindow(Adw.ApplicationWindow):
         rarely changes and the walk is cheap.
         """
         show = self.advanced
-        pending = [self.stack]
+        pending = [root if root is not None else self.stack]
         while pending:
             widget = pending.pop()
             if widget.has_css_class(ADVANCED_CSS):
@@ -1382,6 +1415,8 @@ class MainWindow(Adw.ApplicationWindow):
             while child is not None:
                 pending.append(child)
                 child = child.get_next_sibling()
+        if root is not None:
+            return
 
         selected = self.listbox.get_selected_row()
         for index, (page_id, _title, _icon) in enumerate(self.pages):
@@ -1477,59 +1512,68 @@ class MainWindow(Adw.ApplicationWindow):
         return False
 
     # ------------------------------------------------------------ pages -
-    def _add_pages(self) -> None:
-        # The install pages (Components, Profiles, Summary and Install) were
-        # removed: this is no longer an installation wizard but the settings app
-        # of a running system. Installing packages is install.sh's job.
-        self._add_page("start", "Home", "go-home-symbolic",
-                       self._page_start())
-        # The wizard asks the same settings in order; it doesn't replace the
-        # other pages, it links to them (see wizard_page.py).
+    def _page_wizard(self) -> Gtk.Widget:
+        from .wizard_page import WizardPage
         self.wizard = WizardPage(self)
-        self._add_page("wizard", "Setup Wizard", "starred-symbolic",
-                       self.wizard)
-        self._add_page("profiles", "Profiles", "view-paged-symbolic",
-                       self._page_profiles())
-        self._add_page("mix", "Soup Maker", "view-app-grid-symbolic",
-                       self._page_mix())
-        self._add_page("appearance", "Appearance", "applications-graphics-symbolic",
-                       self._page_appearance())
-        self._add_page("wallcolors", "Wallpaper Colors", "color-select-symbolic",
-                       WallColorsPage(self))
-        self._add_page("wpengine", "Wallpaper Engine", "video-display-symbolic",
-                       self._page_wpengine())
-        self._add_page("bars", "Bar Presets", "view-continuous-symbolic",
-                       self._page_bars())
-        self._add_page("bar", "Status Bar", "view-continuous-symbolic",
-                       self._page_bar())
-        self._add_page("terminal", "Terminal", "utilities-terminal-symbolic",
-                       self._page_app_axis("terminal"))
-        self._add_page("launcher", "Launcher", "system-search-symbolic",
-                       self._page_app_axis("launcher"))
-        self._add_page("widgets", "Widgets", "view-grid-symbolic",
-                       self._page_widgets())
-        self._add_page("behavior", "Behavior", "preferences-system-symbolic",
-                       self._page_behavior())
-        self._add_page("cursor", "Mouse Cursor", "input-mouse-symbolic",
-                       self._page_cursor())
-        self._add_page("rules", "Window Rules", "window-new-symbolic",
-                       self._page_rules())
-        self._add_page("session", "Session", "system-lock-screen-symbolic",
-                       self._page_session())
-        self._add_page("login", "Login Screen", "system-users-symbolic",
-                       LoginPage(self))
-        self._add_page("keybinds", "Keybindings", "input-keyboard-symbolic",
-                       self._page_keybinds())
-        self._add_page("apps", "Applications", "preferences-desktop-apps-symbolic",
-                       self._page_apps())
-        self._add_page("autostart", "Autostart", "system-run-symbolic",
-                       self._page_autostart())
-        self._add_page("components", "Components",
-                       "application-x-addon-symbolic", self._page_components())
-        self._add_page("monitors", "Displays", "video-display-symbolic",
-                       self._page_monitors())
-        self._add_page("system", "System", "emblem-system-symbolic",
-                       self._page_system())
+        return self.wizard
+
+    def _page_wallcolors(self) -> Gtk.Widget:
+        from .wallcolors_page import WallColorsPage
+        return WallColorsPage(self)
+
+    def _page_login(self) -> Gtk.Widget:
+        from .login_page import LoginPage
+        return LoginPage(self)
+
+    def _add_pages(self) -> None:
+        # Pages are registered lazily: only the opening page is built on launch
+        # so MOD+I appears immediately instead of constructing 23 pages up front.
+        self._register_page("start", "Home", "go-home-symbolic",
+                            self._page_start)
+        self._register_page("wizard", "Setup Wizard", "starred-symbolic",
+                            self._page_wizard)
+        self._register_page("profiles", "Profiles", "view-paged-symbolic",
+                            self._page_profiles)
+        self._register_page("mix", "Soup Maker", "view-app-grid-symbolic",
+                            self._page_mix)
+        self._register_page("appearance", "Appearance", "applications-graphics-symbolic",
+                            self._page_appearance)
+        self._register_page("wallcolors", "Wallpaper Colors", "color-select-symbolic",
+                            self._page_wallcolors)
+        self._register_page("wpengine", "Wallpaper Engine", "video-display-symbolic",
+                            self._page_wpengine)
+        self._register_page("bars", "Bar Presets", "view-continuous-symbolic",
+                            self._page_bars)
+        self._register_page("bar", "Status Bar", "view-continuous-symbolic",
+                            self._page_bar)
+        self._register_page("terminal", "Terminal", "utilities-terminal-symbolic",
+                            lambda: self._page_app_axis("terminal"))
+        self._register_page("launcher", "Launcher", "system-search-symbolic",
+                            lambda: self._page_app_axis("launcher"))
+        self._register_page("widgets", "Widgets", "view-grid-symbolic",
+                            self._page_widgets)
+        self._register_page("behavior", "Behavior", "preferences-system-symbolic",
+                            self._page_behavior)
+        self._register_page("cursor", "Mouse Cursor", "input-mouse-symbolic",
+                            self._page_cursor)
+        self._register_page("rules", "Window Rules", "window-new-symbolic",
+                            self._page_rules)
+        self._register_page("session", "Session", "system-lock-screen-symbolic",
+                            self._page_session)
+        self._register_page("login", "Login Screen", "system-users-symbolic",
+                            self._page_login)
+        self._register_page("keybinds", "Keybindings", "input-keyboard-symbolic",
+                            self._page_keybinds)
+        self._register_page("apps", "Applications", "preferences-desktop-apps-symbolic",
+                            self._page_apps)
+        self._register_page("autostart", "Autostart", "system-run-symbolic",
+                            self._page_autostart)
+        self._register_page("components", "Components",
+                            "application-x-addon-symbolic", self._page_components)
+        self._register_page("monitors", "Displays", "video-display-symbolic",
+                            self._page_monitors)
+        self._register_page("system", "System", "emblem-system-symbolic",
+                            self._page_system)
 
     # --- home ---------------------------------------------------------------
     def _page_start(self) -> Gtk.Widget:
@@ -1816,6 +1860,7 @@ class MainWindow(Adw.ApplicationWindow):
 
         # 2) Live desktop: the selected ingredient's area is highlighted, regions are clickable.
         # If a bar ingredient is chosen it's drawn even if your own bar isn't selected.
+        from .mix_preview import MixPreview
         self._mix_preview = MixPreview(
             self.root,
             lambda c: (c == "bar" and bool(self._mix_pending.get("bar")))
@@ -2328,8 +2373,14 @@ class MainWindow(Adw.ApplicationWindow):
             if slot == "wallpaper":
                 info = entry["variants"][variant]
                 thumb = mix_mod.thumbnail_path(self.root, profile, variant)
-                preview = ShotPreview(thumb, width=size[0], height=size[1])
-                note = "video — first frame" if info.get("video") else owner
+                wp_id = (info.get("wpengine") or "").strip()
+                if wp_id:
+                    preview = ShotPreview(thumb, width=size[0], height=size[1],
+                                          fallback_label=f"Wallpaper Engine\n#{wp_id}")
+                    note = f"{owner} · Wallpaper Engine"
+                else:
+                    preview = ShotPreview(thumb, width=size[0], height=size[1])
+                    note = "video — first frame" if info.get("video") else owner
                 yield value, info["title"], note, preview
             elif slot == "colors":
                 info = entry["variants"][variant]
@@ -2588,23 +2639,126 @@ class MainWindow(Adw.ApplicationWindow):
         self._refresh_mix()
         self._on_mix_apply()
 
+    def _wpengine_requirement_info(self, wp_id: str,
+                                   label: str = "") -> tuple[str, list[tuple[str, list[str]]]]:
+        """Details + missing packages for a Wallpaper Engine item."""
+        from .. import wpengine
+
+        ident = wp_id.strip()
+        item = wpengine.find_item(ident)
+        url = wpengine.workshop_url(ident)
+        title = item.title if item is not None else (label or f"Workshop #{ident}")
+        downloaded = item is not None
+        engine_ok = self.applier.component_installed("wallpaperengine")
+        engine_pkgs = (self.applier.missing_packages("wallpaperengine")
+                       or self._component_packages("wallpaperengine")
+                       or ["linux-wallpaperengine"])
+
+        lines = [
+            f"• Wallpaper Engine: {title} (Workshop ID: {ident})",
+            f"  Link: {url}",
+            ("  Workshop status: downloaded in Steam Workshop"
+             if downloaded else
+             "  Workshop status: NOT downloaded yet — subscribe in Steam (Wallpaper Engine)"),
+            (f"  Required package: {' '.join(engine_pkgs)} (installed)"
+             if engine_ok else
+             f"  Required package: {' '.join(engine_pkgs)} (MISSING — plus Steam + Wallpaper Engine)"),
+        ]
+        missing = [] if engine_ok else [("wallpaperengine", engine_pkgs)]
+        return "\n".join(lines), missing
+
+    def _mix_requirements(self, pending: dict[str, str]) -> tuple[str, list[tuple[str, list[str]]]]:
+        """Wallpaper Engine notice + missing components for the pending Soup Maker mix."""
+        wp_notice = ""
+        missing: list[tuple[str, list[str]]] = []
+        seen_comps: set[str] = set()
+
+        def add_comp(comp_id: str) -> None:
+            if not comp_id or comp_id in seen_comps or self.applier.component_installed(comp_id):
+                return
+            seen_comps.add(comp_id)
+            missing.append((comp_id, self.applier.missing_packages(comp_id)
+                            or self._component_packages(comp_id)))
+
+        wall_ref = (pending.get("wallpaper") or "").strip()
+        if wall_ref:
+            profile, variant = mix_mod.split_ref(wall_ref)
+            entry = self._mix_parts.get("profiles", {}).get(profile, {})
+            info = entry.get("variants", {}).get(variant, {})
+            wp_id = (info.get("wpengine") or "").strip()
+            if wp_id:
+                wp_notice, wp_missing = self._wpengine_requirement_info(
+                    wp_id, label=entry.get("title", profile))
+                for comp_id, pkgs in wp_missing:
+                    if comp_id not in seen_comps:
+                        seen_comps.add(comp_id)
+                        missing.append((comp_id, pkgs))
+
+        for slot in mix_mod.APP_SLOT_IDS:
+            val = (pending.get(slot) or "").strip()
+            if val and mix_mod.is_own_ref(self._mix_parts, slot, val):
+                own_vals = mix_mod.own_app_values(self.root, val, slot)
+                for var in ("BAR", "TERMINAL", "LAUNCHER", "NOTIFIER", "WIDGET_ENGINE"):
+                    want = (own_vals.get(var) or "").strip()
+                    if want and self.catalog.component(want):
+                        add_comp(want)
+        return wp_notice, missing
+
     def _on_mix_apply(self) -> None:
-        """Applies the pending selection; asks first if a profile is active."""
+        """Applies the pending selection; asks first if Wallpaper Engine, missing
+        packages, or an active profile requires user confirmation."""
         rice_state = rice_mod.read_state()
-        if not rice_state:
+        wp_notice, missing = self._mix_requirements(self._mix_pending)
+        if not rice_state and not wp_notice and not missing:
             self._mix_apply_now()
             return
-        dialog = Adw.AlertDialog(
-            heading="Remove the installed profile?",
-            body=(f"'{rice_state.get('profile')}' is currently installed. The mix's base "
-                  "is your configuration; the author's files are removed and "
-                  "your old ones come back from the backup. You can reinstall it "
-                  "later from Profiles if you like."))
+
+        sections: list[str] = []
+        if wp_notice:
+            sections.append("This mix uses a Wallpaper Engine animated wallpaper:\n\n" + wp_notice)
+        other_missing = [(cid, pkgs) for cid, pkgs in missing if cid != "wallpaperengine"]
+        if other_missing:
+            lines = []
+            for comp_id, packages in other_missing:
+                comp = self.catalog.component(comp_id)
+                title = comp.title if comp else comp_id
+                lines.append(f"• {title} — {' '.join(packages)}")
+            sections.append("Missing required packages:\n\n" + "\n".join(lines))
+        if rice_state:
+            sections.append(
+                f"'{rice_state.get('profile')}' is currently installed. Applying a mix removes "
+                "the author's files and restores your backup before applying the mix.")
+        if missing:
+            sections.append(
+                "“Install and apply” opens a terminal to install the missing packages "
+                "(your password is asked in the terminal).")
+
+        heading = ("Wallpaper Engine & requirements" if wp_notice and missing
+                   else "Wallpaper Engine wallpaper" if wp_notice
+                   else "Missing packages" if missing
+                   else "Remove the installed profile?")
+        dialog = Adw.AlertDialog(heading=heading, body="\n\n".join(sections))
         dialog.add_response("cancel", "Cancel")
-        dialog.add_response("go", "Remove and apply")
-        dialog.set_response_appearance("go", Adw.ResponseAppearance.SUGGESTED)
+        if missing:
+            dialog.add_response("anyway", "Apply anyway")
+            dialog.add_response("install", "Install and apply")
+            dialog.set_response_appearance("install", Adw.ResponseAppearance.SUGGESTED)
+            dialog.set_default_response("install")
+        else:
+            dialog.add_response("go", "Remove and apply" if rice_state else "Apply")
+            dialog.set_response_appearance("go", Adw.ResponseAppearance.SUGGESTED)
+            dialog.set_default_response("go")
         dialog.set_close_response("cancel")
-        dialog.connect("response", lambda _d, r: r == "go" and self._mix_apply_now())
+
+        def _chosen(_d, response: str) -> None:
+            if response == "cancel":
+                return
+            if response == "install":
+                packages = [pkg for _c, pkgs in missing for pkg in pkgs]
+                self._install_in_terminal(list(dict.fromkeys(packages)), watch=True)
+            self._mix_apply_now()
+
+        dialog.connect("response", _chosen)
         dialog.present(self)
 
     def _mix_apply_now(self) -> None:
@@ -3093,6 +3247,8 @@ class MainWindow(Adw.ApplicationWindow):
         visible = self.stack.get_visible_child_name()
         for page_id, builder in (("profiles", self._page_profiles),
                                  ("mix", self._page_mix)):
+            if page_id not in self._built_pages:
+                continue
             old = self.stack.get_child_by_name(page_id)
             if old is None:
                 continue
@@ -3166,20 +3322,17 @@ class MainWindow(Adw.ApplicationWindow):
         return names[index] if 0 <= index < len(names) else ""
 
     def _on_profile_preset(self, name: str, variant: str = "") -> None:
-        """Applies the profile; if a program is missing, asks about that first.
-
-        If the bar program the profile points to (and a widget engine, if WIDGETS
-        is set) isn't installed, the profile is applied but nothing changes on
-        screen — since the template condition "HAS_<program>" fails, that program's
-        configuration is never generated. Instead, what's missing is shown
-        first and installed in a terminal with one button.
-        """
+        """Applies the profile; if a program is missing or it uses Wallpaper Engine,
+        shows a confirmation popup with requirements first."""
         if rice_mod.is_rice(self.root, name):
             self._apply_rice(name, variant)
             return
+        values = presets_mod.resolve_chain(self.root, profile=name, variant=variant)
+        wp_id = ((values.get("WPENGINE_ID") or "").strip()
+                 if values.get("WALLPAPER_DAEMON") == "wallpaperengine" else "")
         missing = self._profile_requirements(name)
-        if missing:
-            self._ask_install(name, missing, variant)
+        if missing or wp_id:
+            self._ask_install(name, missing, variant, wpengine_id=wp_id)
             return
         self._apply_profile_now(name, variant)
 
@@ -3220,26 +3373,49 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _ask_install(self, profile: str,
                      missing: list[tuple[str, list[str]]],
-                     variant: str = "") -> None:
-        """Lists the missing programs and offers install / apply anyway."""
-        lines = []
-        for comp_id, packages in missing:
-            comp = self.catalog.component(comp_id)
-            title = comp.title if comp else comp_id
-            lines.append(f"• {title} — {' '.join(packages)}")
-        body = ("This profile is drawn with the programs below and they aren't "
-                "installed. If applied without installing, the profile's bar (or "
-                "widgets) won't show at all.\n\n" + "\n".join(lines) +
-                "\n\n“Install and apply” opens a terminal and runs the command "
+                     variant: str = "",
+                     wpengine_id: str = "") -> None:
+        """Lists Wallpaper Engine requirements and/or missing programs before applying."""
+        sections: list[str] = []
+        if wpengine_id:
+            preset = next((p for p in self.presets if p.name == profile), None)
+            wp_notice, _ = self._wpengine_requirement_info(
+                wpengine_id, label=preset.label if preset else profile)
+            sections.append("This profile uses a Wallpaper Engine animated wallpaper:\n\n"
+                            + wp_notice)
+        other_missing = [(cid, pkgs) for cid, pkgs in missing
+                         if not (wpengine_id and cid == "wallpaperengine")]
+        if other_missing:
+            lines = []
+            for comp_id, packages in other_missing:
+                comp = self.catalog.component(comp_id)
+                title = comp.title if comp else comp_id
+                lines.append(f"• {title} — {' '.join(packages)}")
+            sections.append(
+                "This profile also requires the packages below and they aren't "
+                "installed yet:\n\n" + "\n".join(lines))
+        if missing:
+            sections.append(
+                "“Install and apply” opens a terminal and runs the command "
                 "there — the password is asked in the terminal; this app never asks "
                 "for sudo.")
-        dialog = Adw.AlertDialog(heading="Missing programs", body=body)
+
+        heading = ("Wallpaper Engine & missing packages" if wpengine_id and missing
+                   else "Wallpaper Engine wallpaper" if wpengine_id
+                   else "Missing programs")
+        dialog = Adw.AlertDialog(heading=heading, body="\n\n".join(sections))
         dialog.add_response("cancel", "Cancel")
-        dialog.add_response("anyway", "Apply anyway")
-        dialog.add_response("install", "Install and apply")
-        dialog.set_response_appearance("install",
-                                       Adw.ResponseAppearance.SUGGESTED)
-        dialog.set_default_response("install")
+        if missing:
+            dialog.add_response("anyway", "Apply anyway")
+            dialog.add_response("install", "Install and apply")
+            dialog.set_response_appearance("install",
+                                           Adw.ResponseAppearance.SUGGESTED)
+            dialog.set_default_response("install")
+        else:
+            dialog.add_response("apply", "Apply")
+            dialog.set_response_appearance("apply",
+                                           Adw.ResponseAppearance.SUGGESTED)
+            dialog.set_default_response("apply")
         dialog.set_close_response("cancel")
 
         def _chosen(_dialog, response: str) -> None:
@@ -8589,11 +8765,12 @@ class MainWindow(Adw.ApplicationWindow):
             self._set_apply_status(f"Could not apply: {error}", error=True)
         elif result.errors:
             self._set_apply_status(result.errors[0], error=True)
-        elif not result.written:
+        elif not result.written and not result.actions:
             self._set_apply_status("Up to date")
         else:
             detail = ", ".join(result.actions) if result.actions else "written"
-            self._set_apply_status(f"{len(result.written)} files · {detail}")
+            prefix = f"{len(result.written)} files · " if result.written else ""
+            self._set_apply_status(f"{prefix}{detail}")
 
         if self._apply_again:
             # Pending "then"s wait for the round with the latest values.

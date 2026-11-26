@@ -17,6 +17,11 @@ exec-once = systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESK
 exec-once = ~/.config/hypr/scripts/visualizer.sh start
 {{/if}}
 
+{{#if HAS_WAYBAR}}
+# Bar detail panel — stays warm in the background so clicking media/clock opens instantly
+exec-once = ~/.config/hypr/scripts/barpanel.py --daemon
+{{/if}}
+
 {{#if NOTIFY_HISTORY}}
 # Notification history — the bar panel's Notifications tab (current session only)
 exec-once = ~/.config/hypr/scripts/notifylog.py run
