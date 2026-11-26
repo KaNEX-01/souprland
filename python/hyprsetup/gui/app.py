@@ -1095,6 +1095,9 @@ class MainWindow(Adw.ApplicationWindow):
         #: aren't written to the desktop (see set_apply_hold).
         self._apply_hold = False
         self._apply_held = False
+        #: Temporarily suppresses _schedule_apply when syncing an external
+        #: settings.conf change into a hidden resident quick-panel daemon.
+        self._suppress_apply = False
         # Setting key → callback that refreshes the row from the state. When a
         # preset is applied, all widgets update through this.
         self._sync_rows: dict[str, object] = {}
@@ -1367,6 +1370,8 @@ class MainWindow(Adw.ApplicationWindow):
         """Force-build every registered page (used by automated tests)."""
         for page_id, _title, _icon in self.pages:
             self._ensure_page(page_id)
+        if getattr(self, "_icon_gallery_pending", False):
+            self._icon_gallery_rebuild()
 
     def _on_page_selected(self, _box, row) -> None:
         if row is None:
@@ -6426,17 +6431,22 @@ class MainWindow(Adw.ApplicationWindow):
         group.add(holder)
         self._icon_buttons: dict[str, Gtk.ToggleButton] = {}
 
-        def build() -> None:
+        def build() -> bool:
+            self._icon_gallery_pending = False
             child = holder.get_first_child()
             while child is not None:
                 holder.remove(child)
                 child = holder.get_first_child()
             self._icon_buttons = {}
             holder.append(self._icon_theme_flow(entry))
+            return False
 
         refresh.connect("clicked", lambda _b: build())
         self._icon_gallery_rebuild = build
-        build()
+        # Defer building the 27 icon preview cards (far below the fold) until
+        # after the first frame so MOD+I maps without blocking ~170 ms.
+        self._icon_gallery_pending = True
+        GLib.idle_add(build)
 
         def _sync() -> None:
             current = self.state.get("ICON_THEME_NAME")
@@ -8660,9 +8670,20 @@ class MainWindow(Adw.ApplicationWindow):
             if set(filter(None, saved.get("COMPONENTS", "").split(","))) != self.state.selected:
                 mine_selected = set(self.state.selected)
         self._conf_written = text
-        if not self.state.load_conf(self._conf_path()):
-            return False
-        if mine or mine_selected is not None:
+        # If the resident MOD+I daemon is hidden and another tool (or the full
+        # Souprland window) updated settings.conf, mirror the new state without
+        # triggering a redundant apply round.
+        silent = not self.is_visible()
+        if silent:
+            self._suppress_apply = True
+        try:
+            if not self.state.load_conf(self._conf_path()):
+                return False
+            if silent:
+                self.applier.seed_state(self.state.values, self.state.selected)
+        finally:
+            self._suppress_apply = False
+        if not silent and (mine or mine_selected is not None):
             self.state.values.update(mine)
             if mine_selected is not None:
                 self.state.selected = mine_selected
@@ -8672,7 +8693,8 @@ class MainWindow(Adw.ApplicationWindow):
         # read from the state by _sync_all_rows, so that must be called separately.
         self._sync_all_rows()
         self._refresh_component_rows()
-        self._toast("settings.conf changed outside the app — reloaded")
+        if not silent:
+            self._toast("settings.conf changed outside the app — reloaded")
         return False
 
     def _save_conf(self) -> Path:
@@ -8689,6 +8711,8 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _schedule_apply(self) -> None:
         """A setting changed — schedule an apply round at the end of the debounce delay."""
+        if self._suppress_apply:
+            return
         if self._apply_hold:
             self._apply_held = True
             self._set_apply_status("Preview mode: changes pending "
@@ -8839,9 +8863,15 @@ def _detect_monitors() -> list[tuple[str, str, str]]:
     return result
 
 
+_QUICK_RUN = Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp")
+_QUICK_PID = _QUICK_RUN / "hyprsetup-quick.pid"
+_QUICK_STAMP = _QUICK_RUN / "hyprsetup-quick.stamp"
+
+
 class HyprsetupApp(Adw.Application):
     def __init__(self, root: Path, catalog: Catalog,
-                 app_id: str = APP_ID, panel: bool = False):
+                 app_id: str = APP_ID, panel: bool = False,
+                 daemon: bool = False, show: bool = False):
         # The window class is deliberately different in panel mode; the Hyprland
         # rules float and slide both, but the user can target just one of them
         # with WINDOWRULES.
@@ -8850,6 +8880,9 @@ class HyprsetupApp(Adw.Application):
         self.root = root
         self.catalog = catalog
         self.panel = panel
+        self.daemon = daemon and panel
+        self.show_on_start = show
+        self._window: MainWindow | None = None
 
     def do_startup(self) -> None:
         Adw.Application.do_startup(self)
@@ -8864,11 +8897,75 @@ class HyprsetupApp(Adw.Application):
             Gtk.IconTheme.get_for_display(display).add_search_path(
                 str(self.root / "assets"))
         Gtk.Window.set_default_icon_name(ICON_NAME)
+        if self.daemon:
+            self.hold()
+
+    def _write_daemon_files(self) -> None:
+        try:
+            _QUICK_PID.write_text(f"{os.getpid()}\n", encoding="utf-8")
+            _QUICK_STAMP.write_text(
+                f"{int(Path(__file__).stat().st_mtime)}\n", encoding="utf-8")
+        except OSError:
+            pass
+
+    def _clear_daemon_files(self) -> None:
+        try:
+            if _QUICK_PID.is_file() and _QUICK_PID.read_text(encoding="utf-8").strip() == str(os.getpid()):
+                _QUICK_PID.unlink(missing_ok=True)
+                _QUICK_STAMP.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    def _hide_daemon_window(self) -> None:
+        win = self._window
+        if win is None:
+            return
+        if win._apply_source:
+            GLib.source_remove(win._apply_source)
+            win._run_apply()
+        win.set_visible(False)
+
+    def _on_daemon_toggle(self) -> bool:
+        win = self._window
+        if win is None:
+            return True
+        if win.is_visible():
+            self._hide_daemon_window()
+        else:
+            if win._conf_reload_source:
+                GLib.source_remove(win._conf_reload_source)
+                win._reload_conf()
+            elif win._conf_digest() != win._conf_written:
+                win._reload_conf()
+            win.set_visible(True)
+            win.present()
+        return True
+
+    def _on_daemon_quit(self) -> bool:
+        self._clear_daemon_files()
+        self.quit()
+        return False
 
     def do_activate(self) -> None:
         window = MainWindow(self, self.root, self.catalog, panel=self.panel)
         window._on_state_changed()
-        window.present()
+        self._window = window
+        if not self.daemon:
+            window.present()
+            return
+        import signal
+        window.connect("close-request", lambda _w: (self._hide_daemon_window(), True)[1])
+        self._write_daemon_files()
+        GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGUSR1, self._on_daemon_toggle)
+        GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGTERM, self._on_daemon_quit)
+        GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGINT, self._on_daemon_quit)
+        if self.show_on_start:
+            window.present()
+
+    def do_shutdown(self) -> None:
+        if self.daemon:
+            self._clear_daemon_files()
+        Adw.Application.do_shutdown(self)
 
 
 def _monitor_size() -> tuple[int, int]:
@@ -8889,7 +8986,7 @@ def _monitor_size() -> tuple[int, int]:
 
 
 def run(root: Path, catalog_path: Path, templates: Path,
-        panel: bool = False) -> int:
+        panel: bool = False, daemon: bool = False, show: bool = False) -> int:
     root = root.resolve()
     if not catalog_path.is_absolute():
         catalog_path = root / catalog_path
@@ -8897,4 +8994,4 @@ def run(root: Path, catalog_path: Path, templates: Path,
     os.environ.setdefault("GSK_RENDERER", "gl")
     return HyprsetupApp(root, catalog,
                         app_id=QUICK_APP_ID if panel else APP_ID,
-                        panel=panel).run([])
+                        panel=panel, daemon=daemon, show=show).run([])

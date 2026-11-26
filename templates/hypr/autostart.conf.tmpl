@@ -22,6 +22,9 @@ exec-once = ~/.config/hypr/scripts/visualizer.sh start
 exec-once = ~/.config/hypr/scripts/barpanel.py --daemon
 {{/if}}
 
+# Settings quick panel (MOD+I) — stays warm in the background so SUPER+I opens instantly
+exec-once = ~/.config/hypr/scripts/settings.sh --daemon
+
 {{#if NOTIFY_HISTORY}}
 # Notification history — the bar panel's Notifications tab (current session only)
 exec-once = ~/.config/hypr/scripts/notifylog.py run

@@ -31,6 +31,8 @@ from .app import QUICK_APP_ID, run as run_app  # noqa: F401
 __all__ = ["QUICK_APP_ID", "run"]
 
 
-def run(root: Path, catalog_path: Path, templates: Path) -> int:
+def run(root: Path, catalog_path: Path, templates: Path,
+        daemon: bool = False, show: bool = False) -> int:
     """MOD + I: open the settings app in panel mode."""
-    return run_app(root, catalog_path, templates, panel=True)
+    return run_app(root, catalog_path, templates, panel=True,
+                   daemon=daemon, show=show)

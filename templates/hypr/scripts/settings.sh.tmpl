@@ -30,20 +30,51 @@
 #   floats and slides but opens on the Home page, and Esc does not close it.
 set -uo pipefail
 
-# Toggle: if the MOD+I panel is already open, close it instead of opening a second one.
-if command -v hyprctl >/dev/null 2>&1 \
+# Fast path (~5 ms): signal the resident MOD+I panel daemon so toggling opens
+# instantly instead of cold-starting Python + GTK4 + libadwaita every time.
+run_dir="${XDG_RUNTIME_DIR:-/tmp}"
+pid_file="$run_dir/hyprsetup-quick.pid"
+stamp_file="$run_dir/hyprsetup-quick.stamp"
+app_file="$HOME/.local/share/hyprsetup/python/hyprsetup/gui/app.py"
+cur_stamp=""
+[[ -f "$app_file" ]] && cur_stamp="$(stat -c %Y "$app_file" 2>/dev/null || true)"
+
+if [[ -f "$pid_file" ]]; then
+    pid="$(<"$pid_file")"
+    if [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null \
+            && grep -qa "hyprsetup" "/proc/$pid/cmdline" 2>/dev/null; then
+        if [[ -n "$cur_stamp" && -f "$stamp_file" && "$(<"$stamp_file")" != "$cur_stamp" ]]; then
+            kill "$pid" 2>/dev/null || true
+            rm -f "$pid_file" "$stamp_file"
+        elif [[ "${1:-}" == "--daemon" ]]; then
+            exit 0
+        else
+            kill -USR1 "$pid" 2>/dev/null && exit 0
+        fi
+    else
+        rm -f "$pid_file" "$stamp_file"
+    fi
+fi
+
+# Fallback toggle if a non-daemon quick panel window is open.
+if [[ "${1:-}" != "--daemon" ]] && command -v hyprctl >/dev/null 2>&1 \
         && hyprctl clients -j 2>/dev/null | grep -q '"class": "dev.hyprsetup.Quick"'; then
     hyprctl dispatch closewindow 'class:^(dev\.hyprsetup\.Quick)$' >/dev/null 2>&1
     exit 0
 fi
 
+daemon_args=(--quick --daemon)
+[[ "${1:-}" == "--daemon" ]] || daemon_args+=(--show)
+
 if [[ -x "$HOME/.local/bin/hyprsetup" ]]; then
-    exec "$HOME/.local/bin/hyprsetup" --quick
+    exec "$HOME/.local/bin/hyprsetup" "${daemon_args[@]}"
 fi
 
 if command -v hyprsetup >/dev/null 2>&1; then
-    exec hyprsetup --quick
+    exec hyprsetup "${daemon_args[@]}"
 fi
+
+[[ "${1:-}" == "--daemon" ]] && exit 0
 
 if command -v hyprmod >/dev/null 2>&1; then
     exec hyprmod

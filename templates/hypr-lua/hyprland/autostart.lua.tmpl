@@ -25,6 +25,9 @@ hl.on("hyprland.start", function() hl.exec_cmd("~/.config/hypr/scripts/visualize
 hl.on("hyprland.start", function() hl.exec_cmd("~/.config/hypr/scripts/barpanel.py --daemon") end)
 {{/if}}
 
+-- Settings quick panel (MOD+I) — stays warm in the background so SUPER+I opens instantly
+hl.on("hyprland.start", function() hl.exec_cmd("~/.config/hypr/scripts/settings.sh --daemon") end)
+
 {{#if NOTIFY_HISTORY}}
 -- Notification history — the bar panel's Notifications tab (current session only)
 hl.on("hyprland.start", function() hl.exec_cmd("~/.config/hypr/scripts/notifylog.py run") end)

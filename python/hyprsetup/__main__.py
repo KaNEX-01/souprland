@@ -49,8 +49,11 @@ def _cmd_render(args: argparse.Namespace) -> int:
 
 
 def _cmd_gui(args: argparse.Namespace) -> int:
+    quick = getattr(args, "quick", False)
+    daemon = getattr(args, "daemon", False)
+    show = getattr(args, "show", False)
     try:
-        if getattr(args, "quick", False):
+        if quick:
             from .gui.quick import run as run_gui
         else:
             from .gui.app import run as run_gui
@@ -61,7 +64,11 @@ def _cmd_gui(args: argparse.Namespace) -> int:
         print("To install: sudo pacman -S --needed gtk4 libadwaita "
               "python-gobject python-cairo", file=sys.stderr)
         return 1
-    _ensure_desktop_entry(Path(args.root))
+    if not daemon:
+        _ensure_desktop_entry(Path(args.root))
+    if quick:
+        return run_gui(root=Path(args.root), catalog_path=Path(args.catalog),
+                       templates=Path(args.templates), daemon=daemon, show=show)
     return run_gui(root=Path(args.root), catalog_path=Path(args.catalog),
                    templates=Path(args.templates))
 
@@ -992,6 +999,10 @@ def main(argv: list[str] | None = None) -> int:
     # closing with Esc (gui/quick.py → gui/app.py).
     p_gui.add_argument("--quick", action="store_true",
                        help="panel mode: floating window sliding down from the top")
+    p_gui.add_argument("--daemon", action="store_true",
+                       help="stay warm in the background and toggle on SIGUSR1")
+    p_gui.add_argument("--show", action="store_true",
+                       help="open the window immediately when starting --daemon")
     p_gui.set_defaults(func=_cmd_gui)
 
     args = parser.parse_args(argv)
