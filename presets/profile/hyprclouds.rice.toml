@@ -375,8 +375,8 @@ aur = ["eww", "wlogout", "otf-apple-sf-pro"]
 # wallpapers are this project's (wallpapers/); the author's aren't in the repo.
 [variants.sakura]
 title = "Sakura — light, pink"
-wallpaper = "wallpapers/st-sakura.png"
-wallpaper_dest = "~/Pictures/wallpapers/hyprclouds-sakura.png"
+wallpaper = "wallpapers/profile/st-sakura.jpg"
+wallpaper_dest = "~/Pictures/wallpapers/hyprclouds-sakura.jpg"
 apply = [
   "~/.config/hypr/scripts/wallpaper.sh set {wallpaper} || true",
   "python3 ~/.config/hyprclouds/hyprclouds_colors.py {wallpaper} light",
@@ -384,8 +384,8 @@ apply = [
 credit = "This project's st-sakura wallpaper (the author's isn't in the repo)"
 [variants.alacakaranlik]
 title = "Twilight — dark, purple"
-wallpaper = "wallpapers/st-alacakaranlik.png"
-wallpaper_dest = "~/Pictures/wallpapers/hyprclouds-alacakaranlik.png"
+wallpaper = "wallpapers/profile/st-alacakaranlik.jpg"
+wallpaper_dest = "~/Pictures/wallpapers/hyprclouds-alacakaranlik.jpg"
 apply = [
   "~/.config/hypr/scripts/wallpaper.sh set {wallpaper} || true",
   "python3 ~/.config/hyprclouds/hyprclouds_colors.py {wallpaper} dark",
@@ -393,8 +393,8 @@ apply = [
 credit = "This project's st-alacakaranlik wallpaper (the author's isn't in the repo)"
 [variants.orman]
 title = "Forest — dark, orange"
-wallpaper = "wallpapers/st-orman.png"
-wallpaper_dest = "~/Pictures/wallpapers/hyprclouds-orman.png"
+wallpaper = "wallpapers/profile/st-orman.jpg"
+wallpaper_dest = "~/Pictures/wallpapers/hyprclouds-orman.jpg"
 apply = [
   "~/.config/hypr/scripts/wallpaper.sh set {wallpaper} || true",
   "python3 ~/.config/hyprclouds/hyprclouds_colors.py {wallpaper} dark",

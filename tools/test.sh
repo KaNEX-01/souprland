@@ -1998,12 +1998,14 @@ with tempfile.TemporaryDirectory() as tmp:
     st_pre.apply_profile_preset(root, "st-gozcu")
     st_pre.sync_profile_components(root, "st-gozcu")
     ap_pre = apply_mod.Applier(root, cat, config_home=cfg)
+    ap_pre.component_installed = lambda *_: True
     ap_pre.apply(st_pre.values, sorted(st_pre.selected))
     # Fresh Applier seeded with a hyprpaper profile (simulates reopening the GUI).
     st_run = state_mod.SetupState(cat)
     st_run.apply_profile_preset(root, "st-crt")
     st_run.sync_profile_components(root, "st-crt")
     ap_fresh = apply_mod.Applier(root, cat, config_home=cfg)
+    ap_fresh.component_installed = lambda *_: True
     ap_fresh.seed_state(st_run.values, sorted(st_run.selected))
     st_run.apply_profile_preset(root, "st-gozcu")
     st_run.sync_profile_components(root, "st-gozcu")
