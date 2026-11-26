@@ -56,6 +56,11 @@ KEYBIND_KEYS = ("KEYBINDS",)
 #: selected (config/components.json → "widget" category).
 DEFAULT_WIDGET_ENGINE = "eww"
 
+# Keep profile images in the usual wallpaper folder without replacing custom
+# wallpapers or the copies Soup Maker uses for its saved selections.
+PROFILE_WALLPAPER_PATH = "~/Pictures/wallpapers/souprland-profile.png"
+
+
 def config_path() -> Path:
     """Persistent location of the settings: ``~/.config/hyprsetup/settings.conf``.
 
@@ -246,7 +251,8 @@ class SetupState:
     # only provides defaults for the other two; if the user picks a bar preset
     # separately, that wins. Resolution happens in presets.resolve_chain, with
     # the same rules as lib/preset.sh.
-    def apply_profile_preset(self, root, name: str, variant: str = "") -> None:
+    def apply_profile_preset(self, root, name: str, variant: str = "", *,
+                             select_wallpaper: bool = True) -> None:
         """Apply a profile and drop the bar pin, so the profile's own bar
         preset takes effect ("Leave to profile" is the default for every
         profile).
@@ -258,6 +264,8 @@ class SetupState:
         Look settings the new profile does not define do not carry over from
         the old profile but go back to their defaults; otherwise switching from
         a profile with blur to one without would leave blur on.
+
+        ``select_wallpaper`` is false when clearing a pinned component preset.
         """
         self.pinned_bar = ""
         self.pinned_term = ""
@@ -287,6 +295,8 @@ class SetupState:
             values.setdefault("WIDGETS", "")
         merged = presets_mod.reset_values(keys, self._base_defaults())
         merged.update(values)
+        if select_wallpaper and (merged.get("WALLPAPER_IMAGE") or merged.get("WALLPAPER_STYLE")):
+            merged.setdefault("WALLPAPER_PATH", PROFILE_WALLPAPER_PATH)
         self.apply_preset(name, merged)
 
     #: Component selections a profile can change (category variable →
@@ -309,12 +319,10 @@ class SetupState:
         that are not installed are not selected (so you are never left without
         a terminal); returns notes to show the user.
         """
-        values = presets_mod.resolve_chain(root, profile=name)
+        variant = self.variant if self.preset == name else ""
+        values = presets_mod.resolve_chain(root, profile=name, variant=variant)
         notes: list[str] = []
-        own = presets_mod.find(presets_mod.default_dir(root, "profile"), name)
-        if (self.is_selected("wallpaperengine")
-                and (own is None or "WALLPAPER_DAEMON" not in own.values)):
-            values = dict(values)
+        if self.is_selected("wallpaperengine") and not values.get("WALLPAPER_DAEMON"):
             values["WALLPAPER_DAEMON"] = next(
                 (c for c in self.IMAGE_WALLPAPER_DAEMONS
                  if installed is None or installed(c)),
@@ -449,7 +457,7 @@ class SetupState:
         else:
             self.pinned_launcher = ""
         if self.preset:
-            self.apply_profile_preset(root, self.preset)
+            self.apply_profile_preset(root, self.preset, select_wallpaper=False)
         else:
             self.set(key_name, "")
 
@@ -468,7 +476,7 @@ class SetupState:
         """Drop the bar pin; the profile's own preset comes back."""
         self.pinned_bar = ""
         if self.preset:
-            self.apply_profile_preset(root, self.preset)
+            self.apply_profile_preset(root, self.preset, select_wallpaper=False)
         else:
             self.set("BAR_PRESET", "")
 

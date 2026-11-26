@@ -1,52 +1,40 @@
-"""Photo wallpapers of the Script Test profiles (``wallpapers/photo/``).
-
-Every image there is a real photograph released as **CC0 or public domain**
-on Wikimedia Commons, so it can ship inside the repository; author, page and
-licence are listed in ``wallpapers/photo/sources.json``. Each profile's
-"photo" look variant uses its image, the "generated" variant the drawing from
-``tools/script-test-wallpapers.py``.
-
-They replace the former Wallhaven picks, which were downloaded on first use
-from other people's uploads: several were game/film/anime art (DOOM,
-Evangelion, The Mandalorian…) and none had a licence on record.
-
-Old configs may still name ``wallpapers/wallhaven/<profile>.<ext>`` (that
-directory no longer exists) or the ``wallhaven`` variant; ``resolve`` and
-``VARIANT_ALIAS`` send them to the photo of the same profile.
-"""
+"""Resolve bundled wallpapers and recognize copies from older installs."""
 
 from __future__ import annotations
 
-import json
+import hashlib
 from pathlib import Path
 
-DIR = Path("wallpapers/photo")
-SOURCES = DIR / "sources.json"
-LEGACY_DIR = "wallpapers/wallhaven/"
-#: Renamed look variants: old name → new name.
-VARIANT_ALIAS = {"wallhaven": "photo"}
 
-
-def sources(root: Path) -> dict[str, dict]:
-    try:
-        return json.loads((Path(root) / SOURCES).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
+RETIRED_VARIANTS = frozenset({"photo", "uretilmis", "wallhaven"})
+_PROFILE_DIR = Path("wallpapers/profile")
+_LEGACY_DIRS = {Path("wallpapers/photo"), Path("wallpapers/wallhaven")}
 
 
 def resolve(root: Path, image: str) -> Path | None:
-    """The file to use for a configured ``WALLPAPER_IMAGE``.
-
-    An existing file is used as is. A former Wallhaven path maps to the
-    profile's photo, or failing that to its generated wallpaper.
-    """
+    """Use an existing file, or map an archived path to the profile artwork."""
     root = Path(root)
-    target = root / image
+    rel = Path(image)
+    target = root / rel
     if target.is_file():
         return target
-    if image.startswith(LEGACY_DIR):
-        stem = Path(image).stem
-        for candidate in (root / DIR / f"{stem}.jpg", root / "wallpapers" / f"{stem}.png"):
-            if candidate.is_file():
-                return candidate
+    if rel.parent in _LEGACY_DIRS or (rel.parent == Path("wallpapers") and rel.suffix == ".png"):
+        matched = root / _PROFILE_DIR / f"{rel.stem}.jpg"
+        if matched.is_file():
+            return matched
+    if rel.parent == Path("wallpapers/wallhaven"):
+        original = root / "wallpapers" / f"{rel.stem}.png"
+        if original.is_file():
+            return original
     return None
+
+
+def is_archived_wallpaper(root: Path, target: Path, size: int) -> bool:
+    """Recognize exact copies of bundled artwork removed from the install."""
+    try:
+        index = (root / _PROFILE_DIR / "legacy-wallpapers.txt").read_text(encoding="ascii")
+        prefix = f"{size} "
+        hashes = {line.removeprefix(prefix) for line in index.splitlines() if line.startswith(prefix)}
+        return bool(hashes) and hashlib.sha256(target.read_bytes()).hexdigest() in hashes
+    except OSError:
+        return False

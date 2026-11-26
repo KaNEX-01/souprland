@@ -45,13 +45,15 @@ our own images with the same mood:
                  Transmission Tower" — the lock screen and palette come from
                  this image)
 
-Usage:  python3 tools/script-test-wallpapers.py [name ...]
+Usage:  python3 tools/script-test-wallpapers.py [--matched] [name ...]
+Use --matched for the palette-matched desktop wallpapers in wallpapers/profile/.
 Requirements: python-numpy, python-pillow (only this tool; not needed for installing).
 Randomness uses a fixed seed: the same command gives the same image.
 """
 
 from __future__ import annotations
 
+import argparse
 import math
 import sys
 from pathlib import Path
@@ -157,6 +159,8 @@ def gunbatimi(rng: np.random.Generator) -> Image.Image:
     # core is a darker red-orange
     core = np.clip(0.9 - d, 0, 1)[..., None] ** 2
     img = img * (1 - core * 0.5) + np.array(_hex("ff4a1c"), np.float32) * core * 0.5
+    disc = np.clip((0.70 - d) / 0.075, 0, 1)[..., None] * 0.72
+    img = img * (1 - disc) + np.array(_hex("ff9057"), np.float32) * disc
     # faint purple-blue haze top left
     haze = np.exp(-(((xx - W * 0.05) / (W * 0.25)) ** 2 + ((yy - H * 0.08) / (H * 0.3)) ** 2))
     img = img * (1 - 0.35 * haze[..., None]) + np.array(_hex("8a4a7a"), np.float32) * 0.35 * haze[..., None]
@@ -1392,7 +1396,7 @@ def gozcu(rng):
     yy, xx = _grid()
     img = _vgrad([(0.0, "1d1c1d"), (0.40, "2b2a2b"), (0.62, "2e2e2e"), (1.0, "141414")])
     img += ((_noise(rng, 380, 5) - 0.5) * 18)[..., None]
-    moon_x, moon_y, moon_r = W * 0.50, H * 0.50, H * 0.13
+    moon_x, moon_y, moon_r = W * 0.50, H * 0.34, H * 0.13
     d = np.sqrt((xx - moon_x) ** 2 + (yy - moon_y) ** 2)
     img += (np.exp(-(np.maximum(d - moon_r, 0) / (H * 0.16)) ** 2) * 0.55)[..., None] \
         * np.array([20, 120, 80], np.float32)
@@ -1485,12 +1489,75 @@ MAKERS = {"st-yaprak": yaprak, "st-gunbatimi": gunbatimi,
 
 
 def main(names: list[str]) -> int:
-    for index, name in enumerate(names or MAKERS):
-        image = MAKERS[name](np.random.default_rng(1000 + list(MAKERS).index(name)))
-        path = OUT / f"{name}.png"
-        image.save(path, optimize=True)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--matched", action="store_true",
+                        help="render the wallpaper using the profile's bar and palette")
+    parser.add_argument("names", nargs="*", metavar="PROFILE")
+    args = parser.parse_args(names)
+    if args.matched:
+        sys.path.insert(0, str(ROOT / "python"))
+    for name in args.names or MAKERS:
+        if name not in MAKERS:
+            parser.error(f"unknown profile: {name}")
+        seed = (2000 if args.matched else 1000) + list(MAKERS).index(name)
+        image = MAKERS[name](np.random.default_rng(seed))
+        if args.matched:
+            path = OUT / "profile" / f"{name}.jpg"
+            path.parent.mkdir(exist_ok=True)
+            _match_profile(image, name).save(path, quality=92, subsampling=0, optimize=True)
+        else:
+            path = OUT / f"{name}.png"
+            image.save(path, optimize=True)
         print(f"written: {path.relative_to(ROOT)}")
     return 0
+
+
+def _match_profile(image: Image.Image, name: str) -> Image.Image:
+    """Color grade an original render and soften the edge behind the bar."""
+    from hyprsetup import presets, themes
+
+    values = presets.resolve_chain(ROOT, profile=name)
+    palette = themes.resolve(values["THEME"], values.get("CUSTOM_COLORS", ""))
+    bg, surface, fg, accent, secondary = (
+        np.asarray(_hex(palette[key][:6]), dtype=np.float32)
+        for key in ("BG", "SURFACE", "FG", "ACCENT", "ACCENT2")
+    )
+    source = np.asarray(image.convert("RGB"), dtype=np.float32)
+    luma = source @ np.array([0.299, 0.587, 0.114], dtype=np.float32)
+    low, high = np.percentile(luma[::4, ::4], (3, 98))
+    tone = np.clip((luma - low) / max(24, high - low), 0, 1)
+    light = themes.is_light(palette)
+    if light:
+        stops = (fg, _mix(fg, surface, 0.55), surface, bg, _mix(bg, (255, 255, 255), 0.38))
+        tone = tone ** 0.72
+    else:
+        stops = (_mix(bg, (0, 0, 0), 0.38), bg, _mix(surface, secondary, 0.25),
+                 _mix(surface, accent, 0.70), _mix(accent, fg, 0.42))
+        tone = tone ** 1.18
+    ramp = np.asarray(stops)
+    grade = np.stack([np.interp(tone, (0, 0.18, 0.48, 0.83, 1), ramp[:, channel])
+                      for channel in range(3)], axis=-1).astype(np.float32)
+
+    # Retain small hue differences in the illustration and carry the secondary
+    # accent into cool details without introducing unrelated dominant colors.
+    cool = np.clip((source[..., 2] - source[..., 0]) / 100, 0, 1)
+    grade += (cool * tone * (0.12 if light else 0.32))[..., None] * (secondary - accent)
+    chroma = 0 if name in {"st-manga", "st-siyah", "st-sepya"} else 0.13
+    grade += (source - luma[..., None]) * chroma
+    if name == "st-kagit":
+        # The ink landscape stays sepia while the small red sun matches the bar accent.
+        seal = np.clip((source[..., 0] - source[..., 1] - 32) / 78, 0, 1)[..., None]
+        grade += 0.77 * seal * (accent - grade)
+
+    bar_edge = values.get("BAR_POSITION", "top")
+    vertical = bar_edge in {"left", "right"}
+    axis = np.linspace(0, 1, image.width if vertical else image.height, dtype=np.float32)
+    if bar_edge in {"bottom", "right"}:
+        axis = axis[::-1]
+    fade = np.clip(1 - axis / 0.19, 0, 1) ** 2
+    opacity = float(values.get("BAR_OPACITY", "1"))
+    edge = (fade[None, :, None] if vertical else fade[:, None, None]) * (0.8 - 0.28 * opacity)
+    return _img(grade * (1 - edge) + bg * edge)
 
 
 if __name__ == "__main__":

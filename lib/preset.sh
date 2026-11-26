@@ -395,9 +395,15 @@ preset_apply_chain() {
         # does not touch values the user gave. If none is given, the profile's
         # own PROFILE_VARIANT default is used; if its file is missing
         # (old/wrong name), it silently stays with the profile itself.
-        # "wallhaven" was renamed "photo" (CC0 photos, python/hyprsetup/photos.py).
-        [[ "${PROFILE_VARIANT:-}" == wallhaven ]] && PROFILE_VARIANT=photo
         if [[ -n "${PROFILE_VARIANT:-}" ]]; then
+            if [[ "$PROFILE_VARIANT" =~ ^(photo|uretilmis|wallhaven)$ ]] \
+                    && ! preset_file "$PROFILE_VARIANT" variant >/dev/null; then
+                if [[ "$PROFILE_VARIANT" == wallhaven ]] && preset_file photo variant >/dev/null; then
+                    PROFILE_VARIANT=photo
+                elif preset_file matched variant >/dev/null; then
+                    PROFILE_VARIANT=matched
+                fi
+            fi
             if preset_file "$PROFILE_VARIANT" variant >/dev/null; then
                 preset_apply "$PROFILE_VARIANT" unless-user variant
             else

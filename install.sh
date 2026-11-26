@@ -270,22 +270,25 @@ color_scheme_step() {
 # generic gradient and the real image/pattern is never applied. Do not change
 # the order.
 
-# Does the existing WALLPAPER_PATH file match one of the wallpapers/*.png (any
-# profile's image) by content? If so the file was placed automatically by the
-# script, and overwriting it is safe.
+# Match the existing WALLPAPER_PATH against bundled and archived wallpaper
+# content before replacing a file placed by the installer or settings app.
 _wallpaper_is_ours() {
-    local existing="$1" size sum="" candidate
+    local existing="$1" size sum="" candidate archived_hashes
     # A pattern generated earlier (python/hyprsetup/wallpaper.py GENERATED_MARK).
     head -c 128 -- "$existing" 2>/dev/null | grep -aq 'souprland-pattern' && return 0
     have md5sum || return 1
     size=$(stat -c %s -- "$existing" 2>/dev/null) || return 1
-    # Size first: only the candidates matching in size among the repo's ~75 MB are read.
-    for candidate in "$SETUP_ROOT"/wallpapers/*.png "$SETUP_ROOT"/wallpapers/photo/*.jpg; do
+    # Size first: only the candidates matching in size are read.
+    for candidate in "$SETUP_ROOT"/wallpapers/*.png "$SETUP_ROOT"/wallpapers/profile/*.jpg; do
         [[ -f "$candidate" && "$(stat -c %s -- "$candidate")" == "$size" ]] || continue
         [[ -n "$sum" ]] || sum=$(md5sum < "$existing" | cut -d' ' -f1)
         [[ "$(md5sum < "$candidate" | cut -d' ' -f1)" == "$sum" ]] && return 0
     done
-    return 1
+    archived_hashes=$(awk -v size="$size" '$1 == size { print $2 }' \
+        "$SETUP_ROOT/wallpapers/profile/legacy-wallpapers.txt" 2>/dev/null) || return 1
+    [[ -n "$archived_hashes" ]] || return 1
+    sum=$(sha256sum < "$existing") || return 1
+    grep -qxF "${sum%% *}" <<< "$archived_hashes"
 }
 
 wallpaper_step() {
@@ -298,16 +301,15 @@ wallpaper_step() {
 
     if [[ -n "${WALLPAPER_IMAGE:-}" ]]; then
         local src="$SETUP_ROOT/$WALLPAPER_IMAGE"
-        # The Wallhaven picks were replaced by CC0 photos (wallpapers/photo/):
-        # an old wallpapers/wallhaven/<profile>.* path from a settings.conf maps
-        # to the same profile's photo, else its generated wallpaper
-        # (python/hyprsetup/photos.py).
-        if [[ ! -r "$src" && "$WALLPAPER_IMAGE" == wallpapers/wallhaven/* ]]; then
+        # Old bundled paths map to the corresponding artwork (photos.py).
+        if [[ ! -r "$src" && ( "$WALLPAPER_IMAGE" == wallpapers/wallhaven/*
+                || "$WALLPAPER_IMAGE" == wallpapers/photo/*
+                || "$WALLPAPER_IMAGE" =~ ^wallpapers/[^/]+\.png$ ) ]]; then
             local stem="${WALLPAPER_IMAGE##*/}"
             stem="${stem%.*}"
-            if [[ -r "$SETUP_ROOT/wallpapers/photo/$stem.jpg" ]]; then
-                src="$SETUP_ROOT/wallpapers/photo/$stem.jpg"
-            elif [[ -r "$SETUP_ROOT/wallpapers/$stem.png" ]]; then
+            if [[ -r "$SETUP_ROOT/wallpapers/profile/$stem.jpg" ]]; then
+                src="$SETUP_ROOT/wallpapers/profile/$stem.jpg"
+            elif [[ "$WALLPAPER_IMAGE" == wallpapers/wallhaven/* && -r "$SETUP_ROOT/wallpapers/$stem.png" ]]; then
                 src="$SETUP_ROOT/wallpapers/$stem.png"
             fi
         fi

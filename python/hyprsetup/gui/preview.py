@@ -16,19 +16,24 @@ setting does without having to read about it.
 
 from __future__ import annotations
 
+import concurrent.futures
 import hashlib
 import math
 import tempfile
+import threading
 import time
+import weakref
 from pathlib import Path
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
+gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk  # noqa: E402
 
 from .. import cursors as cursors_mod  # noqa: E402
+from .. import photos  # noqa: E402
 from .. import render as render_mod  # noqa: E402
 from .. import settings as schema  # noqa: E402
 from .. import themes  # noqa: E402
@@ -43,22 +48,30 @@ VIRTUAL_W, VIRTUAL_H = 1920.0, 1080.0
 # Generation happens once per theme+pattern and is cached; this is required
 # because the gallery page draws 48 cards at once.
 _WP_SIZE = (384, 216)
-_wp_cache: dict[tuple[str, str], "object | None"] = {}
+_wp_cache: dict[tuple, "object | None"] = {}
 _wp_dir: Path | None = None
 
+#: Returned when an image is being decoded on a background worker thread.
+_SURFACE_PENDING = object()
+_surface_cache: dict[tuple[str, int, int], "object | None"] = {}
+_surface_waiters: dict[tuple[str, int, int], list[weakref.ref]] = {}
+_surface_lock = threading.Lock()
+_img_executor: concurrent.futures.ThreadPoolExecutor | None = None
 
-def _image_surface(path: Path):
-    """Turn an image (PNG/JPEG/WebP) into a preview-sized cairo surface.
 
-    Only PNG used to be read: profiles with JPEG wallpapers (Wallhaven picks)
-    fell back to a solid color on their card. Large images are scaled down to
-    1280px once, since the gallery draws 48 cards at the same time.
-    """
-    import cairo
-    try:
-        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(str(path), 1280, 1280, True)
-    except GLib.Error:
+def _image_pool() -> concurrent.futures.ThreadPoolExecutor:
+    global _img_executor
+    if _img_executor is None:
+        _img_executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=4, thread_name_prefix="hyprsetup-img")
+    return _img_executor
+
+
+def _pixbuf_to_surface(pixbuf):
+    """Blit a decoded GdkPixbuf into a Cairo ImageSurface (call on GTK main thread)."""
+    if pixbuf is None:
         return None
+    import cairo
     surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, pixbuf.get_width(),
                                  pixbuf.get_height())
     cr = cairo.Context(surface)
@@ -67,20 +80,97 @@ def _image_surface(path: Path):
     return surface
 
 
+def _decode_pixbuf(path: str, max_w: int, max_h: int):
+    try:
+        return GdkPixbuf.Pixbuf.new_from_file_at_scale(path, max_w, max_h, True)
+    except GLib.Error:
+        return None
+
+
+def _finish_image_load(key: tuple[str, int, int], pixbuf) -> bool:
+    surface = _pixbuf_to_surface(pixbuf)
+    with _surface_lock:
+        _surface_cache[key] = surface
+        waiters = _surface_waiters.pop(key, [])
+    for ref in waiters:
+        widget = ref()
+        if widget is None:
+            continue
+        ready = getattr(widget, "_on_async_image_ready", None)
+        if ready is not None:
+            ready()
+        else:
+            widget.queue_draw()
+    return False
+
+
+def _request_image_surface(path: str, max_w: int, max_h: int, widget=None):
+    """Return a cached cairo surface, ``None`` on error, or ``_SURFACE_PENDING``.
+
+    When ``widget`` is provided and the image is not yet cached, decoding runs on
+    a background worker thread so gallery pages never freeze the UI; the widget
+    is redrawn automatically via ``GLib.idle_add`` once ready.
+    """
+    key = (path, max_w, max_h)
+    with _surface_lock:
+        if key in _surface_cache:
+            return _surface_cache[key]
+        if widget is None:
+            # Synchronous fallback (e.g. non-widget callers / tests).
+            pass
+        else:
+            waiters = _surface_waiters.get(key)
+            if waiters is not None:
+                waiters.append(weakref.ref(widget))
+                return _SURFACE_PENDING
+            _surface_waiters[key] = [weakref.ref(widget)]
+
+    if widget is None:
+        surface = _pixbuf_to_surface(_decode_pixbuf(path, max_w, max_h))
+        with _surface_lock:
+            _surface_cache[key] = surface
+        return surface
+
+    def work() -> None:
+        pixbuf = _decode_pixbuf(path, max_w, max_h)
+        GLib.idle_add(_finish_image_load, key, pixbuf)
+
+    _image_pool().submit(work)
+    return _SURFACE_PENDING
+
+
+def _image_surface(path: Path, max_w: int = 1280, max_h: int = 1280):
+    """Turn an image (PNG/JPEG/WebP) into a preview-sized cairo surface.
+
+    Only PNG used to be read: profiles with JPEG wallpapers (Wallhaven picks)
+    fell back to a solid color on their card. Large images are scaled down once,
+    since the gallery draws 48 cards at the same time.
+    """
+    return _request_image_surface(str(path), max_w, max_h, widget=None)
+
+
 def _wallpaper_surface(theme: str, style: str, custom_path: str = "",
-                       overrides: str = ""):
-    """Return a cairo surface; None if it cannot be made (the caller falls back to a gradient)."""
+                       overrides: str = "", max_size: int = 1280,
+                       widget=None):
+    """Return a cairo surface, ``_SURFACE_PENDING`` while loading async, or ``None``."""
     global _wp_dir
     import cairo
 
     if custom_path:
         path = Path(custom_path).expanduser()
-        if path.is_file() and path.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp", ".gif"):
-            key = ("__file__", str(path))
-            if key not in _wp_cache:
-                _wp_cache[key] = _image_surface(path)
-            if _wp_cache[key] is not None:
-                return _wp_cache[key]
+        if path.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp", ".gif"):
+            path_str = str(path)
+            key = (path_str, max_size, max_size)
+            with _surface_lock:
+                cached = _surface_cache.get(key, _SURFACE_PENDING) if key in _surface_cache else None
+                in_cache = key in _surface_cache
+            if in_cache:
+                if cached is not None:
+                    return cached
+            elif path.is_file():
+                surf = _request_image_surface(path_str, max_size, max_size, widget=widget)
+                if surf is _SURFACE_PENDING or surf is not None:
+                    return surf
 
     if not style or style not in wallpaper_mod.STYLES:
         return None
@@ -145,6 +235,15 @@ def rounded_path(cr, x: float, y: float, w: float, h: float,
         return
 
     half = math.pi / 2
+    if abs(power - 2.0) < 1e-3:
+        # Fast native C arcs for standard circular corners (99% of calls).
+        cr.arc(x + w - radius, y + radius, radius, -half, 0)
+        cr.arc(x + w - radius, y + h - radius, radius, 0, half)
+        cr.arc(x + radius, y + h - radius, radius, half, math.pi)
+        cr.arc(x + radius, y + radius, radius, math.pi, math.pi + half)
+        cr.close_path()
+        return
+
     # Clockwise: start at the top edge and go around the four corners in turn.
     cr.move_to(x + radius, y)
     cr.line_to(x + w - radius, y)
@@ -293,17 +392,19 @@ class DesktopPreview(_SettingsArea):
                                         self._get("WPENGINE_ID"))
         if not custom_path and self._root:
             image = self._get("WALLPAPER_IMAGE")
-            if image:
-                custom_path = str(self._root / image)
+            if image and (source := photos.resolve(self._root, image)) is not None:
+                custom_path = str(source)
         if not custom_path and self._use_custom_wallpaper:
             custom_path = self._get("WALLPAPER_PATH")
         wp_surface = _wallpaper_surface(
             self._get("THEME") or themes.DEFAULT,
             self._get("WALLPAPER_STYLE"),
             custom_path,
-            self._get("CUSTOM_COLORS"))
+            self._get("CUSTOM_COLORS"),
+            max_size=getattr(self, "_wallpaper_max_size", 1280),
+            widget=self)
         rounded_path(cr, 0, 0, screen_w, screen_h, 8, 2)
-        if wp_surface is not None:
+        if wp_surface is not None and wp_surface is not _SURFACE_PENDING:
             cr.save()
             cr.clip_preserve()
             sw, sh = wp_surface.get_width(), wp_surface.get_height()
@@ -728,11 +829,10 @@ class ShotPreview(Gtk.DrawingArea):
     """A profile's real screenshot, cropped to fill a fixed size.
 
     Gtk.Picture took its natural size from the image (1280px) and widened the
-    gallery card; here the size is fixed like ValuesPreview. The image is
-    scaled down once and cached (the gallery draws 13 cards at once).
+    gallery card; here the size is fixed like ValuesPreview. Images are decoded
+    off the UI thread at card resolution and cached as Cairo surfaces so opening
+    or switching gallery pages never stalls the main loop.
     """
-
-    _cache: dict[str, "GdkPixbuf.Pixbuf | None"] = {}
 
     def __init__(self, path: Path, width: int = 300, height: int = 170,
                  top: float = 1.0, fallback_label: str = ""):
@@ -743,23 +843,24 @@ class ShotPreview(Gtk.DrawingArea):
         #: part cards enlarge the top strip of the screen; in a full-screen
         #: shot the bar was just a line a few pixels tall.
         self._top = max(0.05, min(1.0, top))
+        if self._top < 1.0:
+            self._decode_size = (640, 360)
+        else:
+            self._decode_size = (min(640, max(width * 2, 280)),
+                                 min(360, max(height * 2, 160)))
         self.set_content_width(width)
         self.set_content_height(height)
         self.set_hexpand(False)
         self.set_draw_func(self._draw)
 
-    def _pixbuf(self):
-        if self._path not in self._cache:
-            try:
-                self._cache[self._path] = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                    self._path, 640, 360, True)
-            except GLib.Error:
-                self._cache[self._path] = None
-        return self._cache[self._path]
-
     def _draw(self, _area, cr, width, height) -> None:
-        pixbuf = self._pixbuf()
-        if pixbuf is None:
+        surface = _request_image_surface(
+            self._path, self._decode_size[0], self._decode_size[1], widget=self)
+        if surface is _SURFACE_PENDING:
+            cr.set_source_rgb(0.11, 0.13, 0.16)
+            cr.paint()
+            return
+        if surface is None:
             cr.set_source_rgb(0.11, 0.13, 0.16)
             cr.paint()
             if self._fallback_label:
@@ -774,19 +875,19 @@ class ShotPreview(Gtk.DrawingArea):
                     cr.move_to(max(6, (width - ext.width) / 2), y0 + i * line_h)
                     cr.show_text(line)
             return
+        sw, sh = surface.get_width(), surface.get_height()
         if self._top < 1.0:
-            scale = max(width / pixbuf.get_width(),
-                        height / (pixbuf.get_height() * self._top))
-            cr.translate((width - pixbuf.get_width() * scale) / 2, 0)
+            scale = max(width / max(1, sw), height / max(1.0, sh * self._top))
+            cr.translate((width - sw * scale) / 2, 0)
             cr.scale(scale, scale)
-            Gdk.cairo_set_source_pixbuf(cr, pixbuf, 0, 0)
+            cr.set_source_surface(surface, 0, 0)
             cr.paint()
             return
-        scale = max(width / pixbuf.get_width(), height / pixbuf.get_height())
-        cr.translate((width - pixbuf.get_width() * scale) / 2,
-                     (height - pixbuf.get_height() * scale) / 2)
+        scale = max(width / max(1, sw), height / max(1, sh))
+        cr.translate((width - sw * scale) / 2,
+                     (height - sh * scale) / 2)
         cr.scale(scale, scale)
-        Gdk.cairo_set_source_pixbuf(cr, pixbuf, 0, 0)
+        cr.set_source_surface(surface, 0, 0)
         cr.paint()
 
 
@@ -795,8 +896,12 @@ class ValuesPreview(DesktopPreview):
 
     On gallery cards the profile + its bar preset come resolved together
     (``presets.resolve_chain``), so the real height and position of the bar
-    the profile points to are drawn.
+    the profile points to are drawn. Because a card's values are immutable, the
+    rendered bitmap is cached per size so switching back to Profiles blits in
+    microseconds instead of repainting 30+ full mockups from scratch.
     """
+
+    _wallpaper_max_size = 480
 
     def __init__(self, values: dict[str, str],
                  width: int = 248, height: int = 140,
@@ -809,6 +914,26 @@ class ValuesPreview(DesktopPreview):
         self.set_hexpand(False)
         # Let the wallpaper show on the card: windows on the right half.
         self.window_share = 0.55
+        self._frame_cache: tuple[int, int, object] | None = None
+
+    def _on_async_image_ready(self) -> None:
+        self._frame_cache = None
+        self.queue_draw()
+
+    def _draw(self, area, cr, width, height) -> None:
+        iw, ih = max(1, int(round(width))), max(1, int(round(height)))
+        cached = self._frame_cache
+        if cached is not None and cached[0] == iw and cached[1] == ih:
+            cr.set_source_surface(cached[2], 0, 0)
+            cr.paint()
+            return
+        import cairo
+        surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, iw, ih)
+        buf_cr = cairo.Context(surface)
+        super()._draw(area, buf_cr, width, height)
+        self._frame_cache = (iw, ih, surface)
+        cr.set_source_surface(surface, 0, 0)
+        cr.paint()
 
 
 class LauncherPreview(_SettingsArea):

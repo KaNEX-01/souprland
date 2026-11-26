@@ -1512,7 +1512,12 @@ for want in ("windowrule = float on, match:class ^(pavucontrol)$",
         problems.append(f"hyprmigrate: '{want}' missing")
 if "windowrulev2 =" in new or "\n        ignore_window" in new:
     problems.append("hyprmigrate: an old line remained")
-if shutil.which("Hyprland"):
+from hyprsetup.apply import Applier as _HyprApplier
+from hyprsetup.catalog import Catalog as _HyprCatalog
+_hypr_verify_conf = (bool(shutil.which("Hyprland"))
+                     and _HyprApplier(Path("."), _HyprCatalog.load("config/components.json"))
+                     .resolve_hypr_lang("auto") == "conf")
+if _hypr_verify_conf:
     with tempfile.TemporaryDirectory() as t:
         conf = Path(t) / "h.conf"; conf.write_text(new)
         out = subprocess.run(["Hyprland", "--verify-config", "-c", str(conf)],
@@ -1651,7 +1656,7 @@ for want in ("bind = SUPER, J, layoutmsg, togglesplit",
              "name = hyprsetup-windowrule-1", "border_size = 0"):
     if want not in new2:
         problems.append(f"hyprmigrate (extra rules): '{want}' missing")
-if shutil.which("Hyprland"):
+if _hypr_verify_conf:
     with tempfile.TemporaryDirectory() as t:
         conf = Path(t) / "h.conf"; conf.write_text(new2)
         out = subprocess.run(["Hyprland", "--verify-config", "-c", str(conf)],
@@ -2010,6 +2015,51 @@ with tempfile.TemporaryDirectory() as tmp:
     res_kule = ap_fresh.apply(st_run.values, sorted(st_run.selected))
     if "Wallpaper daemon restarted" not in res_kule.actions:
         problems.append(f"switch to st-kule did not restart wallpaper: {res_kule.actions}")
+
+# Applying a profile after Soup Maker must use the profile image, even when
+# both the previous mix image and the default wallpaper are user files.
+with tempfile.TemporaryDirectory() as tmp:
+    from unittest.mock import patch
+
+    home = Path(tmp)
+    cfg = home / ".config"
+    wallpapers = home / "Pictures/wallpapers"
+    wallpapers.mkdir(parents=True)
+    mix_image = wallpapers / "mix-st-kule-own.png"
+    mix_image.write_bytes(b"saved Soup Maker wallpaper")
+    custom_image = wallpapers / "wallpaper.png"
+    custom_image.write_bytes(b"custom wallpaper")
+    st = state_mod.SetupState(cat)
+    st.values["WALLPAPER_PATH"] = f"~/Pictures/wallpapers/{mix_image.name}"
+    ap = apply_mod.Applier(root, cat, config_home=cfg)
+    ap.component_installed = lambda *_: True
+    ap.seed_state(st.values, st.selected)
+    for name in ("st-yaprak", "st-orman"):
+        st.apply_profile_preset(root, name, "photo")
+        result = ap.apply(st.values, st.selected)
+        target = ap.wallpaper_file(st.values)
+        source = root / st.get("WALLPAPER_IMAGE")
+        if not target.is_file() or target.read_bytes() != source.read_bytes():
+            problems.append(f"switch to {name} did not copy the profile wallpaper")
+        if "Wallpaper daemon restarted" not in result.actions:
+            problems.append(f"switch to {name} did not refresh the wallpaper daemon")
+    if (mix_image.read_bytes() != b"saved Soup Maker wallpaper"
+            or custom_image.read_bytes() != b"custom wallpaper"):
+        problems.append("switching profiles overwrote another wallpaper")
+
+    # awww must be sent the image explicitly, including when the profile file
+    # is already current and the only change is which path to display.
+    st.toggle("swww", True)
+    ap.seed_state(dict(st.values, WALLPAPER_PATH=str(mix_image)), st.selected)
+    result = ap.apply(st.values, st.selected)
+    wallpaper_script = cfg / "hypr/scripts/wallpaper.sh"
+    with (patch.object(apply_mod, "_process_running", return_value=False),
+          patch.object(apply_mod, "_run", return_value=True) as run):
+        ap._refresh_wallpaper(dict(st.values, WALLPAPER_DAEMON="swww"))
+    if ("Wallpaper daemon restarted" not in result.actions
+            or run.call_count != 1
+            or run.call_args.args != ([str(wallpaper_script), "set", str(target)],)):
+        problems.append("switching profiles did not send the selected image to awww")
 # The profile overlay must carry this project's window rules: otherwise
 # under the author's hypr config ALT+Tab becomes a tiled window.
 from hyprsetup import keybinds as K
@@ -2639,7 +2689,10 @@ if again.written:
 
 values["GAPS_IN"] = str(int(values.get("GAPS_IN", "5")) + 7)
 single = applier.apply(values, selected)
-if single.written != ["hypr/hyprland.conf"]:
+expected_hypr = ("hypr/hyprland.lua"
+                 if applier.resolve_hypr_lang(values.get("HYPR_LANG", "")) == "lua"
+                 else "hypr/hyprland.conf")
+if single.written != [expected_hypr]:
     problems.append(f"GAPS_IN should have changed a single file, changed: {single.written}")
 print("\n".join(problems))
 PYEOF
@@ -2858,10 +2911,11 @@ else:
         problems.append("the wallpaper is not the profile's image")
 
 # 3. Colors must reach the generated files (hex or KDE's decimal)
+hypr_rel = "hypr/hyprland.lua" if run.resolve_hypr_lang("auto") == "lua" else "hypr/hyprland.conf"
 palette = themes.resolve("gruvbox-dark")
 bg, accent = palette["BG"][:6].lower(), palette["ACCENT"][:6].lower()
 decimal = ",".join(str(int(bg[i:i + 2], 16)) for i in (0, 2, 4))
-for rel in ("hypr/hyprland.conf", "waybar/style.css", "kitty/kitty.conf",
+for rel in (hypr_rel, "waybar/style.css", "kitty/kitty.conf",
             "gtk-3.0/gtk.css", "kdeglobals"):
     path = config_home / rel
     if not path.is_file():
@@ -2875,21 +2929,21 @@ for rel in ("hypr/hyprland.conf", "waybar/style.css", "kitty/kitty.conf",
 auto_lang = values_for("gruvbox-material")
 auto_lang["HYPR_LANG"] = "auto"
 written = applier().apply(auto_lang, selected).written
-if not (config_home / "hypr/hyprland.conf").is_file():
-    problems.append("with HYPR_LANG=auto hypr/hyprland.conf was never generated")
+if not (config_home / hypr_rel).is_file():
+    problems.append(f"with HYPR_LANG=auto {hypr_rel} was never generated")
 else:
-    text = (config_home / "hypr/hyprland.conf").read_text().lower()
+    text = (config_home / hypr_rel).read_text().lower()
     if accent not in text and bg not in text:
-        problems.append("hyprland.conf does not carry the new palette (border/shadow "
+        problems.append(f"{hypr_rel} does not carry the new palette (border/shadow "
                         "keep the old colors)")
 
 # 4. THEME="auto" must really extract from the wallpaper
 run.apply(values_for("hyde"), selected)          # THEME="auto"
-text = (config_home / "hypr/hyprland.conf").read_text()
+text = (config_home / hypr_rel).read_text()
 found = re.findall(r"rgba\(([0-9a-f]{6})[0-9a-f]{2}\)", text)
 default_accent = themes.THEMES[themes.DEFAULT]["ACCENT"][:6].lower()
 if not found:
-    problems.append("no color found in hyprland.conf")
+    problems.append(f"no color found in {hypr_rel}")
 elif found[0] == default_accent:
     problems.append("THEME=auto fell back to the default palette — extraction "
                     "from the wallpaper is not working")
@@ -3309,6 +3363,11 @@ if want render && ((!QUICK)); then
     if ! command -v Hyprland >/dev/null 2>&1; then
         skip "generated config valid per Hyprland" "Hyprland not installed"
     else
+        hl_lang=$(PYTHONPATH=python python3 -c '
+from pathlib import Path
+from hyprsetup.apply import Applier
+from hyprsetup.catalog import Catalog
+print(Applier(Path("."), Catalog.load("config/components.json")).resolve_hypr_lang("auto"))')
         hl_bad=""; hl_count=0
         for tree in "$TMP_ROOT/render"/*/ "$TMP_ROOT/render-lua"/*/; do
             [[ -d "$tree/hypr" ]] || continue
@@ -3317,6 +3376,8 @@ if want render && ((!QUICK)); then
             # trap is noted in install.sh's summary_step).
             entry=""
             if [[ -f "$tree/hypr/hyprland.conf" ]]; then
+                # Hyprland 0.57+ removed the .conf parser and only parses Lua.
+                [[ "$hl_lang" == "lua" ]] && continue
                 entry="hyprland.conf"
             elif [[ -f "$tree/hypr/hyprland.lua" ]]; then
                 entry="hyprland.lua"

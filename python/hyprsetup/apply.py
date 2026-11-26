@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import backups as backups_mod
+from . import photos
 from . import rice as rice_mod
 from . import keybinds as keybinds_mod
 from . import render as render_mod
@@ -346,6 +347,7 @@ class Applier:
         self._live_home = config_home is None
 
         self._installed: set[str] | None = None
+        self._installed_lock = threading.Lock()
         #: Primary tools in the previous apply (category id → component id).
         self._last_primaries: dict[str, str] = {}
         #: Backups go to the same folder for a whole apply session.
@@ -360,6 +362,7 @@ class Applier:
         #: files are not deleted either), so the diff stays empty and the timer
         #: would keep running. Only the previous value reveals the turn-off.
         self._last_rotate: str | None = None
+        self._last_wallpaper_path: Path | None = None
         #: Were eww widgets on in the last apply (None = not known yet).
         #: When the eww component is dropped no eww file is written; the action
         #: that closes the still-open windows only comes from this difference.
@@ -377,16 +380,21 @@ class Applier:
         ``pacman -T``; read once and cached.
         """
         if self._installed is None or refresh:
-            try:
-                out = subprocess.run(["pacman", "-Qi"], capture_output=True,
-                                     text=True, timeout=60, check=False,
-                                     env={**os.environ, "LC_ALL": "C"}).stdout
-                self._installed = _parse_installed(out)
-            except (OSError, subprocess.SubprocessError):
-                # No pacman (non-Arch / test environment): we cannot verify,
-                # treat every component as installed —
-                # lib/render.sh:_render_component_installed makes the same call.
-                self._installed = set()
+            with self._installed_lock:
+                if self._installed is None or refresh:
+                    names = _read_pacman_local_db()
+                    if not names:
+                        try:
+                            out = subprocess.run(["pacman", "-Qi"], capture_output=True,
+                                                 text=True, timeout=60, check=False,
+                                                 env={**os.environ, "LC_ALL": "C"}).stdout
+                            names = _parse_installed(out)
+                        except (OSError, subprocess.SubprocessError):
+                            # No pacman (non-Arch / test environment): we cannot verify,
+                            # treat every component as installed —
+                            # lib/render.sh:_render_component_installed makes the same call.
+                            names = set()
+                    self._installed = names
         return self._installed
 
     def component_installed(self, comp_id: str) -> bool:
@@ -1099,8 +1107,7 @@ class Applier:
 
         Same rule as install.sh:_wallpaper_is_ours (content comparison): if
         the user put their own image there, the profile does NOT override it.
-        Size is checked first; only a candidate matching in size is read (the
-        repo holds ~75 MB).
+        Size is checked first; only a candidate matching in size is read.
         """
         from . import wallpaper as wallpaper_mod
         if wallpaper_mod.is_generated(target):
@@ -1110,11 +1117,10 @@ class Applier:
         except OSError:
             return False
         data = None
-        # Generated images (*.png) and the CC0 photos (photo/*.jpg): after a
-        # photo theme the wallpaper was taken for the user's own image and
-        # never changed again.
+        # Include every bundled source format so a wallpaper copied by one
+        # profile can still be replaced by the next one.
         wallpapers = self.root / "wallpapers"
-        for candidate in [*wallpapers.glob("*.png"), *wallpapers.glob("photo/*.jpg")]:
+        for candidate in [*wallpapers.glob("*.png"), *wallpapers.glob("profile/*.jpg")]:
             try:
                 if candidate.stat().st_size != size:
                     continue
@@ -1123,7 +1129,7 @@ class Applier:
                     return True
             except OSError:
                 continue
-        return False
+        return photos.is_archived_wallpaper(self.root, target, size)
 
     def _wallpaper_step(self, values: dict[str, str]) -> str:
         """Puts the profile's wallpaper in place; returns what was done.
@@ -1145,12 +1151,8 @@ class Applier:
             return ""                       # your own image, left alone
 
         if image:
-            source = self.root / image
-            if not source.is_file():
-                # A former Wallhaven path → the profile's CC0 photo (photos.py).
-                from . import photos
-                source = photos.resolve(self.root, image) or source
-            if source.is_file():
+            source = photos.resolve(self.root, image)
+            if source is not None:
                 try:
                     if (target.exists()
                             and target.read_bytes() == source.read_bytes()):
@@ -1201,10 +1203,10 @@ class Applier:
         for cat, var in self._PRIMARY_CATEGORIES.items():
             self._last_primaries[cat] = values.get(var, "")
         self._last_rotate = (values.get("WALLPAPER_ROTATE") or "0").strip()
+        self._last_wallpaper_path = self.wallpaper_file(values)
 
-    def _wallpaperengine_script(self) -> Path | None:
-        for rel in ("hypr/scripts/wallpaperengine.sh",
-                    f"hypr/{keybinds_mod.RICE_SCRIPTS}/wallpaperengine.sh"):
+    def _wallpaper_script(self, name: str) -> Path | None:
+        for rel in (f"hypr/scripts/{name}", f"hypr/{keybinds_mod.RICE_SCRIPTS}/{name}"):
             path = self.config_home / rel
             if path.is_file():
                 return path
@@ -1237,7 +1239,7 @@ class Applier:
             main_id = (values.get("WPENGINE_ID") or "").strip()
             per_screen = wpengine.parse_per_screen(values.get("WPENGINE_PER_SCREEN", ""))
             if ((main_id or per_screen)
-                    and self._wallpaperengine_script() is not None
+                    and self._wallpaper_script("wallpaperengine.sh") is not None
                     and self.component_installed("wallpaperengine")
                     and not _process_running(_WPENGINE_PROCESS)):
                 return True
@@ -1251,6 +1253,12 @@ class Applier:
             action = action_for(rel)
             if action:
                 actions.add(action)
+
+        # awww reads the image via its client, so a path change may only affect
+        # wallpaper.sh and leave the daemon's config untouched.
+        if (values.get("WALLPAPER_DAEMON") == "swww" and self._last_wallpaper_path is not None
+                and self._last_wallpaper_path != self.wallpaper_file(values)):
+            actions.add("wallpaper")
 
         # A backend change MAY NOT SHOW in the file diff: when switching from
         # waybar to hyprpanel waybar's own config does not change at all, yet
@@ -1614,7 +1622,7 @@ class Applier:
                 continue
             if (cat.id == "wallpaper" and "wallpaperengine" in selected
                     and self.component_installed("wallpaperengine")):
-                script = self._wallpaperengine_script()
+                script = self._wallpaper_script("wallpaperengine.sh")
                 if script is not None and not _process_running(_WPENGINE_PROCESS):
                     _spawn(f"{shlex.quote(str(script))} start")
                     started.append("Wallpaper Engine")
@@ -1672,7 +1680,7 @@ class Applier:
             _run(["pkill", "-x", _WPENGINE_PROCESS])
             stopped = True
         if daemon == "wallpaperengine":
-            script = self._wallpaperengine_script()
+            script = self._wallpaper_script("wallpaperengine.sh")
             from . import wpengine
             per_screen = wpengine.parse_per_screen(values.get("WPENGINE_PER_SCREEN", ""))
             main_id = (values.get("WPENGINE_ID") or "").strip()
@@ -1689,6 +1697,13 @@ class Applier:
                 # monitors from hyprctl and puts the scene on each one.
                 _spawn(f"{shlex.quote(str(script))} start")
             return
+        if daemon == "swww":
+            script = self._wallpaper_script("wallpaper.sh")
+            image = self.wallpaper_file(values)
+            if script is not None and image.is_file():
+                if not _run([str(script), "set", str(image)]):
+                    raise RuntimeError(f"Could not apply {image} with awww/swww")
+                return
         self._restart_primary(daemon, always=stopped or (
             previous is not None and previous != daemon))
 
@@ -1957,6 +1972,41 @@ def _run(argv: list[str]) -> bool:
                               check=False).returncode == 0
     except (OSError, subprocess.SubprocessError):
         return False
+
+
+def _read_pacman_local_db(db_dir: Path = Path("/var/lib/pacman/local")) -> set[str]:
+    """Read installed package names + ``Provides`` directly from pacman's local DB.
+
+    Produces the exact same set as ``LC_ALL=C pacman -Qi`` (~6× faster because it
+    avoids spawning pacman and formatting every metadata field). Returns an empty
+    set if the DB does not exist so the caller can fall back to ``pacman -Qi``.
+    """
+    if not db_dir.is_dir():
+        return set()
+    names: set[str] = set()
+    try:
+        entries = list(db_dir.iterdir())
+    except OSError:
+        return set()
+    for entry in entries:
+        desc = entry / "desc"
+        try:
+            text = desc.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        section = ""
+        for line in text.splitlines():
+            if line.startswith("%") and line.endswith("%"):
+                section = line
+            elif not line:
+                section = ""
+            elif section == "%NAME%":
+                names.add(line.strip())
+            elif section == "%PROVIDES%":
+                item = line.strip()
+                if item:
+                    names.add(re.split(r"[<>=]", item, maxsplit=1)[0])
+    return names
 
 
 def _parse_installed(text: str) -> set[str]:

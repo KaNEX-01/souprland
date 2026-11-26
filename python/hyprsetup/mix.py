@@ -140,7 +140,7 @@ def thumbnail_path(root: Path, profile: str, variant: str) -> Path:
     """Small preview of the wallpaper (the UI's cards): shipped ones live in the
     repo, imported ones in the user's folder."""
     if variant == OWN_VARIANT and not rice_mod.is_rice(Path(root), profile):
-        values = presets_mod.resolve_chain(Path(root), profile=profile)
+        values = _own_values(root, profile)
         if values.get("WALLPAPER_DAEMON") == "wallpaperengine" and values.get("WPENGINE_ID"):
             from . import wpengine
             preview = wpengine.preview_path(values["WPENGINE_ID"])
@@ -195,7 +195,7 @@ def own_parts(root: Path) -> dict[str, dict]:
         if rice_mod.is_rice(Path(root), name):
             continue
         try:
-            values = presets_mod.resolve_chain(Path(root), profile=name)
+            values = _own_values(root, name)
         except (OSError, ValueError, KeyError):
             continue
         owner, _, rest = (preset.label or name).partition(" — ")
@@ -917,7 +917,7 @@ def slot_values(root: Path, parts: dict, slot: str, value: str,
         look = parts["profiles"][value].get("look")
         if not look:
             raise RuntimeError(f"no window look: {value}")
-        return dict(look["values"])
+        return {**LOOK_DEFAULTS, **look["values"]}
     if is_own_ref(parts, slot, value):
         return own_app_values(root, value, slot)
     raise ValueError(f"unknown slot: {slot}")

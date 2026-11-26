@@ -9,6 +9,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -1072,6 +1073,9 @@ class MainWindow(Adw.ApplicationWindow):
         # the OLD one must be stopped too, see apply.py).
         self.applier = Applier(root, catalog, self.keybinds)
         self.applier.seed_state(self.state.values, self.state.selected)
+        # Warm the installed-package set off the UI thread so opening Profiles
+        # or Components does not block waiting on pacman's database.
+        threading.Thread(target=self.applier.installed_packages, daemon=True).start()
         # Setting rows call this before writing a value that needs a program
         # (see build_setting_row.commit, deps.py).
         self.state.require = self._require
@@ -1113,7 +1117,8 @@ class MainWindow(Adw.ApplicationWindow):
         self.toasts = Adw.ToastOverlay()
         self.set_content(self.toasts)
 
-        self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE)
+        self.stack = Gtk.Stack(transition_type=Gtk.StackTransitionType.NONE,
+                               vhomogeneous=False, hhomogeneous=False)
         self.pages: list[tuple[str, str, str]] = []   # (id, title, icon)
         self._page_builders: dict[str, object] = {}
         self._built_pages: set[str] = set()
@@ -1370,6 +1375,8 @@ class MainWindow(Adw.ApplicationWindow):
         """Force-build every registered page (used by automated tests)."""
         for page_id, _title, _icon in self.pages:
             self._ensure_page(page_id)
+        for slot, _label in getattr(self, "_mix_steps", []):
+            self._ensure_mix_strip(slot)
         if getattr(self, "_icon_gallery_pending", False):
             self._icon_gallery_rebuild()
 
@@ -1786,6 +1793,8 @@ class MainWindow(Adw.ApplicationWindow):
         self._mix_apps = mix_mod.app_parts(self.root)
         self._mix_pending: dict[str, str] = mix_mod.selection()
         self._mix_cards: dict[str, list[tuple[Gtk.Widget, str]]] = {}
+        self._mix_built_strips: set[str] = set()
+        self._mix_rice_variants: dict[str, str] = {}
         # Slot → (manual settings box, note); a separate dict per slot for re-reading
         # the rows from the state (_sync_rows is keyed by setting key, so this mustn't
         # override the same setting's row on the Appearance page).
@@ -1897,10 +1906,12 @@ class MainWindow(Adw.ApplicationWindow):
         head.append(manual)
         outer.append(head)
 
-        self._mix_strips = Gtk.Stack(transition_type=Gtk.StackTransitionType.CROSSFADE,
-                                     vhomogeneous=False)
+        self._mix_strips = Gtk.Stack(transition_type=Gtk.StackTransitionType.NONE,
+                                     vhomogeneous=False, hhomogeneous=False)
+        # Strips are built lazily when a step is first opened (9 slots × ~45 cards
+        # used to freeze the UI for ~1s when switching to Soup Maker).
         for slot, _label in self._mix_steps:
-            self._mix_strips.add_named(self._mix_strip(slot), slot)
+            self._mix_strips.add_named(Gtk.Box(), slot)
         outer.append(self._mix_strips)
 
         # 4) Back / Next.
@@ -2098,7 +2109,19 @@ class MainWindow(Adw.ApplicationWindow):
         self._refresh_mix()
         self._toast(f"Wallpaper: {path.name}")
 
+    def _ensure_mix_strip(self, slot: str) -> None:
+        if slot in self._mix_built_strips:
+            return
+        old = self._mix_strips.get_child_by_name(slot)
+        if old is not None:
+            self._mix_strips.remove(old)
+        strip = self._mix_strip(slot)
+        self._mix_strips.add_named(strip, slot)
+        self._mix_built_strips.add(slot)
+
     def _mix_rebuild_strip(self, slot: str) -> None:
+        if slot not in getattr(self, "_mix_built_strips", ()):
+            return
         old = self._mix_strips.get_child_by_name(slot)
         visible = self._mix_strips.get_visible_child_name()
         if old is not None:
@@ -2115,6 +2138,7 @@ class MainWindow(Adw.ApplicationWindow):
         if not button.get_active():
             button.set_active(True)        # toggled → comes back here
             return
+        self._ensure_mix_strip(slot)
         self._mix_strips.set_visible_child_name(slot)
         self._mix_preview.set_current(slot)
         self._refresh_mix()
@@ -2353,9 +2377,11 @@ class MainWindow(Adw.ApplicationWindow):
         size = (140, 78) if compact else (220, 124)
 
         def shot(profile: str) -> Gtk.Widget:
-            variant = ""
-            if rice_mod.is_rice(self.root, profile):
-                variant = rice_mod.load(self.root, profile).default_variant
+            variant = self._mix_rice_variants.get(profile)
+            if variant is None:
+                variant = (rice_mod.load(self.root, profile).default_variant
+                           if rice_mod.is_rice(self.root, profile) else "")
+                self._mix_rice_variants[profile] = variant
             path = shots / f"{profile}.variants" / f"{variant}.jpg"
             if mix_mod.is_own(self._mix_parts, profile):
                 # Our profiles have no screenshot set; their photo stands in.
@@ -3273,7 +3299,7 @@ class MainWindow(Adw.ApplicationWindow):
         variant.
         """
         variants = presets_mod.load_variants(self.root, profile)
-        if not variants:
+        if not variants or (len(variants) == 1 and variants[0].name == values.get("PROFILE_VARIANT")):
             return None
         names = [v.name for v in variants]
         picker = Gtk.DropDown.new_from_strings([v.label for v in variants])
@@ -3335,21 +3361,24 @@ class MainWindow(Adw.ApplicationWindow):
         values = presets_mod.resolve_chain(self.root, profile=name, variant=variant)
         wp_id = ((values.get("WPENGINE_ID") or "").strip()
                  if values.get("WALLPAPER_DAEMON") == "wallpaperengine" else "")
-        missing = self._profile_requirements(name)
+        missing = self._profile_requirements(values)
         if missing or wp_id:
             self._ask_install(name, missing, variant, wpengine_id=wp_id)
             return
         self._apply_profile_now(name, variant)
 
     # ------------------------------------------------- requirements check --
-    def _profile_requirements(self, name: str) -> list[tuple[str, list[str]]]:
+    def _profile_requirements(self, values: dict[str, str]) -> list[tuple[str, list[str]]]:
         """Components the profile needs that are NOT installed.
 
         The returned list is ``(component id, missing packages)`` pairs. If it's
         empty the profile can be applied as is.
         """
-        values = presets_mod.resolve_chain(self.root, profile=name)
         needed = [values.get("BAR", "") or _BAR_BACKENDS[0][0]]
+        if (values.get("WALLPAPER_IMAGE") and not values.get("WALLPAPER_DAEMON")
+                and not any(self.applier.component_installed(c)
+                            for c in self.state.IMAGE_WALLPAPER_DAEMONS)):
+            needed.append(self.state.IMAGE_WALLPAPER_DAEMONS[0])
         if presets_mod.split_widgets(values.get("WIDGETS", "")):
             # Widgets aren't drawn without an engine; if an engine is already
             # installed (eww or quickshell) there's no point asking for a new one.

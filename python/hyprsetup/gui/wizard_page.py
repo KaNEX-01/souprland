@@ -357,12 +357,21 @@ class WizardPage(Gtk.Box):
                 "selected": set(st.selected),
                 "login": copy.deepcopy(self._login_data())}
 
-    def _login_page(self):
+    def _login_page(self, *, ensure: bool = False):
+        if ensure:
+            return self.win._ensure_page("login")
+        if "login" not in getattr(self.win, "_built_pages", ()):
+            return None
         return self.win.stack.get_child_by_name("login")
 
     def _login_data(self) -> dict:
         page = self._login_page()
-        return page.data if page is not None else {}
+        if page is not None:
+            return page.data
+        data = login.load_state()
+        data.setdefault("sddm", {})
+        data.setdefault("plasmalogin", {})
+        return data
 
     def _restore_snapshot(self) -> None:
         snap = self._snapshot
@@ -810,7 +819,8 @@ class WizardPage(Gtk.Box):
         """(file shown, path written to WALLPAPER_PATH when selected)."""
         out: list[tuple[Path, Path]] = []
         dest_dir = self.home / "Pictures" / "wallpapers"
-        for path in sorted((self.win.root / "wallpapers").glob("*.png")):
+        bundled = self.win.root / "wallpapers"
+        for path in sorted([*bundled.glob("*.png"), *bundled.glob("profile/*.jpg")]):
             out.append((path, dest_dir / f"souprland-{path.name}"))
         seen = {dest for _src, dest in out}
         for folder in (dest_dir, self.home / "Pictures" / "Wallpapers"):
@@ -1253,7 +1263,7 @@ class WizardPage(Gtk.Box):
         while (child := self._login_body.get_first_child()) is not None:
             self._login_body.remove(child)
         self._login_syncs = []
-        page = self._login_page()
+        page = self._login_page(ensure=True)
         manager = login.current_manager()
         body = self._login_body
 
@@ -1405,7 +1415,7 @@ class WizardPage(Gtk.Box):
 
     def _login_plan(self) -> str:
         manager = login.current_manager()
-        page = self._login_page()
+        page = self._login_page(ensure=True)
         if manager == "plasmalogin" and page is not None:
             saved = page.data["plasmalogin"]
             labels = {"wallpaper": "my wallpaper", "color": "solid color",
@@ -1418,7 +1428,7 @@ class WizardPage(Gtk.Box):
         return manager or "—"
 
     def _apply_login(self) -> None:
-        page = self._login_page()
+        page = self._login_page(ensure=True)
         if page is None:
             return
         manager = login.current_manager()
